@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Demo Website Tailwind</title>
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+  <!-- ===== HEADER ===== -->
+  <header class="bg-white shadow">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-blue-600">MyWebsite</h1>
+      <nav class="space-x-6">
+        <a href="#" class="hover:text-blue-600">Trang chủ</a>
+        <a href="#" class="hover:text-blue-600">Sản phẩm</a>
+        <a href="#" class="hover:text-blue-600">Giới thiệu</a>
+        <a href="#" class="hover:text-blue-600">Liên hệ</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== HERO ===== -->
+  <section class="bg-blue-600 text-white">
+    <div class="max-w-7xl mx-auto px-6 py-20 text-center">
+      <h2 class="text-4xl font-bold mb-4">
+        Chào mừng đến với website của tôi
+      </h2>
+      <p class="mb-8 text-lg">
+        Website demo sử dụng HTML + Tailwind CSS
+      </p>
+      <button class="bg-white text-blue-600 px-6 py-3 rounded font-semibold hover:bg-gray-200">
+        Bắt đầu ngay
+      </button>
+    </div>
+  </section>
+
+  <!-- ===== PRODUCT LIST ===== -->
+  <section class="max-w-7xl mx-auto px-6 py-16">
+    <h3 class="text-3xl font-bold mb-8 text-center">Sản phẩm nổi bật</h3>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- Card -->
+      <div class="bg-white rounded shadow p-6">
+        <img src="https://via.placeholder.com/300x200" class="mb-4 rounded">
+        <h4 class="text-xl font-semibold mb-2">Sản phẩm 1</h4>
+        <p class="text-gray-600 mb-4">Mô tả ngắn về sản phẩm.</p>
+        <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          Mua ngay
+        </button>
+      </div>
+
+      <div class="bg-white rounded shadow p-6">
+        <img src="https://via.placeholder.com/300x200" class="mb-4 rounded">
+        <h4 class="text-xl font-semibold mb-2">Sản phẩm 2</h4>
+        <p class="text-gray-600 mb-4">Mô tả ngắn về sản phẩm.</p>
+        <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          Mua ngay
+        </button>
+      </div>
+
+      <div class="bg-white rounded shadow p-6">
+        <img src="https://via.placeholder.com/300x200" class="mb-4 rounded">
+        <h4 class="text-xl font-semibold mb-2">Sản phẩm 3</h4>
+        <p class="text-gray-600 mb-4">Mô tả ngắn về sản phẩm.</p>
+        <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          Mua ngay
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="bg-gray-800 text-white">
+    <div class="max-w-7xl mx-auto px-6 py-6 text-center">
+      <p>© 2026 MyWebsite. All rights reserved.</p>
+    </div>
+  </footer>
+
+</body>
+</html>

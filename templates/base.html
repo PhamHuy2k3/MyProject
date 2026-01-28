@@ -16,11 +16,148 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    
+    <!-- Custom Cursor & Common Styles -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;300;400;500&display=swap');
+        
+        :root {
+            --cursor-size: 20px;
+            --cursor-hover-size: 60px;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            cursor: none;
+        }
+        
+        .font-art { font-family: 'Syne', sans-serif; }
+        .font-jp { font-family: 'Noto Sans JP', sans-serif; }
+        
+        /* Custom Cursor */
+        #custom-cursor {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--cursor-size);
+            height: var(--cursor-size);
+            border: 1px solid #064e3b;
+            background-color: rgba(6, 78, 59, 0.1);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s, background-color 0.3s, border 0.3s;
+            mix-blend-mode: difference;
+        }
+        
+        #custom-cursor.hovered {
+            width: var(--cursor-hover-size);
+            height: var(--cursor-hover-size);
+            background-color: #fff;
+            border-color: transparent;
+        }
+        
+        /* Noise Overlay */
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.08;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+        
+        /* Toast Notification */
+        .toast {
+            animation: slideIn 0.3s ease-out, fadeOut 0.3s ease-in 2.7s forwards;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
+    {% block extra_styles %}{% endblock %}
 </head>
-<body class="selection:bg-emerald-900 selection:text-white">
+<body class="selection:bg-emerald-900 selection:text-white bg-[#f2f0ec]">
+    <!-- Noise Overlay -->
+    <div class="noise-overlay"></div>
+    
+    <!-- Custom Cursor -->
+    <div id="custom-cursor"></div>
+    
+    <!-- Toast Notifications -->
+    {% if messages %}
+    <div id="toast-container" class="fixed top-6 right-6 z-[9998] space-y-3">
+        {% for message in messages %}
+        <div class="toast flex items-center gap-3 px-6 py-4 rounded-lg shadow-xl border backdrop-blur-sm
+            {% if message.tags == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-800
+            {% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-800
+            {% elif message.tags == 'warning' %}bg-yellow-50 border-yellow-200 text-yellow-800
+            {% else %}bg-white border-stone-200 text-stone-800{% endif %}">
+            {% if message.tags == 'success' %}
+            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-500"></i>
+            {% elif message.tags == 'error' %}
+            <i data-lucide="x-circle" class="w-5 h-5 text-red-500"></i>
+            {% elif message.tags == 'warning' %}
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-500"></i>
+            {% else %}
+            <i data-lucide="info" class="w-5 h-5 text-blue-500"></i>
+            {% endif %}
+            <span class="font-medium text-sm">{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
     {% block content %}{% endblock %}
 
     {% block json_data %}{% endblock %}
     <script src="{% static 'js/main.js' %}"></script>
+    
+    <!-- Custom Cursor Script -->
+    <script>
+        // Custom Cursor
+        const cursor = document.getElementById('custom-cursor');
+        if (cursor) {
+            document.addEventListener('mousemove', (e) => {
+                cursor.style.left = e.clientX + 'px';
+                cursor.style.top = e.clientY + 'px';
+            });
+            
+            const addHoverListeners = () => {
+                document.querySelectorAll('.hover-trigger, a, button, input, textarea, select').forEach(trigger => {
+                    trigger.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
+                    trigger.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+                });
+            };
+            addHoverListeners();
+            
+            // Re-add listeners when new content is loaded
+            const observer = new MutationObserver(addHoverListeners);
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
+        
+        // Initialize Lucide Icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+        
+        // Auto-hide toast after 3 seconds
+        setTimeout(() => {
+            const toasts = document.querySelectorAll('.toast');
+            toasts.forEach(toast => toast.remove());
+        }, 3000);
+    </script>
 </body>
 </html>

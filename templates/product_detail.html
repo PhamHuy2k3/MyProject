@@ -2,24 +2,217 @@
 
 {% block title %}{{ product.title }} — TeaZen{% endblock %}
 
+{% block extra_styles %}
+<style>
+    .tape {
+        position: absolute;
+        width: 100px;
+        height: 30px;
+        background-color: rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(2px);
+        border-left: 1px solid rgba(255,255,255,0.8);
+        border-right: 1px solid rgba(255,255,255,0.8);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        z-index: 10;
+    }
+    
+    @keyframes float-slow {
+        0%, 100% { transform: translateY(0) rotate(var(--rot, 0deg)); }
+        50% { transform: translateY(-15px) rotate(calc(var(--rot, 0deg) + 2deg)); }
+    }
+    
+    .floating-item {
+        animation: float-slow 8s ease-in-out infinite;
+    }
+    
+    .image-frame {
+        position: relative;
+        background: white;
+        padding: 12px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    
+    .image-frame::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border: 1px solid rgba(0,0,0,0.05);
+        pointer-events: none;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-6xl mx-auto px-6 py-24">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-        <div>
-            <div class="overflow-hidden rounded-[2rem] aspect-[4/5] shadow-2xl"><img src="{% if product.image %}{{ product.image.url }}{% else %}https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?q=80&w=1200&auto=format&fit=crop{% endif %}" class="w-full h-full object-cover"></div>
-        </div>
-        <div class="space-y-6">
-            <h1 class="font-art text-5xl font-bold">{{ product.title }}</h1>
-            <p class="text-stone-600">{{ product.excerpt }}</p>
-            {% if product.price %}
-            <div class="text-3xl font-bold text-emerald-900">{{ product.price }}₫</div>
-            {% endif %}
-            <div class="mt-6 prose max-w-none text-stone-700">{{ product.description|linebreaks }}</div>
-            <div class="mt-8 flex items-center gap-4">
-                <a href="/" class="px-6 py-3 bg-emerald-950 text-white rounded-full font-bold">Back</a>
-                <button class="px-6 py-3 border border-emerald-900 rounded-full font-bold">Add to cart</button>
+<!-- NAVIGATION -->
+<nav class="fixed top-0 w-full p-6 flex justify-between items-center z-50 mix-blend-difference text-white">
+    <a href="{% url 'index' %}" class="hover-trigger font-art text-xl font-bold flex items-center gap-2">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i> Quay lại
+    </a>
+    <a href="{% url 'cart' %}" class="hover-trigger font-mono text-xs tracking-widest uppercase flex items-center gap-2">
+        <i data-lucide="shopping-bag" class="w-4 h-4"></i> Giỏ hàng
+    </a>
+</nav>
+
+<!-- BACKGROUND DECORATIONS -->
+<div class="fixed top-20 right-[5%] text-9xl font-jp font-thin text-stone-200 select-none -z-10 writing-vertical hidden lg:block">茶葉</div>
+<div class="fixed bottom-10 left-[5%] font-art text-[12vw] font-bold text-emerald-900/5 select-none -z-10 leading-none">PRODUCT</div>
+
+<!-- FLOATING DECORATIVE ELEMENTS -->
+<div class="floating-item fixed top-32 left-[8%] w-32 h-32 rounded-full bg-emerald-100/50 blur-3xl -z-10 hidden lg:block" style="--rot: 3deg;"></div>
+<div class="floating-item fixed bottom-32 right-[10%] w-48 h-48 rounded-full bg-amber-100/50 blur-3xl -z-10 hidden lg:block" style="--rot: -2deg;"></div>
+
+<!-- MAIN CONTENT -->
+<div class="min-h-screen pt-24 pb-16 px-6">
+    <div class="max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+            
+            <!-- LEFT: PRODUCT IMAGE (Polaroid Style) -->
+            <div class="lg:sticky lg:top-24">
+                <div class="relative max-w-lg mx-auto group">
+                    <!-- Tape -->
+                    <div class="tape -top-4 left-1/2 -translate-x-1/2 -rotate-2"></div>
+                    
+                    <!-- Image Frame -->
+                    <div class="image-frame rotate-1 transition-transform duration-500 group-hover:rotate-0">
+                        <div class="aspect-[4/5] overflow-hidden bg-stone-100">
+                            <img src="{% if product.image %}{{ product.image.url }}{% else %}https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?q=80&w=1200&auto=format&fit=crop{% endif %}" 
+                                 alt="{{ product.title }}"
+                                 class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                        </div>
+                        
+                        <!-- Caption -->
+                        <div class="mt-4 text-center pb-4">
+                            <p class="font-mono text-xs text-stone-400 uppercase tracking-widest">TeaZen Collection</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Decorative Stamp -->
+                    <div class="absolute -bottom-6 -right-6 w-20 h-20 rounded-full border-2 border-dashed border-emerald-800 text-emerald-800 flex items-center justify-center font-bold text-[10px] uppercase rotate-12 opacity-60 mix-blend-multiply bg-[#f2f0ec] hidden md:flex">
+                        Premium<br>Quality
+                    </div>
+                </div>
+            </div>
+            
+            <!-- RIGHT: PRODUCT INFO -->
+            <div class="space-y-8">
+                <!-- Breadcrumb -->
+                <div class="flex items-center gap-2 text-xs text-stone-500 font-mono uppercase tracking-wider">
+                    <a href="{% url 'index' %}" class="hover:text-emerald-900 hover-trigger">Home</a>
+                    <span>/</span>
+                    <span>Shop</span>
+                    <span>/</span>
+                    <span class="text-emerald-900">{{ product.title }}</span>
+                </div>
+                
+                <!-- Title -->
+                <div>
+                    <h1 class="font-art text-5xl lg:text-6xl font-bold text-emerald-950 leading-tight">{{ product.title }}</h1>
+                    {% if product.excerpt %}
+                    <p class="mt-4 text-xl text-stone-600 font-light">{{ product.excerpt }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Price -->
+                {% if product.price %}
+                <div class="flex items-baseline gap-4">
+                    <span class="font-art text-4xl font-bold text-emerald-900">{{ product.price|floatformat:0 }}₫</span>
+                    <span class="text-sm text-stone-500 font-mono uppercase tracking-wider">/ sản phẩm</span>
+                </div>
+                {% endif %}
+                
+                <!-- Divider -->
+                <div class="w-16 h-1 bg-emerald-900"></div>
+                
+                <!-- Description -->
+                {% if product.description %}
+                <div class="prose prose-stone max-w-none">
+                    <p class="text-stone-700 leading-relaxed">{{ product.description|linebreaks }}</p>
+                </div>
+                {% endif %}
+                
+                <!-- Features (Static for now) -->
+                <div class="grid grid-cols-2 gap-4 py-6 border-y border-stone-200">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                            <i data-lucide="leaf" class="w-5 h-5 text-emerald-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm">100% Organic</p>
+                            <p class="text-xs text-stone-500">Tự nhiên</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                            <i data-lucide="award" class="w-5 h-5 text-amber-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm">Premium Grade</p>
+                            <p class="text-xs text-stone-500">Chất lượng cao</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                            <i data-lucide="truck" class="w-5 h-5 text-blue-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm">Free Shipping</p>
+                            <p class="text-xs text-stone-500">Đơn từ 500k</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                            <i data-lucide="shield-check" class="w-5 h-5 text-purple-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm">Đổi trả 30 ngày</p>
+                            <p class="text-xs text-stone-500">Hoàn tiền 100%</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap items-center gap-4 pt-4">
+                    <a href="{% url 'cart_add' product.id %}" 
+                       class="hover-trigger flex-1 min-w-[200px] bg-emerald-900 text-white font-bold py-4 px-8 uppercase tracking-widest text-center hover:bg-emerald-800 transition-colors flex items-center justify-center gap-3 shadow-lg hover:shadow-xl">
+                        <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+                        Thêm vào giỏ
+                    </a>
+                    
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'wishlist_add' product.id %}" 
+                       class="hover-trigger w-14 h-14 border-2 border-stone-300 flex items-center justify-center hover:border-red-500 hover:text-red-500 hover:bg-red-50 transition-all">
+                        <i data-lucide="heart" class="w-6 h-6"></i>
+                    </a>
+                    {% endif %}
+                </div>
+                
+                <!-- Share -->
+                <div class="flex items-center gap-4 text-stone-500 text-sm">
+                    <span class="font-mono uppercase tracking-wider">Share:</span>
+                    <div class="flex gap-3">
+                        <a href="#" class="hover:text-emerald-900 hover-trigger"><i data-lucide="facebook" class="w-5 h-5"></i></a>
+                        <a href="#" class="hover:text-emerald-900 hover-trigger"><i data-lucide="twitter" class="w-5 h-5"></i></a>
+                        <a href="#" class="hover:text-emerald-900 hover-trigger"><i data-lucide="instagram" class="w-5 h-5"></i></a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- RELATED PRODUCTS SECTION (Optional) -->
+<section class="py-16 px-6 bg-white/50">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-12">
+            <span class="text-stone-500 font-mono text-xs uppercase tracking-widest">Khám phá thêm</span>
+            <h2 class="font-art text-4xl font-bold text-emerald-950 mt-2">Sản phẩm liên quan</h2>
+        </div>
+        <div class="text-center">
+            <a href="{% url 'index' %}" class="hover-trigger inline-flex items-center gap-2 bg-emerald-900 text-white px-8 py-3 font-bold uppercase tracking-wider hover:bg-emerald-800 transition-colors">
+                Xem tất cả sản phẩm
+                <i data-lucide="arrow-right" class="w-5 h-5"></i>
+            </a>
+        </div>
+    </div>
+</section>
 {% endblock %}

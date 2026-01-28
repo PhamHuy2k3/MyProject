@@ -204,9 +204,9 @@
                                     <a href="{% url 'wishlist_remove' wishlist.product.id %}" class="bg-red-100 text-red-600 p-1.5 rounded-full hover:bg-red-200 transition-colors">
                                         <i data-lucide="x" class="w-3 h-3"></i>
                                     </a>
-                                    <button class="bg-black text-white p-1.5 rounded-full hover:bg-emerald-600 transition-colors">
+                                    <a href="{% url 'cart_add' wishlist.product.id %}" class="bg-black text-white p-1.5 rounded-full hover:bg-emerald-600 transition-colors">
                                         <i data-lucide="shopping-bag" class="w-3 h-3"></i>
-                                    </button>
+                                    </a>
                                 </div>
                             </div>
                         </div>

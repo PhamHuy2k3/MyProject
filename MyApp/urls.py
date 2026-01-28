@@ -20,6 +20,12 @@ urlpatterns = [
     path('wishlist/add/<int:product_id>/', views.wishlist_add, name='wishlist_add'),
     path('wishlist/remove/<int:product_id>/', views.wishlist_remove, name='wishlist_remove'),
     
+    # Cart
+    path('cart/', views.cart_view, name='cart'),
+    path('cart/add/<int:product_id>/', views.cart_add, name='cart_add'),
+    path('cart/remove/<int:product_id>/', views.cart_remove, name='cart_remove'),
+    path('cart/update/<int:product_id>/', views.cart_update, name='cart_update'),
+    
     # Admin Dashboard
     path('manage/', views.admin_dashboard, name='admin_dashboard'),
     

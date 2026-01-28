@@ -9,7 +9,7 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.template.loader import render_to_string
 
-from .models import Product, StoryboardItem, RawItem, CabinetItem, UserProfile, Order, Wishlist
+from .models import Product, StoryboardItem, RawItem, CabinetItem, UserProfile, Order, Wishlist, Cart, CartItem
 from .forms import ProductForm, StoryboardItemForm, RawItemForm, CabinetItemForm, LoginForm, RegisterForm, UserProfileForm
 
 
@@ -219,6 +219,96 @@ def wishlist_remove(request, product_id):
     Wishlist.objects.filter(user=request.user, product=product).delete()
     messages.success(request, f'Đã xóa "{product.title}" khỏi danh sách yêu thích.')
     return redirect(request.META.get('HTTP_REFERER', 'profile'))
+
+
+# ==================== CART VIEWS ====================
+
+def get_or_create_cart(request):
+    """Lấy hoặc tạo giỏ hàng cho user hoặc guest"""
+    if request.user.is_authenticated:
+        cart, created = Cart.objects.get_or_create(user=request.user)
+    else:
+        # Cho guest users, dùng session
+        if not request.session.session_key:
+            request.session.create()
+        session_key = request.session.session_key
+        cart, created = Cart.objects.get_or_create(session_key=session_key)
+    return cart
+
+
+def cart_view(request):
+    """Xem giỏ hàng"""
+    cart = get_or_create_cart(request)
+    cart_items = cart.items.select_related('product').all()
+    
+    context = {
+        'cart': cart,
+        'cart_items': cart_items,
+    }
+    return render(request, 'cart.html', context)
+
+
+def cart_add(request, product_id):
+    """Thêm sản phẩm vào giỏ hàng"""
+    product = get_object_or_404(Product, id=product_id)
+    cart = get_or_create_cart(request)
+    
+    cart_item, created = CartItem.objects.get_or_create(
+        cart=cart,
+        product=product,
+        defaults={'quantity': 1}
+    )
+    
+    if not created:
+        cart_item.quantity += 1
+        cart_item.save()
+        messages.success(request, f'Đã tăng số lượng "{product.title}" trong giỏ hàng!')
+    else:
+        messages.success(request, f'Đã thêm "{product.title}" vào giỏ hàng!')
+    
+    # Kiểm tra nếu là AJAX request
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        from django.http import JsonResponse
+        return JsonResponse({
+            'success': True,
+            'message': f'Đã thêm "{product.title}" vào giỏ hàng!',
+            'cart_total': cart.get_total_items()
+        })
+    
+    return redirect(request.META.get('HTTP_REFERER', 'index'))
+
+
+def cart_remove(request, product_id):
+    """Xóa sản phẩm khỏi giỏ hàng"""
+    product = get_object_or_404(Product, id=product_id)
+    cart = get_or_create_cart(request)
+    
+    CartItem.objects.filter(cart=cart, product=product).delete()
+    messages.success(request, f'Đã xóa "{product.title}" khỏi giỏ hàng.')
+    
+    return redirect('cart')
+
+
+def cart_update(request, product_id):
+    """Cập nhật số lượng sản phẩm trong giỏ hàng"""
+    if request.method == 'POST':
+        product = get_object_or_404(Product, id=product_id)
+        cart = get_or_create_cart(request)
+        quantity = int(request.POST.get('quantity', 1))
+        
+        try:
+            cart_item = CartItem.objects.get(cart=cart, product=product)
+            if quantity > 0:
+                cart_item.quantity = quantity
+                cart_item.save()
+                messages.success(request, 'Đã cập nhật số lượng.')
+            else:
+                cart_item.delete()
+                messages.success(request, f'Đã xóa "{product.title}" khỏi giỏ hàng.')
+        except CartItem.DoesNotExist:
+            pass
+    
+    return redirect('cart')
 
 
 # ==================== ADMIN DASHBOARD ====================

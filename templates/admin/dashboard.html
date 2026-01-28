@@ -1,0 +1,143 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Tổng quan nội dung website TeaZen{% endblock %}
+
+{% block content %}
+<!-- STATS -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="card p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-stone-500 text-sm">Sản Phẩm</p>
+                <p class="text-3xl font-bold text-stone-800 mt-1">{{ products_count }}</p>
+            </div>
+            <div class="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+                <i data-lucide="package" class="w-6 h-6 text-emerald-600"></i>
+            </div>
+        </div>
+        <a href="{% url 'product_list' %}" class="text-emerald-600 text-sm mt-4 block hover:underline">Xem tất cả →</a>
+    </div>
+    
+    <div class="card p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-stone-500 text-sm">Storyboard</p>
+                <p class="text-3xl font-bold text-stone-800 mt-1">{{ storyboard_count }}</p>
+            </div>
+            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <i data-lucide="film" class="w-6 h-6 text-blue-600"></i>
+            </div>
+        </div>
+        <a href="{% url 'storyboard_list' %}" class="text-blue-600 text-sm mt-4 block hover:underline">Xem tất cả →</a>
+    </div>
+    
+    <div class="card p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-stone-500 text-sm">Raw Gallery</p>
+                <p class="text-3xl font-bold text-stone-800 mt-1">{{ raw_count }}</p>
+            </div>
+            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                <i data-lucide="image" class="w-6 h-6 text-purple-600"></i>
+            </div>
+        </div>
+        <a href="{% url 'raw_list' %}" class="text-purple-600 text-sm mt-4 block hover:underline">Xem tất cả →</a>
+    </div>
+    
+    <div class="card p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-stone-500 text-sm">Cabinet</p>
+                <p class="text-3xl font-bold text-stone-800 mt-1">{{ cabinet_count }}</p>
+            </div>
+            <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                <i data-lucide="archive" class="w-6 h-6 text-amber-600"></i>
+            </div>
+        </div>
+        <a href="{% url 'cabinet_list' %}" class="text-amber-600 text-sm mt-4 block hover:underline">Xem tất cả →</a>
+    </div>
+</div>
+
+<!-- QUICK ACTIONS -->
+<div class="card p-6 mb-8">
+    <h2 class="font-art text-xl font-bold text-stone-800 mb-4">Thêm Nhanh</h2>
+    <div class="flex flex-wrap gap-3">
+        <a href="{% url 'product_create' %}" class="btn-primary inline-flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i> Thêm Sản Phẩm
+        </a>
+        <a href="{% url 'storyboard_create' %}" class="btn-secondary inline-flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i> Thêm Storyboard
+        </a>
+        <a href="{% url 'raw_create' %}" class="btn-secondary inline-flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i> Thêm Raw
+        </a>
+        <a href="{% url 'cabinet_create' %}" class="btn-secondary inline-flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i> Thêm Cabinet
+        </a>
+    </div>
+</div>
+
+<!-- RECENT ITEMS -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Recent Products -->
+    <div class="card p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="font-art text-xl font-bold text-stone-800">Sản Phẩm Gần Đây</h2>
+            <a href="{% url 'product_list' %}" class="text-emerald-600 text-sm hover:underline">Xem tất cả</a>
+        </div>
+        <div class="space-y-3">
+            {% for product in products %}
+            <div class="flex items-center gap-4 p-3 bg-stone-50 rounded-xl">
+                <div class="w-12 h-12 bg-stone-200 rounded-lg overflow-hidden flex-shrink-0">
+                    {% if product.image %}
+                    <img src="{{ product.image.url }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <div class="w-full h-full flex items-center justify-center text-stone-400"><i data-lucide="image" class="w-5 h-5"></i></div>
+                    {% endif %}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-stone-800 truncate">{{ product.title }}</p>
+                    <p class="text-sm text-stone-500">{% if product.price %}{{ product.price }}₫{% else %}Chưa có giá{% endif %}</p>
+                </div>
+                <a href="{% url 'product_edit' product.pk %}" class="text-stone-400 hover:text-emerald-600">
+                    <i data-lucide="edit-2" class="w-4 h-4"></i>
+                </a>
+            </div>
+            {% empty %}
+            <p class="text-stone-500 text-center py-4">Chưa có sản phẩm nào</p>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Recent Storyboard -->
+    <div class="card p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="font-art text-xl font-bold text-stone-800">Storyboard Gần Đây</h2>
+            <a href="{% url 'storyboard_list' %}" class="text-emerald-600 text-sm hover:underline">Xem tất cả</a>
+        </div>
+        <div class="space-y-3">
+            {% for item in storyboard_items %}
+            <div class="flex items-center gap-4 p-3 bg-stone-50 rounded-xl">
+                <div class="w-12 h-12 bg-stone-200 rounded-lg overflow-hidden flex-shrink-0">
+                    {% if item.image %}
+                    <img src="{{ item.image.url }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <div class="w-full h-full flex items-center justify-center text-stone-400"><i data-lucide="image" class="w-5 h-5"></i></div>
+                    {% endif %}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-stone-800 truncate">{{ item.title }}</p>
+                    <p class="text-sm text-stone-500 truncate">{{ item.excerpt }}</p>
+                </div>
+                <a href="{% url 'storyboard_edit' item.pk %}" class="text-stone-400 hover:text-emerald-600">
+                    <i data-lucide="edit-2" class="w-4 h-4"></i>
+                </a>
+            </div>
+            {% empty %}
+            <p class="text-stone-500 text-center py-4">Chưa có storyboard nào</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

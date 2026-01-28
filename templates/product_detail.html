@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.title }} — TeaZen{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-24">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+        <div>
+            <div class="overflow-hidden rounded-[2rem] aspect-[4/5] shadow-2xl"><img src="{% if product.image %}{{ product.image.url }}{% else %}https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?q=80&w=1200&auto=format&fit=crop{% endif %}" class="w-full h-full object-cover"></div>
+        </div>
+        <div class="space-y-6">
+            <h1 class="font-art text-5xl font-bold">{{ product.title }}</h1>
+            <p class="text-stone-600">{{ product.excerpt }}</p>
+            {% if product.price %}
+            <div class="text-3xl font-bold text-emerald-900">{{ product.price }}₫</div>
+            {% endif %}
+            <div class="mt-6 prose max-w-none text-stone-700">{{ product.description|linebreaks }}</div>
+            <div class="mt-8 flex items-center gap-4">
+                <a href="/" class="px-6 py-3 bg-emerald-950 text-white rounded-full font-bold">Back</a>
+                <button class="px-6 py-3 border border-emerald-900 rounded-full font-bold">Add to cart</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

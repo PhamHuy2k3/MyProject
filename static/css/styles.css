@@ -1,0 +1,196 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;300;400;500&display=swap');
+
+:root {
+    --cursor-size: 20px;
+    --cursor-hover-size: 60px;
+    --color-accent: #064e3b;
+    --color-text: #1c1917;
+}
+
+body {
+    font-family: 'Space Grotesk', sans-serif;
+    background-color: #f3f4f1;
+    color: var(--color-text);
+    cursor: none;
+    overflow-x: hidden;
+}
+
+.font-art { font-family: 'Syne', sans-serif; }
+.font-jp { font-family: 'Noto Sans JP', sans-serif; }
+
+/* NOISE TEXTURE */
+.noise-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9998;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* AMBIENT BACKGROUND */
+.ambient-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    background: #f0fdf4;
+}
+.ambient-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.5;
+    animation: float-blob 15s infinite ease-in-out alternate;
+}
+.blob-1 { top: -10%; left: -10%; width: 60vw; height: 60vw; background: #a7f3d0; animation-delay: 0s; }
+.blob-2 { top: 30%; right: -20%; width: 50vw; height: 50vw; background: #fef08a; animation-delay: -5s; }
+.blob-3 { bottom: -10%; left: 10%; width: 50vw; height: 50vw; background: #99f6e4; animation-delay: -10s; }
+
+@keyframes float-blob {
+    0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+    50% { transform: translate(30px, 50px) scale(1.1) rotate(10deg); }
+    100% { transform: translate(-20px, -30px) scale(0.9) rotate(-5deg); }
+}
+
+/* CUSTOM CURSOR */
+#custom-cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--cursor-size);
+    height: var(--cursor-size);
+    border: 1px solid #064e3b;
+    background-color: rgba(6, 78, 59, 0.1);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s, background-color 0.3s, border 0.3s;
+    mix-blend-mode: difference;
+}
+#custom-cursor.hovered {
+    width: var(--cursor-hover-size);
+    height: var(--cursor-hover-size);
+    background-color: #fff;
+    border-color: transparent;
+    mix-blend-mode: difference;
+}
+
+/* MARQUEE */
+.marquee-container { overflow: hidden; white-space: nowrap; position: relative; }
+.marquee-content { display: inline-block; animation: marquee 30s linear infinite; }
+@keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+/* UTILS */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.magnetic-btn { transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+
+/* SCROLL ANIMATIONS */
+.reveal-text-container { overflow: hidden; display: block; }
+.reveal-text-content {
+    transform: translateY(100%);
+    transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 0;
+}
+.in-view .reveal-text-content { transform: translateY(0); opacity: 1; }
+
+.reveal-img-scale {
+    transform: scale(1.1);
+    filter: blur(5px);
+    opacity: 0;
+    transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.in-view .reveal-img-scale { transform: scale(1); filter: blur(0); opacity: 1; }
+
+.fade-up {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.8s ease-out;
+}
+.in-view.fade-up { opacity: 1; transform: translateY(0); }
+
+/* PARALLAX SLIDER */
+.slider-perspective { perspective: 1000px; }
+.slider-container { transform-style: preserve-3d; }
+.slide-card { position: absolute; left: 50%; top: 50%; transition: all 0.8s cubic-bezier(0.165, 0.84, 0.44, 1); }
+.slide-card.active { transform: translate(-50%, -50%) scale(1) translateZ(0); z-index: 20; opacity: 1; box-shadow: 0 40px 80px -20px rgba(16, 185, 129, 0.3); }
+.slide-card.next { transform: translate(15%, -50%) scale(0.85) rotateY(-8deg); z-index: 10; opacity: 0.8; filter: blur(2px) grayscale(20%); }
+.slide-card.prev { transform: translate(-115%, -50%) scale(0.85) rotateY(8deg); z-index: 10; opacity: 0.8; filter: blur(2px) grayscale(20%); }
+.slide-card.hidden-slide { transform: translate(-50%, -50%) scale(0.5); opacity: 0; z-index: 0; pointer-events: none; }
+
+/* FLUID GRADIENT ANIMATION */
+@keyframes gradient-flow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+.animate-gradient-flow { background-size: 300% 300%; animation: gradient-flow 4s ease infinite; }
+
+/* STORYBOARD STYLE */
+.film-strip { display: flex; flex-direction: column; gap: 2rem; }
+.frame-container { position: relative; overflow: hidden; border: 1px solid rgba(0,0,0,0.1); background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(5px); padding: 0.5rem; transition: transform 0.5s ease; }
+.frame-img-wrapper { position: relative; overflow: hidden; aspect-ratio: 16/9; filter: grayscale(100%) contrast(1.1) brightness(1.1); transition: filter 0.5s ease; }
+.frame-container:hover .frame-img-wrapper { filter: grayscale(0%) contrast(1) brightness(1); }
+.frame-meta { font-family: 'Space Grotesk', monospace; font-size: 0.7rem; color: #666; margin-top: 0.5rem; display: flex; justify-content: space-between; opacity: 0.7; }
+.vertical-text { writing-mode: vertical-rl; text-orientation: mixed; }
+
+/* INTRO OVERLAY */
+#intro-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #064e3b; z-index: 10000; display: flex; align-items: center; justify-content: center; transition: opacity 1s ease-out, visibility 1s; color: white; }
+#intro-overlay.fade-out { opacity: 0; visibility: hidden; }
+.falling-leaf { position: absolute; background-repeat: no-repeat; background-size: contain; opacity: 0; pointer-events: none; }
+@keyframes leaf-fall { 0% { transform: translateY(-10vh) rotate(0deg) translateX(0); opacity: 0; } 10% { opacity: 0.8; } 100% { transform: translateY(110vh) rotate(360deg) translateX(20px); opacity: 0; } }
+
+/* --- ORGANIC TREE STYLES --- */
+.organic-tree-container { position: relative; width: 100%; max-width: 1000px; margin: 0 auto; }
+.tree-branch-path { fill: none; stroke: #064e3b; stroke-width: 1.5; stroke-linecap: round; stroke-dasharray: 1000; stroke-dashoffset: 1000; transition: stroke-dashoffset 2s cubic-bezier(0.45, 0, 0.55, 1); }
+.in-view .tree-branch-path { stroke-dashoffset: 0; }
+.leaf-node { opacity: 0; transform: scale(0); transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.in-view .leaf-node { opacity: 1; transform: scale(1); }
+.branch-content { opacity: 0; transform: translateY(20px); transition: all 0.8s ease-out 0.5s; }
+.in-view .branch-content { opacity: 1; transform: translateY(0); }
+
+/* --- HORIZONTAL SCROLL --- */
+.h-scroll-section { position: relative; height: 300vh; }
+.h-scroll-sticky { position: sticky; top: 0; height: 100vh; overflow: hidden; display: flex; align-items: center; }
+.h-scroll-container { display: flex; gap: 4rem; padding-left: 5vw; will-change: transform; }
+.ritual-card { width: 400px; height: 600px; flex-shrink: 0; position: relative; }
+
+/* SPA */
+.page-hidden { display: none; }
+.page-visible { display: block; animation: fadeIn 0.8s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* --- THE DIGITAL ZEN ARTIFACT (3D) --- */
+#artifact-container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    background: radial-gradient(circle at center, #022c22 0%, #000000 100%);
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+#webgl-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+.artifact-content {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    color: #ecfdf5;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+}
+.artifact-content h2 { text-shadow: 0 0 30px rgba(16, 185, 129, 0.5); }

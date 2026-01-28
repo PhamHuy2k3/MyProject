@@ -1,0 +1,15 @@
+[
+  {"model": "MyApp.product", "pk": 1, "fields": {"title": "Ceremonial Blend", "slug": "ceremonial-blend", "excerpt": "A refined ceremonial grade tea.", "image_url": "https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?q=80&w=1200&auto=format&fit=crop", "description": "Ceremonial Blend — hand-picked leaves for mindful brewing.", "price": "120000.00", "created_at": "2024-01-01T00:00:00Z"}},
+  {"model": "MyApp.product", "pk": 2, "fields": {"title": "Mountain Oolong", "slug": "mountain-oolong", "excerpt": "Floral aroma with honey finish.", "image_url": "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1200&auto=format&fit=crop", "description": "Hand-roasted oolong from high elevation.", "price": "85000.00", "created_at": "2024-02-01T00:00:00Z"}},
+
+  {"model": "MyApp.storyboarditem", "pk": 1, "fields": {"title": "The Beginning", "slug": "the-beginning", "image_url": "https://images.unsplash.com/photo-1531980863769-529e84318d87?q=80&w=800", "excerpt": "Origins of the leaf.", "created_at": "2024-01-05T00:00:00Z"}},
+  {"model": "MyApp.storyboarditem", "pk": 2, "fields": {"title": "Harvest", "slug": "harvest", "image_url": "https://images.unsplash.com/photo-1564890369478-c523508a13c1?q=80&w=800", "excerpt": "Picking season.", "created_at": "2024-01-10T00:00:00Z"}},
+  {"model": "MyApp.storyboarditem", "pk": 3, "fields": {"title": "Infusion", "slug": "infusion", "image_url": "https://images.unsplash.com/photo-1627435601361-ec25f5b1d0e5?q=80&w=800", "excerpt": "The art of steeping.", "created_at": "2024-01-15T00:00:00Z"}},
+
+  {"model": "MyApp.rawitem", "pk": 1, "fields": {"title": "Brew Moment", "image_url": "https://images.unsplash.com/photo-1563822249509-33514a81670a?q=80&w=800", "caption": "Community capture.", "created_at": "2024-03-01T00:00:00Z"}},
+  {"model": "MyApp.rawitem", "pk": 2, "fields": {"title": "Steam", "image_url": "https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=800", "caption": "Ritual heat.", "created_at": "2024-03-02T00:00:00Z"}},
+  {"model": "MyApp.rawitem", "pk": 3, "fields": {"title": "Pour", "image_url": "https://images.unsplash.com/photo-1550950158-d0d960dff51b?q=80&w=800", "caption": "The pour.", "created_at": "2024-03-03T00:00:00Z"}},
+
+  {"model": "MyApp.cabinetitem", "pk": 1, "fields": {"title": "Shan Cake", "image_url": "https://images.unsplash.com/photo-1597481499750-3e6b22637e12?q=80&w=800", "note": "Aged pu-erh.", "created_at": "2023-12-01T00:00:00Z"}},
+  {"model": "MyApp.cabinetitem", "pk": 2, "fields": {"title": "Silver Needle", "image_url": "https://images.unsplash.com/photo-1589785243878-3601740954b0?q=80&w=800", "note": "Delicate white tea.", "created_at": "2023-12-10T00:00:00Z"}}
+]

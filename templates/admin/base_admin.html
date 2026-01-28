@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Quản Lý{% endblock %} — TeaZen Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+        .font-art { font-family: 'Playfair Display', serif; }
+        body { font-family: 'Inter', sans-serif; }
+        
+        .form-input {
+            @apply w-full px-4 py-3 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all;
+        }
+        .form-file {
+            @apply w-full px-4 py-3 bg-white border border-stone-200 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer;
+        }
+        .btn-primary {
+            @apply px-6 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200;
+        }
+        .btn-secondary {
+            @apply px-6 py-3 bg-stone-100 text-stone-700 font-semibold rounded-xl hover:bg-stone-200 transition-all;
+        }
+        .btn-danger {
+            @apply px-6 py-3 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 transition-all;
+        }
+        .card {
+            @apply bg-white rounded-2xl shadow-xl shadow-stone-200/50 border border-stone-100;
+        }
+        .sidebar-link {
+            @apply flex items-center gap-3 px-4 py-3 rounded-xl text-stone-600 hover:bg-emerald-50 hover:text-emerald-700 transition-all;
+        }
+        .sidebar-link.active {
+            @apply bg-emerald-50 text-emerald-700 font-semibold;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 min-h-screen">
+    <!-- SIDEBAR -->
+    <aside class="fixed left-0 top-0 w-64 h-full bg-white border-r border-stone-200 p-6 z-40">
+        <a href="/" class="font-art text-2xl font-bold text-emerald-900 block mb-8">TeaZen<span class="text-emerald-500">.</span></a>
+        
+        <nav class="space-y-2">
+            <a href="{% url 'admin_dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                Dashboard
+            </a>
+            <a href="{% url 'product_list' %}" class="sidebar-link {% if 'product' in request.resolver_match.url_name %}active{% endif %}">
+                <i data-lucide="package" class="w-5 h-5"></i>
+                Sản Phẩm
+            </a>
+            <a href="{% url 'storyboard_list' %}" class="sidebar-link {% if 'storyboard' in request.resolver_match.url_name %}active{% endif %}">
+                <i data-lucide="film" class="w-5 h-5"></i>
+                Storyboard
+            </a>
+            <a href="{% url 'raw_list' %}" class="sidebar-link {% if 'raw' in request.resolver_match.url_name %}active{% endif %}">
+                <i data-lucide="image" class="w-5 h-5"></i>
+                Raw Gallery
+            </a>
+            <a href="{% url 'cabinet_list' %}" class="sidebar-link {% if 'cabinet' in request.resolver_match.url_name %}active{% endif %}">
+                <i data-lucide="archive" class="w-5 h-5"></i>
+                Cabinet
+            </a>
+        </nav>
+        
+        <div class="absolute bottom-6 left-6 right-6">
+            <a href="/" class="sidebar-link text-stone-400 hover:text-emerald-600">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                Về Trang Chủ
+            </a>
+        </div>
+    </aside>
+    
+    <!-- MAIN CONTENT -->
+    <main class="ml-64 p-8">
+        <!-- HEADER -->
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="font-art text-3xl font-bold text-stone-800">{% block page_title %}Dashboard{% endblock %}</h1>
+                <p class="text-stone-500 mt-1">{% block page_subtitle %}Quản lý nội dung website{% endblock %}</p>
+            </div>
+            {% block header_actions %}{% endblock %}
+        </header>
+        
+        <!-- MESSAGES -->
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+            <div class="px-4 py-3 rounded-xl {% if message.tags == 'success' %}bg-emerald-50 text-emerald-700 border border-emerald-200{% elif message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200{% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %} flex items-center gap-2">
+                {% if message.tags == 'success' %}<i data-lucide="check-circle" class="w-5 h-5"></i>{% endif %}
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    </main>
+    
+    <script>lucide.createIcons();</script>
+</body>
+</html>

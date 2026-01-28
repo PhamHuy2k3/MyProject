@@ -1,0 +1,86 @@
+{% extends 'auth/base_auth.html' %}
+
+{% block title %}Đăng Nhập - TeaZen{% endblock %}
+
+{% block content %}
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-full max-w-md px-4">
+    
+    <!-- Back Button -->
+    <a href="{% url 'index' %}" class="hover-trigger absolute -top-16 left-4 flex items-center gap-2 text-emerald-900 font-bold hover:underline decoration-2 underline-offset-4 transition-all">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i> Quay lại
+    </a>
+
+    <!-- The Paper Form -->
+    <div class="relative bg-[#fff] p-8 md:p-12 shadow-2xl border border-stone-200 rotate-1 transition-transform duration-300 hover:rotate-0">
+        <div class="tape -top-5 left-1/2 -translate-x-1/2 rotate-1"></div>
+        
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="font-art text-4xl font-bold text-emerald-950 mb-2">Xin Chào.</div>
+            <p class="text-stone-500 text-sm font-mono tracking-tighter">MEMBER ACCESS / ID: 2024</p>
+            <div class="w-12 h-1 bg-emerald-900 mx-auto mt-4"></div>
+        </div>
+
+        <!-- Error Messages -->
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 text-sm font-medium">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if form.non_field_errors %}
+        <div class="mb-6 bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 text-sm font-medium">
+            {% for error in form.non_field_errors %}
+                {{ error }}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Form -->
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="input-group">
+                <input type="text" name="username" class="input-field hover-trigger {% if form.username.errors %}error{% endif %}" placeholder=" " value="{{ form.username.value|default:'' }}" required>
+                <label class="input-label">Tên đăng nhập</label>
+                {% if form.username.errors %}<p class="text-red-500 text-xs mt-1">{{ form.username.errors.0 }}</p>{% endif %}
+            </div>
+            
+            <div class="input-group">
+                <input type="password" name="password" class="input-field hover-trigger {% if form.password.errors %}error{% endif %}" placeholder=" " required>
+                <label class="input-label">Mật khẩu</label>
+                {% if form.password.errors %}<p class="text-red-500 text-xs mt-1">{{ form.password.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div class="flex justify-between items-center mb-8 text-xs font-bold text-stone-600">
+                <label class="flex items-center gap-2 cursor-pointer hover-trigger">
+                    <input type="checkbox" name="remember" class="w-4 h-4 accent-emerald-900">
+                    <span>Ghi nhớ</span>
+                </label>
+                <a href="{% url 'password_reset' %}" class="hover:text-emerald-900 hover:underline">Quên mật khẩu?</a>
+            </div>
+
+            <button type="submit" class="hover-trigger w-full bg-emerald-900 text-white font-bold py-4 uppercase tracking-[0.2em] text-xs brutal-btn border-2 border-emerald-950 hover:bg-emerald-800 transition-colors">
+                Đăng Nhập
+            </button>
+        </form>
+
+        <!-- Footer -->
+        <div class="mt-8 pt-6 border-t-2 border-dashed border-stone-200 text-center">
+            <p class="text-stone-500 text-sm">Chưa có tài khoản? 
+                <a href="{% url 'register' %}" class="text-emerald-900 font-bold hover:underline">Đăng ký ngay</a>
+            </p>
+        </div>
+        
+        <!-- Decorative Stamps -->
+        <div class="absolute -right-8 top-10 w-16 h-16 rounded-full border-2 border-emerald-800 text-emerald-800 flex items-center justify-center font-bold text-[10px] uppercase rotate-12 opacity-80 mix-blend-multiply bg-[#f2f0ec] hidden md:flex">
+            Premium<br>Quality
+        </div>
+        <i data-lucide="flower" class="absolute -bottom-6 -left-6 w-12 h-12 text-pink-300 rotate-45 mix-blend-multiply opacity-80"></i>
+    </div>
+</div>
+{% endblock %}

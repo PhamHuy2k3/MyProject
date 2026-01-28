@@ -1,0 +1,46 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}Quản Lý Raw Gallery{% endblock %}
+{% block page_subtitle %}{{ items.count }} mục{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'raw_create' %}" class="btn-primary inline-flex items-center gap-2">
+    <i data-lucide="plus" class="w-4 h-4"></i> Thêm Raw
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    {% for item in items %}
+    <div class="card overflow-hidden group relative">
+        <div class="aspect-[3/4] bg-stone-200 overflow-hidden">
+            {% if item.image %}
+            <img src="{{ item.image.url }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+            {% else %}
+            <div class="w-full h-full flex items-center justify-center text-stone-400">
+                <i data-lucide="image" class="w-8 h-8"></i>
+            </div>
+            {% endif %}
+        </div>
+        <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="absolute bottom-0 left-0 right-0 p-4 text-white">
+                <h3 class="font-semibold mb-1">{{ item.title }}</h3>
+                <p class="text-sm text-white/70">{{ item.caption }}</p>
+                <div class="flex gap-2 mt-3">
+                    <a href="{% url 'raw_edit' item.pk %}" class="flex-1 text-center py-2 bg-white/20 backdrop-blur rounded-lg hover:bg-white/30 transition-all text-sm">Sửa</a>
+                    <a href="{% url 'raw_delete' item.pk %}" class="py-2 px-3 bg-white/20 backdrop-blur rounded-lg hover:bg-red-500 transition-all">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-span-full card p-12 text-center">
+        <i data-lucide="image" class="w-12 h-12 mx-auto mb-4 text-stone-300"></i>
+        <p class="text-stone-500">Chưa có raw item nào</p>
+        <a href="{% url 'raw_create' %}" class="text-emerald-600 hover:underline mt-2 inline-block">Thêm raw đầu tiên →</a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

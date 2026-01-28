@@ -1,0 +1,128 @@
+{% extends 'auth/base_auth.html' %}
+
+{% block title %}Chỉnh sửa thông tin - TeaZen{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .page-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        width: 100%;
+        padding: 2rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- BACKGROUND TYPOGRAPHY -->
+<div class="fixed top-[5%] right-[-2%] font-art text-[25vw] font-bold text-emerald-900/5 select-none leading-none z-0">EDIT</div>
+<div class="fixed bottom-[-5%] left-[-5%] font-art text-[25vw] font-bold text-emerald-900/5 select-none leading-none z-0">YOU</div>
+
+<!-- EDIT PROFILE FORM -->
+<div class="page-container relative z-10">
+    <div class="relative w-full max-w-lg">
+        <!-- Back Button -->
+        <a href="{% url 'profile' %}" class="hover-trigger absolute -top-12 left-0 md:-left-12 flex items-center gap-2 text-emerald-900 font-bold hover:underline decoration-2 underline-offset-4 transition-all z-20">
+            <i data-lucide="arrow-left" class="w-5 h-5"></i> Quay lại
+        </a>
+
+        <!-- The Paper Form -->
+        <div class="relative bg-[#fff] p-8 md:p-12 shadow-2xl border border-stone-200 -rotate-1 transition-transform duration-300 hover:rotate-0">
+            <!-- Tape holding the form -->
+            <div class="tape -top-5 right-20 rotate-2"></div>
+            <div class="tape -bottom-5 left-20 -rotate-1"></div>
+            
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="font-art text-4xl font-bold text-emerald-950 mb-2">Chỉnh sửa.</div>
+                <p class="text-stone-500 text-sm font-mono tracking-tighter">EDIT YOUR PROFILE</p>
+                <div class="w-12 h-1 bg-emerald-900 mx-auto mt-4"></div>
+            </div>
+
+            <!-- Avatar Preview -->
+            <div class="flex justify-center mb-8">
+                <div class="relative">
+                    <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-emerald-900 shadow-lg">
+                        {% if profile.avatar %}
+                        <img src="{{ profile.avatar.url }}" class="w-full h-full object-cover" id="avatar-preview">
+                        {% else %}
+                        <div class="w-full h-full flex items-center justify-center bg-emerald-100" id="avatar-preview-container">
+                            <i data-lucide="user" class="w-12 h-12 text-emerald-300"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <label for="id_avatar" class="absolute -bottom-2 -right-2 bg-emerald-900 text-white p-2 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer hover-trigger">
+                        <i data-lucide="camera" class="w-4 h-4"></i>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <!-- Hidden file input -->
+                <input type="file" name="avatar" id="id_avatar" class="hidden" accept="image/*">
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="input-group">
+                        <input type="text" name="first_name" class="input-field hover-trigger" placeholder=" " value="{{ request.user.first_name }}" required>
+                        <label class="input-label">Họ</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" name="last_name" class="input-field hover-trigger" placeholder=" " value="{{ request.user.last_name }}" required>
+                        <label class="input-label">Tên</label>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <input type="text" name="bio" class="input-field hover-trigger" placeholder=" " value="{{ profile.bio }}">
+                    <label class="input-label">Giới thiệu ngắn</label>
+                </div>
+
+                <div class="input-group">
+                    <input type="tel" name="phone" class="input-field hover-trigger" placeholder=" " value="{{ profile.phone }}">
+                    <label class="input-label">Số điện thoại</label>
+                </div>
+
+                <div class="input-group">
+                    <textarea name="address" class="input-field hover-trigger resize-none" rows="3" placeholder=" ">{{ profile.address }}</textarea>
+                    <label class="input-label">Địa chỉ</label>
+                </div>
+
+                <button type="submit" class="hover-trigger w-full bg-emerald-900 text-white font-bold py-4 uppercase tracking-[0.2em] text-xs brutal-btn border-2 border-emerald-950 hover:bg-emerald-800 transition-colors">
+                    Lưu thay đổi
+                </button>
+            </form>
+
+            <!-- Decorative -->
+            <div class="absolute -left-6 top-20 w-20 h-20 rounded-full border-2 border-dashed border-emerald-800 text-emerald-800 flex items-center justify-center font-bold text-[10px] uppercase -rotate-12 opacity-60 mix-blend-multiply bg-[#f2f0ec] hidden md:flex">
+                Your<br>Profile
+            </div>
+            <i data-lucide="sparkle" class="absolute -top-4 -right-4 w-10 h-10 text-yellow-500 rotate-12 mix-blend-multiply opacity-80 animate-pulse"></i>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Preview avatar when file selected
+    document.getElementById('id_avatar').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('avatar-preview');
+                const container = document.getElementById('avatar-preview-container');
+                if (preview && preview.tagName === 'IMG') {
+                    preview.src = e.target.result;
+                } else if (container) {
+                    container.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover" id="avatar-preview">`;
+                }
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+</script>
+{% endblock %}

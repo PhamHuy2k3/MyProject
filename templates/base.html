@@ -1,0 +1,26 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TeaZen - Digital Tea Artistry{% endblock %}</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Three.js (For 3D Effects) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body class="selection:bg-emerald-900 selection:text-white">
+    {% block content %}{% endblock %}
+
+    {% block json_data %}{% endblock %}
+    <script src="{% static 'js/main.js' %}"></script>
+</body>
+</html>

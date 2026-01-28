@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TeaZen{% endblock %}</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;300;400;500&display=swap');
+        
+        :root {
+            --cursor-size: 20px;
+            --cursor-hover-size: 60px;
+        }
+
+        body { 
+            font-family: 'Space Grotesk', sans-serif; 
+            color: #1c1917;
+            cursor: none;
+            overflow-x: hidden;
+            overflow-y: auto;
+            min-height: 100vh;
+            width: 100vw;
+            background-color: #f2f0ec;
+            position: relative;
+        }
+        
+        .font-art { font-family: 'Syne', sans-serif; }
+        .font-jp { font-family: 'Noto Sans JP', sans-serif; }
+
+        .noise-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 0; opacity: 0.08;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        #custom-cursor {
+            position: fixed; top: 0; left: 0; width: var(--cursor-size); height: var(--cursor-size);
+            border: 1px solid #064e3b; background-color: rgba(6, 78, 59, 0.1);
+            border-radius: 50%; pointer-events: none; z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s, background-color 0.3s, border 0.3s;
+            mix-blend-mode: difference;
+        }
+        #custom-cursor.hovered {
+            width: var(--cursor-hover-size); height: var(--cursor-hover-size);
+            background-color: #fff; border-color: transparent;
+        }
+
+        @keyframes float-slow {
+            0%, 100% { transform: translateY(0) rotate(var(--rot)); }
+            50% { transform: translateY(-20px) rotate(calc(var(--rot) + 2deg)); }
+        }
+        
+        .floating-item { animation: float-slow 8s ease-in-out infinite; }
+
+        .tape {
+            position: absolute; width: 120px; height: 35px;
+            background-color: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(2px);
+            border-left: 1px solid rgba(255,255,255,0.8);
+            border-right: 1px solid rgba(255,255,255,0.8);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        .input-group { position: relative; margin-bottom: 1.5rem; }
+        .input-field {
+            width: 100%; background: #fbfaf9;
+            border: 2px solid #e7e5e4;
+            padding: 15px; font-size: 1rem; color: #064e3b;
+            font-family: 'Space Grotesk', sans-serif;
+            outline: none; transition: all 0.3s;
+            box-shadow: 4px 4px 0 #e7e5e4;
+        }
+        .input-field:focus { 
+            border-color: #064e3b; 
+            box-shadow: 4px 4px 0 #064e3b;
+            transform: translate(-2px, -2px);
+        }
+        .input-field.error {
+            border-color: #dc2626;
+            box-shadow: 4px 4px 0 #dc2626;
+        }
+        .input-label {
+            position: absolute; left: 15px; top: 15px;
+            color: #78716c; transition: all 0.3s ease;
+            pointer-events: none; font-weight: 500;
+        }
+        .input-field:focus ~ .input-label,
+        .input-field:not(:placeholder-shown) ~ .input-label {
+            transform: translateY(-28px); font-size: 0.75rem; color: #064e3b; font-weight: 700; letter-spacing: 1px;
+        }
+
+        .brutal-btn { 
+            transition: transform 0.1s; 
+            box-shadow: 6px 6px 0 #064e3b;
+        }
+        .brutal-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 2px 2px 0 #064e3b;
+        }
+    </style>
+    {% block extra_styles %}{% endblock %}
+</head>
+<body>
+
+    <div class="noise-overlay"></div>
+    <div id="custom-cursor"></div>
+
+    <!-- BACKGROUND TYPOGRAPHY -->
+    <div class="absolute top-[-5%] left-[-5%] font-art text-[25vw] font-bold text-emerald-900/5 select-none leading-none z-0">TEA</div>
+    <div class="absolute bottom-[-10%] right-[-5%] font-art text-[25vw] font-bold text-emerald-900/5 select-none leading-none z-0">ZEN</div>
+    <div class="absolute top-1/2 left-10 -translate-y-1/2 font-jp text-9xl font-thin text-stone-900/5 select-none writing-vertical z-0">茶道</div>
+
+    <!-- SCATTERED IMAGES -->
+    <div class="floating-item absolute top-10 right-[15%] w-64 aspect-[3/4] z-0 shadow-xl border-4 border-white rotate-6 hover:z-20 hover:scale-105 transition-all duration-500 hidden lg:block" style="--rot: 6deg;">
+        <div class="tape -top-4 left-1/2 -translate-x-1/2 -rotate-3"></div>
+        <img src="https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?q=80&w=800" class="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500">
+        <div class="absolute bottom-0 bg-white w-full p-2 text-center font-mono text-xs">Fig 01. Infusion</div>
+    </div>
+
+    <div class="floating-item absolute bottom-10 left-[10%] w-72 aspect-square z-0 shadow-xl border-4 border-white -rotate-3 hover:z-20 hover:scale-105 transition-all duration-500 hidden lg:block" style="--rot: -3deg;">
+        <div class="tape -top-4 left-1/2 -translate-x-1/2 rotate-2"></div>
+        <img src="https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=800" class="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500">
+        <span class="absolute -right-6 -bottom-6 bg-yellow-300 text-black font-bold px-3 py-1 rounded-full text-xs shadow-md rotate-12">#Organic</span>
+    </div>
+
+    {% block content %}{% endblock %}
+
+    <script>
+        const cursor = document.getElementById('custom-cursor');
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        });
+
+        document.querySelectorAll('.hover-trigger, button, input, a').forEach(trigger => {
+            trigger.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
+            trigger.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+        });
+        
+        lucide.createIcons();
+    </script>
+</body>
+</html>

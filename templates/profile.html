@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Trang Cá Nhân - TeaZen{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .font-hand { font-family: 'Reenie Beanie', cursive; }
+    
+    /* Receipt Style */
+    .receipt {
+        background: #fff;
+        padding: 2rem;
+        position: relative;
+        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+    }
+    .receipt::after {
+        content: "";
+        position: absolute; left: 0; bottom: -10px; width: 100%; height: 20px;
+        background: radial-gradient(circle, transparent 70%, #fff 70%) 0 0/20px 20px repeat-x;
+        transform: rotate(180deg);
+    }
+
+    /* Member Card Texture */
+    .member-card-bg {
+        background: radial-gradient(circle at top right, #34d399, #064e3b);
+        position: relative; overflow: hidden;
+    }
+    .member-card-bg::before {
+        content: ""; position: absolute; inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    
+    /* Tape effect */
+    .tape {
+        position: absolute; width: 100px; height: 30px;
+        background-color: rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(2px);
+        border-left: 1px solid rgba(255,255,255,0.8);
+        border-right: 1px solid rgba(255,255,255,0.8);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        z-index: 10;
+    }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Reenie+Beanie&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<!-- HEADER / NAVIGATION -->
+<nav class="fixed top-0 w-full p-6 flex justify-between items-center z-50 mix-blend-difference text-stone-800">
+    <a href="{% url 'index' %}" class="hover-trigger font-art text-xl font-bold flex items-center gap-2">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i> Trang chủ
+    </a>
+    <div class="font-mono text-xs tracking-widest uppercase">Xin chào: {{ profile.get_full_name }}</div>
+</nav>
+
+<!-- BACKGROUND DECORATIONS -->
+<div class="fixed top-20 right-[10%] text-9xl font-jp font-thin text-stone-200 select-none -z-10 writing-vertical">会員</div>
+<div class="fixed bottom-10 left-[5%] font-art text-[15vw] font-bold text-emerald-900/5 select-none -z-10 leading-none">PROFILE</div>
+
+<!-- MAIN CONTENT GRID -->
+<div class="container mx-auto px-6 pt-24 pb-12">
+    
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        
+        <!-- LEFT COLUMN: IDENTITY (Polaroid & Card) -->
+        <div class="lg:col-span-4 space-y-12 lg:sticky lg:top-24">
+            
+            <!-- 1. Polaroid Avatar -->
+            <div class="relative w-64 mx-auto group">
+                <div class="tape -top-4 left-1/2 -translate-x-1/2 -rotate-3"></div>
+                <div class="bg-white p-3 pb-10 shadow-xl transform rotate-2 transition-transform duration-500 group-hover:rotate-0 hover-trigger">
+                    <div class="aspect-square bg-gray-200 overflow-hidden filter sepia-[0.2]">
+                        {% if profile.avatar %}
+                        <img src="{{ profile.avatar.url }}" class="w-full h-full object-cover">
+                        {% else %}
+                        <div class="w-full h-full flex items-center justify-center bg-emerald-100">
+                            <i data-lucide="user" class="w-24 h-24 text-emerald-300"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="mt-4 text-center">
+                        <h2 class="font-art text-2xl font-bold text-stone-800">{{ profile.get_full_name }}</h2>
+                        <p class="font-hand text-xl text-stone-500 -mt-1 transform -rotate-2">{{ profile.bio }} since {{ profile.member_since|date:"Y" }}</p>
+                    </div>
+                </div>
+                <!-- Edit Pencil -->
+                <a href="{% url 'profile_edit' %}" class="absolute -bottom-4 -right-4 bg-emerald-900 text-white p-3 rounded-full shadow-lg hover:scale-110 transition-transform hover-trigger">
+                    <i data-lucide="pen-tool" class="w-5 h-5"></i>
+                </a>
+            </div>
+
+            <!-- 2. Membership Card -->
+            <div class="relative w-full max-w-sm mx-auto perspective-1000 group">
+                <div class="member-card-bg w-full aspect-[1.586/1] rounded-2xl shadow-2xl p-6 flex flex-col justify-between text-white transform transition-transform duration-700 hover:rotate-y-12 hover:rotate-x-12 hover-trigger cursor-pointer">
+                    <div class="flex justify-between items-start">
+                        <span class="font-art font-bold text-xl tracking-tighter">TeaZen.</span>
+                        <i data-lucide="leaf" class="w-6 h-6 opacity-80"></i>
+                    </div>
+                    <div>
+                        <div class="font-mono text-sm opacity-70 tracking-widest mb-1">{{ profile.membership_number }}</div>
+                        <div class="flex justify-between items-end">
+                            <div>
+                                <div class="text-[10px] uppercase opacity-60 tracking-wider">Member</div>
+                                <div class="font-bold text-lg tracking-wide uppercase">{{ profile.get_full_name }}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[10px] uppercase opacity-60 tracking-wider">Level</div>
+                                <div class="font-art font-bold text-lg text-yellow-300">{{ profile.get_membership_level_display }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Shine effect -->
+                    <div class="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl"></div>
+                </div>
+            </div>
+
+            <!-- 3. Mini Stats (Post-it notes) -->
+            <div class="flex justify-center gap-4 flex-wrap">
+                <div class="bg-[#fef3c7] p-4 w-28 h-28 shadow-md rotate-[-2deg] flex flex-col justify-center items-center text-center hover-trigger transform hover:scale-105 transition-transform cursor-pointer">
+                    <div class="font-art text-3xl font-bold text-emerald-900">{{ total_orders }}</div>
+                    <div class="font-hand text-lg text-stone-600 leading-none">Đơn hàng</div>
+                </div>
+                <div class="bg-[#dcfce7] p-4 w-28 h-28 shadow-md rotate-[3deg] flex flex-col justify-center items-center text-center hover-trigger transform hover:scale-105 transition-transform cursor-pointer">
+                    <div class="font-art text-3xl font-bold text-emerald-900">{{ profile.points }}</div>
+                    <div class="font-hand text-lg text-stone-600 leading-none">Điểm</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: DASHBOARD (Receipts & Tickets) -->
+        <div class="lg:col-span-8 space-y-12">
+            
+            <!-- Section Title -->
+            <div class="relative">
+                <h2 class="font-art text-5xl font-bold text-emerald-950">Hoạt động.</h2>
+                <i data-lucide="sparkle" class="absolute -top-4 -left-8 w-8 h-8 text-yellow-500 animate-pulse"></i>
+            </div>
+
+            <!-- 1. Order History (Receipt Style) -->
+            <div class="relative group">
+                <div class="tape -top-3 left-1/2 -translate-x-1/2 rotate-1"></div>
+                <div class="receipt rotate-[-1deg] transition-transform duration-300 hover:rotate-0">
+                    <div class="text-center border-b-2 border-dashed border-stone-300 pb-4 mb-4">
+                        <h3 class="font-mono font-bold text-xl uppercase tracking-widest">Lịch sử đơn hàng</h3>
+                        <p class="text-xs text-stone-500">Cảm ơn bạn đã ủng hộ TeaZen</p>
+                    </div>
+                    
+                    <div class="space-y-4 font-mono text-sm">
+                        {% for order in orders %}
+                        <div class="flex justify-between items-center hover:bg-stone-50 p-2 rounded hover-trigger cursor-pointer {% if forloop.counter > 2 %}opacity-60{% endif %}">
+                            <div>
+                                <div class="font-bold">#{{ order.order_number }}</div>
+                                <div class="text-stone-500 text-xs">{{ order.created_at|date:"d/m/Y" }} • {{ order.get_status_display }}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold">{{ order.total_amount|floatformat:0 }}₫</div>
+                                <div class="text-emerald-600 text-xs">{{ order.items.count }} sản phẩm</div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-8 text-stone-500">
+                            <i data-lucide="package" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
+                            <p>Bạn chưa có đơn hàng nào</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t-2 border-dashed border-stone-300 text-center">
+                        <button class="font-mono text-xs uppercase underline hover:text-emerald-600 hover-trigger">Xem tất cả</button>
+                        <div class="mt-2">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Barcode.svg/1200px-Barcode.svg.png" class="h-8 mx-auto opacity-40">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Wishlist / Favorites (Ticket Stubs) -->
+            <div>
+                <div class="flex justify-between items-end mb-6">
+                    <h3 class="font-art text-3xl font-bold text-stone-800">Yêu thích</h3>
+                    <span class="font-hand text-xl text-stone-500 transform -rotate-3">Đã lưu để xem sau...</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {% for wishlist in wishlists %}
+                    <div class="relative bg-white p-4 shadow-lg border-l-4 border-emerald-900 flex gap-4 items-center hover-trigger cursor-pointer group hover:-translate-y-1 transition-transform">
+                        <div class="w-20 h-20 bg-gray-100 flex-shrink-0 overflow-hidden">
+                            {% if wishlist.product.image %}
+                            <img src="{{ wishlist.product.image.url }}" class="w-full h-full object-cover group-hover:scale-110 transition-transform">
+                            {% else %}
+                            <div class="w-full h-full flex items-center justify-center bg-emerald-50">
+                                <i data-lucide="leaf" class="w-8 h-8 text-emerald-200"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow">
+                            <h4 class="font-bold font-art text-lg leading-none">{{ wishlist.product.title }}</h4>
+                            <p class="text-xs text-stone-500 mt-1 uppercase tracking-wider">{{ wishlist.product.excerpt|truncatechars:20 }}</p>
+                            <div class="flex justify-between items-center mt-2">
+                                <span class="font-mono font-bold">{{ wishlist.product.price|floatformat:0 }}₫</span>
+                                <div class="flex gap-2">
+                                    <a href="{% url 'wishlist_remove' wishlist.product.id %}" class="bg-red-100 text-red-600 p-1.5 rounded-full hover:bg-red-200 transition-colors">
+                                        <i data-lucide="x" class="w-3 h-3"></i>
+                                    </a>
+                                    <button class="bg-black text-white p-1.5 rounded-full hover:bg-emerald-600 transition-colors">
+                                        <i data-lucide="shopping-bag" class="w-3 h-3"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Punch hole effect -->
+                        <div class="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-[#f2f0ec] rounded-full shadow-inner"></div>
+                    </div>
+                    {% empty %}
+                    <div class="col-span-2 text-center py-8 text-stone-500 bg-white rounded-lg shadow">
+                        <i data-lucide="heart" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
+                        <p>Bạn chưa có sản phẩm yêu thích nào</p>
+                        <a href="{% url 'index' %}" class="inline-block mt-4 text-emerald-600 font-bold hover:underline">Khám phá ngay</a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- 3. Account Settings (Handwritten List) -->
+            <div class="bg-[#fff9c4] p-8 shadow-md rotate-1 max-w-md mx-auto md:mx-0 relative">
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-400 shadow-sm border border-red-500"></div>
+                <h3 class="font-hand text-3xl font-bold text-stone-800 mb-4 underline decoration-wavy decoration-emerald-500">Cài đặt tài khoản:</h3>
+                <ul class="space-y-2 font-hand text-xl text-stone-700">
+                    <li class="hover:text-emerald-800 cursor-pointer hover-trigger group">
+                        <a href="{% url 'profile_edit' %}" class="flex items-center gap-2">
+                            <div class="w-4 h-4 border border-stone-800 rounded-sm group-hover:bg-emerald-800"></div>
+                            <span>Chỉnh sửa thông tin cá nhân</span>
+                        </a>
+                    </li>
+                    <li class="flex items-center gap-2 hover:text-emerald-800 cursor-pointer hover-trigger group">
+                        <div class="w-4 h-4 border border-stone-800 rounded-sm group-hover:bg-emerald-800"></div>
+                        <span>Quản lý địa chỉ</span>
+                    </li>
+                    <li class="flex items-center gap-2 hover:text-emerald-800 cursor-pointer hover-trigger group">
+                        <div class="w-4 h-4 border border-stone-800 rounded-sm group-hover:bg-emerald-800"></div>
+                        <span>Phương thức thanh toán</span>
+                    </li>
+                    <li class="mt-4">
+                        <a href="{% url 'logout' %}" class="flex items-center gap-2 text-red-600 cursor-pointer hover-trigger group">
+                            <i data-lucide="log-out" class="w-4 h-4"></i>
+                            <span>Đăng xuất</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

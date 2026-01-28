@@ -1,12 +1,373 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to My Project</title>
-</head>
-<body>
-    <h1>Welcome to My Django Project!</h1>
-    <p>Your template is working correctly.</p>
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% block title %}TeaZen - Digital Tea Artistry{% endblock %}
+
+{% block content %}
+    <!-- AMBIENT BACKGROUND -->
+    <div class="ambient-bg">
+        <div class="ambient-blob blob-1"></div>
+        <div class="ambient-blob blob-2"></div>
+        <div class="ambient-blob blob-3"></div>
+    </div>
+
+    <!-- OVERLAYS -->
+    <div class="noise-overlay"></div>
+    <div id="custom-cursor"></div>
+    
+    <!-- INTRO OVERLAY -->
+    <div id="intro-overlay">
+        <div class="text-center z-50">
+            <div class="font-art text-6xl md:text-9xl font-bold tracking-tighter text-[#dcfce7] flex items-center justify-center gap-4">
+                <i data-lucide="leaf" class="w-16 h-16 fill-current"></i> TeaZen<span class="text-emerald-500">.</span>
+            </div>
+            <p class="text-emerald-200/60 mt-4 font-mono tracking-[0.3em] text-sm uppercase">Digital Tea Artistry</p>
+        </div>
+    </div>
+
+    <!-- NAVBAR (Contained) -->
+    <nav class="fixed top-6 left-0 w-full z-50 px-6 mix-blend-difference text-white">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <a onclick="navigateTo('home')" class="font-art text-2xl font-bold tracking-tighter hover-trigger cursor-pointer">TeaZen.</a>
+            <div class="hidden md:flex gap-12 text-sm font-medium uppercase tracking-widest">
+                <button onclick="navigateTo('home')" class="hover-trigger group relative">Home<span class="absolute -bottom-1 left-0 w-0 h-[1px] bg-white transition-all group-hover:w-full"></span></button>
+                <button onclick="navigateTo('story')" class="hover-trigger group relative">Story<span class="absolute -bottom-1 left-0 w-0 h-[1px] bg-white transition-all group-hover:w-full"></span></button>
+                <button class="hover-trigger group relative">Shop<span class="absolute -bottom-1 left-0 w-0 h-[1px] bg-white transition-all group-hover:w-full"></span></button>
+                {% if user.is_staff or user.is_superuser %}
+                <a href="{% url 'admin_dashboard' %}" class="hover-trigger group relative">Quản Lý<span class="absolute -bottom-1 left-0 w-0 h-[1px] bg-white transition-all group-hover:w-full"></span></a>
+                {% endif %}
+            </div>
+            <div class="flex items-center gap-4">
+                {% if user.is_authenticated %}
+                <a href="{% url 'profile' %}" class="hover-trigger text-xs font-medium hidden md:inline hover:underline">{{ user.first_name|default:user.username }}</a>
+                <a href="{% url 'logout' %}" class="hover-trigger flex items-center gap-2 border border-white/30 rounded-full px-4 py-2 hover:bg-white hover:text-black transition-all">
+                    <span class="text-xs font-bold uppercase">Đăng xuất</span>
+                </a>
+                {% else %}
+                <a href="{% url 'login' %}" class="hover-trigger flex items-center gap-2 border border-white/30 rounded-full px-4 py-2 hover:bg-white hover:text-black transition-all">
+                    <span class="text-xs font-bold uppercase">Đăng nhập</span>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <!-- PAGE 1: HOME PAGE -->
+        <div id="page-home" class="page-visible">
+            
+            <!-- 1. HERO SECTION -->
+            <section class="relative min-h-screen w-full overflow-hidden flex flex-col justify-center px-6 pt-20 bg-transparent">
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full text-center opacity-[0.03] pointer-events-none select-none">
+                    <h1 class="font-art text-[20vw] leading-none font-bold text-emerald-900">PURE</h1>
+                </div>
+                <div class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
+                    <div class="lg:col-span-7 space-y-8">
+                        <h1 class="font-art text-6xl md:text-8xl lg:text-[7rem] leading-[0.9] font-bold text-emerald-950">
+                            <span class="reveal-text-container"><span class="reveal-text-content block" style="transition-delay: 0.1s">Nature's</span></span>
+                            <span class="reveal-text-container"><span class="reveal-text-content block italic font-light ml-12 text-emerald-800" style="transition-delay: 0.2s">Finest</span></span>
+                            <span class="reveal-text-container"><span class="reveal-text-content block text-right mr-12" style="transition-delay: 0.3s">Brew</span></span>
+                        </h1>
+                        <div class="flex flex-col md:flex-row gap-8 items-start md:items-center pl-2 pt-8 fade-up" style="transition-delay: 0.5s">
+                            <p class="max-w-xs text-sm leading-relaxed text-stone-600 font-medium">[01] — Nghệ thuật thưởng trà hiện đại. Sự kết hợp hoàn hảo giữa truyền thống và phong cách sống tối giản.</p>
+                            <button onclick="navigateTo('story')" class="hover-trigger magnetic-btn group relative px-8 py-4 bg-emerald-950 text-[#f3f4f1] rounded-full overflow-hidden cursor-pointer">
+                                <span class="relative z-10 font-bold uppercase text-xs tracking-widest group-hover:text-emerald-950 transition-colors">Khám Phá</span>
+                                <div class="absolute inset-0 bg-[#dcfce7] transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300 ease-out"></div>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-5 relative mt-12 lg:mt-0 fade-up" style="transition-delay: 0.6s">
+                        <div class="w-full aspect-[3/4] md:aspect-[4/5] overflow-hidden rounded-t-[10rem] rounded-b-[2rem] relative shadow-2xl">
+                            <img src="https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?q=80&w=1200&auto=format&fit=crop" class="w-full h-full object-cover reveal-img-scale" alt="Tea Pour">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. MARQUEE -->
+            <section class="py-12 border-y border-emerald-900/10 bg-emerald-950 text-[#dcfce7] overflow-hidden rotate-[-1deg] scale-105 my-12 shadow-xl">
+                <div class="marquee-container">
+                    <div class="marquee-content font-art text-4xl md:text-6xl font-bold uppercase tracking-tighter opacity-80">
+                        Premium Quality — Hand Picked — 100% Organic — Mindful Living — Sustainable — Premium Quality — Hand Picked — 100% Organic — Mindful Living —
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. SLIDER -->
+            <section class="py-32 overflow-hidden relative bg-white/30 backdrop-blur-sm scroll-section" id="slider-section">
+                <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/rice-paper.png')] opacity-20"></div>
+                <div class="px-6 mb-20 flex flex-col items-center max-w-7xl mx-auto relative z-10">
+                    <span class="text-emerald-600 font-bold tracking-widest text-xs uppercase mb-2 block fade-up">[ Selection ]</span>
+                    <h2 class="font-art text-5xl md:text-6xl font-bold text-emerald-950 text-center">
+                        <span class="reveal-text-container"><span class="reveal-text-content block">Masterpiece</span></span>
+                        <span class="reveal-text-container"><span class="reveal-text-content block">Collection</span></span>
+                    </h2>
+                    <div class="w-16 h-0.5 bg-emerald-700 mt-6 fade-up"></div>
+                </div>
+                
+                <div class="slider-perspective w-full h-[800px] relative flex items-center justify-center fade-up" style="transition-delay: 0.2s">
+                    <div id="parallax-slider-container" class="slider-container w-full h-full relative">
+                        {% for product in products %}
+                        <div class="slide-card {% if forloop.first %}active{% elif forloop.counter == 2 %}next{% elif forloop.last %}prev{% else %}hidden-slide{% endif %} w-80 md:w-[28rem] h-[600px] cursor-pointer hover-trigger group rounded-[2.5rem] overflow-hidden shadow-2xl transition-all duration-700 border border-white/60 bg-white" data-index="{{ forloop.counter0 }}" onclick="goToSlide({{ forloop.counter0 }})">
+                            <a href="{{ product.get_absolute_url }}" class="relative w-full h-full block">
+                                <img src="{% if product.image %}{{ product.image.url }}{% else %}https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?q=80&w=1200&auto=format&fit=crop{% endif %}" alt="{{ product.title }}" class="absolute inset-0 w-full h-full object-cover blur-[2px] brightness-110 transition-all duration-700 group-hover:scale-105 group-hover:blur-0">
+                                <div class="absolute inset-0 bg-gradient-to-tr from-emerald-400/50 via-teal-300/50 to-lime-300/50 mix-blend-overlay animate-gradient-flow transition-opacity duration-700 group-hover:opacity-40"></div>
+                                <div class="absolute bottom-6 left-4 right-4 bg-white/70 backdrop-blur-md border border-white/50 p-4 rounded-2xl shadow-lg transition-transform duration-500 translate-y-2 group-hover:translate-y-0">
+                                    <h3 class="font-art font-bold text-xl text-emerald-950 mb-1 drop-shadow-sm">{{ product.title }}</h3>
+                                    <div class="flex justify-between items-center mt-2">
+                                        <p class="text-xs text-stone-600 tracking-widest uppercase font-medium">{{ product.excerpt|truncatewords:3 }}</p>
+                                        {% if product.price %}<p class="text-white font-bold bg-emerald-700 px-2 py-1 rounded-lg text-sm">{{ product.price }}₫</p>{% endif %}
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        {% empty %}
+                        <div class="w-full h-full flex items-center justify-center text-stone-500">No products yet.</div>
+                        {% endfor %}
+                    </div>
+                    <button onclick="moveSlider('prev')" class="absolute left-4 md:left-12 top-1/2 -translate-y-1/2 z-30 hover-trigger w-14 h-14 rounded-full border border-stone-300 flex items-center justify-center bg-white/60 backdrop-blur-md hover:bg-emerald-900 hover:text-white transition-all shadow-sm"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
+                    <button onclick="moveSlider('next')" class="absolute right-4 md:right-12 top-1/2 -translate-y-1/2 z-30 hover-trigger w-14 h-14 rounded-full border border-stone-300 flex items-center justify-center bg-white/60 backdrop-blur-md hover:bg-emerald-900 hover:text-white transition-all shadow-sm"><i data-lucide="arrow-right" class="w-6 h-6"></i></button>
+                </div>
+            </section>
+
+            <!-- 4. STORYBOARD -->
+            <section class="py-32 px-6 bg-white/40 backdrop-blur-md relative overflow-hidden scroll-section">
+                <div class="absolute inset-0 pointer-events-none flex justify-around opacity-5"><div class="w-[1px] h-full bg-black"></div><div class="w-[1px] h-full bg-black"></div><div class="w-[1px] h-full bg-black"></div></div>
+                <div class="max-w-7xl mx-auto relative z-10">
+                    <div class="flex justify-between items-start mb-16">
+                        <div class="fade-up">
+                            <span class="text-stone-500 font-mono text-xs uppercase mb-2 block tracking-widest">Process / 001</span>
+                            <h2 class="font-art text-5xl font-bold text-stone-900">The Storyboard.</h2>
+                        </div>
+                        <div class="hidden md:block vertical-text font-jp text-stone-400 text-sm tracking-widest fade-up" style="transition-delay: 0.2s">お茶の物語</div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+                        {% for col in storyboard_columns %}
+                        <div class="film-strip space-y-8 {% if forloop.first %}pt-0{% elif forloop.counter == 2 %}md:pt-24{% else %}md:pt-48{% endif %} fade-up" style="transition-delay: 0.{{ forloop.counter }}s">
+                            {% for item in col %}
+                            <div class="hover-trigger frame-container group cursor-pointer">
+                                <div class="frame-img-wrapper"><img src="{% if item.image %}{{ item.image.url }}{% else %}https://images.unsplash.com/photo-1531980863769-529e84318d87?q=80&w=800{% endif %}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"></div>
+                                <div class="frame-meta"><span>SCENE</span><span>{{ item.created_at|date:'H:i' }}</span></div>
+                                <h3 class="font-art text-xl font-bold mt-2 group-hover:text-emerald-800 transition-colors">{{ item.title }}</h3>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. THE HERITAGE TREE -->
+            <section class="py-32 relative overflow-hidden bg-white/60 backdrop-blur-md scroll-section" id="heritage-tree">
+                <div class="max-w-7xl mx-auto px-6 relative z-10">
+                    <div class="text-center mb-24 fade-up">
+                        <span class="text-emerald-600 font-bold tracking-widest text-xs uppercase mb-2 block">[ Roots ]</span>
+                        <h2 class="font-art text-5xl md:text-6xl font-bold text-emerald-950">The Heritage Tree</h2>
+                        <p class="text-stone-500 mt-4 max-w-md mx-auto">Mỗi nhánh cây là một câu chuyện, mỗi lá trà là một di sản.</p>
+                    </div>
+                    <div class="organic-tree-container relative min-h-[1200px]">
+                        <div class="absolute left-1/2 top-0 bottom-0 w-[2px] bg-emerald-900/10 -translate-x-1/2"></div>
+                        <div id="tree-leaves" class="absolute inset-0 pointer-events-none overflow-hidden z-20"></div>
+                        <!-- Branch 1, 2, 3, 4 ... (As before) -->
+                        <div class="absolute top-[5%] left-0 right-1/2 pr-8 flex justify-end items-center group tree-node">
+                            <div class="branch-content w-80 text-right mr-8">
+                                <div class="overflow-hidden rounded-[2rem] aspect-[4/3] shadow-lg mb-4"><img src="https://images.unsplash.com/photo-1597481499750-3e6b22637e12?q=80&w=800" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"></div><h3 class="font-art text-2xl font-bold text-emerald-900">1820: Origins</h3><p class="text-sm text-stone-500">Khởi nguồn từ những cây chè Shan Tuyết cổ thụ.</p>
+                            </div>
+                            <svg class="absolute right-0 top-1/2 -translate-y-1/2 w-32 h-20 -mr-[1px]" style="transform: translateY(10px);"><path d="M0 40 Q64 40 128 0" fill="none" stroke="#064e3b" stroke-width="1.5" class="tree-branch-path"/></svg><div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-4 h-4 bg-emerald-900 rounded-full z-10 leaf-node border-4 border-white"></div>
+                        </div>
+                        <div class="absolute top-[30%] left-1/2 right-0 pl-8 flex justify-start items-center group tree-node">
+                            <div class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-emerald-900 rounded-full z-10 leaf-node border-4 border-white"></div><svg class="absolute left-0 top-1/2 -translate-y-1/2 w-32 h-20 -ml-[1px]" style="transform: translateY(10px) scaleX(-1);"><path d="M0 40 Q64 40 128 0" fill="none" stroke="#064e3b" stroke-width="1.5" class="tree-branch-path"/></svg>
+                            <div class="branch-content w-80 text-left ml-8">
+                                <div class="overflow-hidden rounded-[2rem] aspect-[4/3] shadow-lg mb-4"><img src="https://images.unsplash.com/photo-1515814472071-4d632dbc5d4a?q=80&w=800" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"></div><h3 class="font-art text-2xl font-bold text-emerald-900">Craftsmanship</h3><p class="text-sm text-stone-500">Phương pháp sao trà thủ công bằng chảo gang.</p>
+                            </div>
+                        </div>
+                        <div class="absolute top-[55%] left-0 right-1/2 pr-8 flex justify-end items-center group tree-node">
+                            <div class="branch-content w-80 text-right mr-8">
+                                <div class="overflow-hidden rounded-[2rem] aspect-[4/3] shadow-lg mb-4"><img src="https://images.unsplash.com/photo-1606312619070-d48b4c652a52?q=80&w=800" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"></div><h3 class="font-art text-2xl font-bold text-emerald-900">Tea Culture</h3><p class="text-sm text-stone-500">Cầu nối văn hóa giữa các thế hệ.</p>
+                            </div>
+                            <svg class="absolute right-0 top-1/2 -translate-y-1/2 w-32 h-20 -mr-[1px]" style="transform: translateY(10px);"><path d="M0 40 Q64 40 128 0" fill="none" stroke="#064e3b" stroke-width="1.5" class="tree-branch-path"/></svg><div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-4 h-4 bg-emerald-900 rounded-full z-10 leaf-node border-4 border-white"></div>
+                        </div>
+                         <div class="absolute top-[80%] left-1/2 right-0 pl-8 flex justify-start items-center group tree-node">
+                            <div class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-emerald-900 rounded-full z-10 leaf-node border-4 border-white"></div><svg class="absolute left-0 top-1/2 -translate-y-1/2 w-32 h-20 -ml-[1px]" style="transform: translateY(10px) scaleX(-1);"><path d="M0 40 Q64 40 128 0" fill="none" stroke="#064e3b" stroke-width="1.5" class="tree-branch-path"/></svg>
+                            <div class="branch-content w-80 text-left ml-8">
+                                <div class="overflow-hidden rounded-[2rem] aspect-[4/3] shadow-lg mb-4"><img src="https://images.unsplash.com/photo-1556679343-c7306c1976bc?q=80&w=800" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"></div><h3 class="font-art text-2xl font-bold text-emerald-900">Modern Brew</h3><p class="text-sm text-stone-500">Sự kết hợp táo bạo giữa truyền thống và hiện đại.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. THE CABINET -->
+            <section class="py-32 bg-emerald-950 text-[#f3f4f1] relative scroll-section">
+                <div class="max-w-7xl mx-auto px-6">
+                    <div class="mb-16 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                        <div class="fade-up">
+                            <span class="text-emerald-400 font-bold tracking-widest text-xs uppercase mb-2 block">[ Archive ]</span>
+                            <h2 class="font-art text-5xl font-bold">The Cabinet</h2>
+                        </div>
+                        <p class="text-emerald-200/60 max-w-xs text-sm fade-up">Khám phá các loại trà trứ danh được lưu giữ trong ngăn tủ ký ức.</p>
+                    </div>
+                    <div id="cabinet-container" class="flex flex-col h-[700px] border-t border-emerald-800 fade-up">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 p-8">
+                            {% for item in cabinet_items %}
+                            <div class="p-6 bg-white/5 rounded-[2rem] shadow-inner hover:shadow-xl transition-shadow">
+                                <div class="overflow-hidden rounded-[1.5rem] aspect-[4/3] mb-4"><img src="{% if item.image %}{{ item.image.url }}{% else %}https://images.unsplash.com/photo-1597481499750-3e6b22637e12?q=80&w=800{% endif %}" class="w-full h-full object-cover"></div>
+                                <h4 class="font-art text-xl font-bold">{{ item.title }}</h4>
+                                <p class="text-sm text-emerald-200/60 mt-2">{{ item.note }}</p>
+                            </div>
+                            {% empty %}
+                            <p class="text-stone-500">No cabinet items yet.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. THE RITUAL -->
+            <section class="h-scroll-section bg-white/20 backdrop-blur-sm">
+                <div class="h-scroll-sticky">
+                    <div class="absolute top-12 left-12 z-20"><h2 class="font-art text-6xl md:text-8xl font-bold text-emerald-950 opacity-10">THE RITUAL</h2></div>
+                    <div class="h-scroll-container" id="ritual-container">
+                        <div class="ritual-card flex flex-col justify-center px-12">
+                            <span class="text-emerald-600 font-bold tracking-widest text-xs uppercase mb-4 block">[ Experience ]</span>
+                            <h2 class="font-art text-5xl font-bold text-emerald-950">Nghi Thức<br>Pha Trà</h2>
+                            <p class="text-stone-600 mt-6 max-w-xs">Một hành trình tĩnh lặng gồm 4 bước.</p>
+                            <div class="mt-8 flex items-center gap-2 text-sm font-bold text-emerald-800"><i data-lucide="arrow-right" class="w-4 h-4"></i> Cuộn để khám phá</div>
+                        </div>
+                        <div class="ritual-card group"><div class="w-full h-full overflow-hidden rounded-[3rem] relative shadow-xl"><img src="https://images.unsplash.com/photo-1563822249509-33514a81670a?q=80&w=800&auto=format&fit=crop" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"><div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent p-8 flex flex-col justify-end text-white"><span class="text-4xl font-art font-bold opacity-50 mb-2">01</span><h3 class="text-2xl font-bold">Tráng Ấm</h3><p class="text-sm text-white/80 mt-2">Làm nóng ấm bằng nước sôi.</p></div></div></div>
+                        <div class="ritual-card group"><div class="w-full h-full overflow-hidden rounded-[3rem] relative shadow-xl"><img src="https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=800&auto=format&fit=crop" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"><div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent p-8 flex flex-col justify-end text-white"><span class="text-4xl font-art font-bold opacity-50 mb-2">02</span><h3 class="text-2xl font-bold">Thưởng Hương</h3><p class="text-sm text-white/80 mt-2">Cảm nhận hương thơm lan tỏa.</p></div></div></div>
+                        <div class="ritual-card group"><div class="w-full h-full overflow-hidden rounded-[3rem] relative shadow-xl"><img src="https://images.unsplash.com/photo-1550950158-d0d960dff51b?q=80&w=800&auto=format&fit=crop" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"><div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent p-8 flex flex-col justify-end text-white"><span class="text-4xl font-art font-bold opacity-50 mb-2">03</span><h3 class="text-2xl font-bold">Hãm Trà</h3><p class="text-sm text-white/80 mt-2">Đợi 30-45 giây.</p></div></div></div>
+                        <div class="ritual-card group"><div class="w-full h-full overflow-hidden rounded-[3rem] relative shadow-xl"><img src="https://images.unsplash.com/photo-1556679343-c7306c1976bc?q=80&w=800&auto=format&fit=crop" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"><div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent p-8 flex flex-col justify-end text-white"><span class="text-4xl font-art font-bold opacity-50 mb-2">04</span><h3 class="text-2xl font-bold">Thưởng Thức</h3><p class="text-sm text-white/80 mt-2">Rót ra chén và thưởng thức.</p></div></div></div>
+                        <div class="w-20"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 8. SCRAPBOOK (RESTORED SPOTLIGHT EFFECT) -->
+            <section id="chaotic-section" class="py-32 px-6 bg-transparent overflow-hidden transition-colors duration-700 ease-in-out scroll-section">
+                <div class="max-w-7xl mx-auto mb-16 flex justify-between items-end">
+                    <div class="fade-up">
+                        <span id="chaotic-subtitle" class="text-emerald-600 font-bold tracking-widest text-xs uppercase mb-2 block">[ Gallery ]</span>
+                        <h2 id="chaotic-title" class="font-art text-5xl font-bold text-emerald-950 transition-colors duration-700">Raw &<br>Unfiltered.</h2>
+                    </div>
+                    <p class="text-stone-500 text-sm max-w-xs text-right hidden md:block fade-up">Những khoảnh khắc ngẫu hứng từ cộng đồng yêu trà.</p>
+                </div>
+                <div class="max-w-7xl mx-auto fade-up">
+                    <div id="scrapbook-container" class="flex overflow-x-auto px-4 py-12 gap-8 pb-24 cursor-grab active:cursor-grabbing hide-scrollbar snap-x">
+                        {% for raw in raw_items %}
+                        <div class="scrapbook-item hover-trigger relative flex-shrink-0 w-72 group transition-all duration-500 ease-out {% cycle '-rotate-2' 'rotate-3' '-rotate-1' 'rotate-2' %} {% cycle 'mt-0' 'mt-12' 'mt-4' 'mt-16' %} hover:z-20 cursor-pointer snap-start">
+                            <div class="bg-white p-4 pb-6 shadow-lg transform transition-all duration-500 scrapbook-card">
+                                <div class="tape absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-10 bg-emerald-100/80 rotate-90 backdrop-blur-sm border-l border-r border-white/40 shadow-sm z-10 transition-opacity duration-300 opacity-80"></div>
+                                <div class="aspect-[3/4] overflow-hidden bg-[#f0f2f1] mb-4 transition-all duration-500 scrapbook-img-container filter sepia-[0.2]">
+                                    <img src="{% if raw.image %}{{ raw.image.url }}{% else %}https://images.unsplash.com/photo-1563822249509-33514a81670a?q=80&w=800{% endif %}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 scrapbook-img">
+                                </div>
+                                <div class="text-center">
+                                    <h3 class="font-art text-xl font-bold text-stone-800 leading-tight">{{ raw.title }}</h3>
+                                    <p class="text-emerald-700 font-bold mt-2 font-mono text-sm">{{ raw.caption }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-stone-500">No items yet.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <!-- 9. PINTEREST STREAM -->
+            <section class="py-32 bg-transparent scroll-section">
+                <div class="px-6 mb-12 max-w-7xl mx-auto flex justify-between items-end">
+                    <div class="fade-up">
+                        <h2 class="font-art text-4xl font-bold text-emerald-950">Shop The Look</h2>
+                        <p class="text-stone-500 mt-2">Cảm hứng bài trí không gian trà đạo.</p>
+                    </div>
+                    <div class="flex gap-2 fade-up">
+                        <button onclick="scrollPinterest('left')" class="hover-trigger w-12 h-12 rounded-full border border-stone-400 flex items-center justify-center hover:bg-emerald-900 hover:text-white transition-colors"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                        <button onclick="scrollPinterest('right')" class="hover-trigger w-12 h-12 rounded-full border border-stone-400 flex items-center justify-center hover:bg-emerald-900 hover:text-white transition-colors"><i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+                    </div>
+                </div>
+                <div class="max-w-7xl mx-auto fade-up">
+                    <div id="pinterest-scroll" class="flex overflow-x-auto gap-6 px-4 pb-12 snap-x hide-scrollbar">
+                        {% for product in products %}
+                        <a href="{{ product.get_absolute_url }}" class="hover-trigger relative flex-shrink-0 w-80 group snap-center cursor-pointer">
+                            <div class="relative overflow-hidden rounded-[2rem] aspect-[3/4] mb-4">
+                                <img src="{% if product.image %}{{ product.image.url }}{% else %}https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?q=80&w=800{% endif %}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                <button class="absolute top-4 right-4 bg-white/90 p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0"><i data-lucide="heart" class="w-5 h-5"></i></button>
+                            </div>
+                            <div class="flex justify-between items-start px-2">
+                                <div><h3 class="font-art font-bold text-lg text-emerald-950">{{ product.title }}</h3><p class="text-stone-500 text-sm">{{ product.excerpt|truncatewords:3 }}</p></div>
+                                {% if product.price %}<div class="font-mono font-bold">{{ product.price }}₫</div>{% endif %}
+                            </div>
+                        </a>
+                        {% empty %}
+                        <div class="text-stone-500">No products yet.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <!-- 10. NEW: THE DIGITAL ZEN ARTIFACT (3D) -->
+            <section id="artifact-container">
+                <canvas id="webgl-canvas"></canvas>
+                <div class="artifact-content fade-up">
+                    <span class="text-emerald-400 font-mono text-xs uppercase tracking-[0.3em] block mb-4">Pure Essence</span>
+                    <h2 class="font-art text-6xl md:text-8xl font-bold tracking-tighter mb-4 text-white">The Soul of Tea.</h2>
+                    <p class="text-emerald-200/60 max-w-md mx-auto text-sm">A living digital sculpture representing the infinite complexity within a single drop.</p>
+                </div>
+            </section>
+        </div>
+
+        <!-- PAGE 2: STORY PAGE -->
+        <div id="page-story" class="page-hidden">
+            <!-- (Content same as before) -->
+            <div class="relative w-full h-[70vh] overflow-hidden">
+                <img src="https://images.unsplash.com/photo-1550950158-d0d960dff51b?q=80&w=1600&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover" alt="Tea Pouring">
+                <div class="absolute inset-0 bg-black/40"></div>
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-4 text-white">
+                    <span class="tracking-[0.3em] text-sm font-bold mb-4 uppercase animate-fade-in-up text-emerald-300">Về Chúng Tôi</span>
+                    <h1 class="text-5xl md:text-8xl font-art font-bold mb-6 animate-fade-in-up" style="animation-delay: 0.2s">Tìm Về Sự Tĩnh Lặng</h1>
+                    <p class="max-w-xl text-xl font-light leading-relaxed animate-fade-in-up text-stone-200" style="animation-delay: 0.4s">
+                        "Uống trà không chỉ là giải khát, đó là một hành trình thiền định, kết nối con người với thiên nhiên."
+                    </p>
+                </div>
+            </div>
+            <div class="max-w-5xl mx-auto px-6 py-24 space-y-32">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+                    <div class="relative">
+                        <div class="absolute -top-4 -left-4 w-full h-full border-2 border-emerald-800/20 rounded-[2rem]"></div>
+                        <img src="https://images.unsplash.com/photo-1589785243878-3601740954b0?q=80&w=800&auto=format&fit=crop" class="relative rounded-[2rem] shadow-xl w-full aspect-[4/5] object-cover" alt="Tea Hills">
+                    </div>
+                    <div class="space-y-6">
+                        <span class="text-emerald-700 font-bold tracking-widest text-xs uppercase">01. Cội Nguồn</span>
+                        <h2 class="text-4xl font-art text-emerald-950 font-medium">Sinh Ra Từ Sương Mù</h2>
+                        <p class="text-stone-600 leading-relaxed text-lg">
+                            TeaZen bắt đầu từ những đồi chè cổ thụ nằm sâu trong vùng núi cao, nơi sương mù bao phủ quanh năm. 
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="bg-emerald-950 text-[#dcfce7] pt-24 pb-12 px-6 relative overflow-hidden">
+            <div class="max-w-7xl mx-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-16 mb-24">
+                    <div>
+                        <h3 class="font-art text-3xl mb-8">Stay in the loop</h3>
+                        <div class="flex border-b border-[#dcfce7]/30 pb-4">
+                            <input type="email" placeholder="Email Address" class="bg-transparent w-full outline-none text-xl placeholder-[#dcfce7]/30">
+                            <button class="uppercase font-bold text-sm tracking-widest hover:text-white">Subsrcibe</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-8 text-sm opacity-70">
+                        <ul class="space-y-4"><li><a href="#" onclick="navigateTo('home')">Shop All</a></li><li><a href="#" onclick="navigateTo('story')">About Us</a></li><li>Journal</li></ul>
+                        <ul class="space-y-4"><li>Instagram</li><li>Twitter</li><li>Facebook</li></ul>
+                    </div>
+                </div>
+                <div class="border-t border-[#dcfce7]/10 pt-8 flex flex-col md:flex-row justify-between items-end">
+                    <h2 class="font-art text-[15vw] leading-[0.8] font-bold opacity-20 select-none">TEAZEN</h2>
+                    <p class="text-xs opacity-40 uppercase tracking-widest mb-4 md:mb-8">© 2024 Design by Gemini</p>
+                </div>
+            </div>
+        </footer>
+    </main>
+{% endblock %}

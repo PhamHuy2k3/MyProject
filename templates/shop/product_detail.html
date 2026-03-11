@@ -830,6 +830,9 @@ function submitComment(e, productId, parentId = null) {
                     }
                 }
             }
+            // Render new icons
+            if (window.lucide) window.lucide.createIcons();
+            
         } else {
             alert(data.error || 'Đã xảy ra lỗi.');
         }
@@ -862,15 +865,18 @@ function interactComment(commentId, action) {
         if (isCurrentlyLiked) {
             // Unliking
             likeBtn.className = 'flex items-center gap-1.5 font-bold text-sm transition-colors text-stone-500 hover:text-emerald-600';
-            likeBtn.querySelector('i').classList.remove('fill-current');
+            const icon = likeBtn.querySelector('svg') || likeBtn.querySelector('i');
+            if(icon) icon.classList.remove('fill-current');
             newCount = Math.max(0, prevCount - 1);
         } else {
             // Liking
             likeBtn.className = 'flex items-center gap-1.5 font-bold text-sm transition-colors text-emerald-600';
-            likeBtn.querySelector('i').classList.add('fill-current');
+            const icon = likeBtn.querySelector('svg') || likeBtn.querySelector('i');
+            if(icon) icon.classList.add('fill-current');
             if (isCurrentlyDisliked) {
                 dislikeBtn.className = 'flex items-center gap-1.5 font-bold text-sm transition-colors text-stone-500 hover:text-red-500';
-                dislikeBtn.querySelector('i').classList.remove('fill-current');
+                const dIcon = dislikeBtn.querySelector('svg') || dislikeBtn.querySelector('i');
+                if(dIcon) dIcon.classList.remove('fill-current');
             }
             newCount = prevCount + 1;
         }
@@ -878,14 +884,17 @@ function interactComment(commentId, action) {
         if (isCurrentlyDisliked) {
             // Undisliking
             dislikeBtn.className = 'flex items-center gap-1.5 font-bold text-sm transition-colors text-stone-500 hover:text-red-500';
-            dislikeBtn.querySelector('i').classList.remove('fill-current');
+            const dIcon = dislikeBtn.querySelector('svg') || dislikeBtn.querySelector('i');
+            if(dIcon) dIcon.classList.remove('fill-current');
         } else {
             // Disliking
             dislikeBtn.className = 'flex items-center gap-1.5 font-bold text-sm transition-colors text-red-500';
-            dislikeBtn.querySelector('i').classList.add('fill-current');
+            const dIcon = dislikeBtn.querySelector('svg') || dislikeBtn.querySelector('i');
+            if(dIcon) dIcon.classList.add('fill-current');
             if (isCurrentlyLiked) {
                 likeBtn.className = 'flex items-center gap-1.5 font-bold text-sm transition-colors text-stone-500 hover:text-emerald-600';
-                likeBtn.querySelector('i').classList.remove('fill-current');
+                const icon = likeBtn.querySelector('svg') || likeBtn.querySelector('i');
+                if(icon) icon.classList.remove('fill-current');
                 newCount = Math.max(0, prevCount - 1);
             }
         }
@@ -909,9 +918,12 @@ function interactComment(commentId, action) {
             // Sync with absolute truth from Server
             likeCount.textContent = data.likes;
             likeBtn.className = `flex items-center gap-1.5 font-bold text-sm transition-colors ${data.state === 'like' ? 'text-emerald-600' : 'text-stone-500 hover:text-emerald-600'}`;
-            likeBtn.querySelector('i').classList.toggle('fill-current', data.state === 'like');
+            const icon = likeBtn.querySelector('svg') || likeBtn.querySelector('i');
+            if(icon) icon.classList.toggle('fill-current', data.state === 'like');
+            
             dislikeBtn.className = `flex items-center gap-1.5 font-bold text-sm transition-colors ${data.state === 'dislike' ? 'text-red-500' : 'text-stone-500 hover:text-red-500'}`;
-            dislikeBtn.querySelector('i').classList.toggle('fill-current', data.state === 'dislike');
+            const dIcon = dislikeBtn.querySelector('svg') || dislikeBtn.querySelector('i');
+            if(dIcon) dIcon.classList.toggle('fill-current', data.state === 'dislike');
         } else {
             throw new Error('Not authenticated');
         }
@@ -924,8 +936,12 @@ function interactComment(commentId, action) {
         const prevLiked = prevLikeClass.includes('text-emerald-600');
         const prevDisliked = prevDislikeClass.includes('text-red-500');
         
-        likeBtn.querySelector('i').classList.toggle('fill-current', prevLiked);
-        dislikeBtn.querySelector('i').classList.toggle('fill-current', prevDisliked);
+        const icon = likeBtn.querySelector('svg') || likeBtn.querySelector('i');
+        if(icon) icon.classList.toggle('fill-current', prevLiked);
+        
+        const dIcon = dislikeBtn.querySelector('svg') || dislikeBtn.querySelector('i');
+        if(dIcon) dIcon.classList.toggle('fill-current', prevDisliked);
+        
         likeCount.textContent = prevCount;
         
         if(err.message === 'Not authenticated') {

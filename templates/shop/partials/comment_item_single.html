@@ -1,4 +1,6 @@
-{% load static %}
+{% load static comment_tags %}
+{% get_user_interaction comment user as user_interaction %}
+
 
 <!-- Single Comment Item -->
 <div class="comment-item bg-white rounded-[2rem] p-6 shadow-sm border border-stone-100 transition-all hover:shadow-md {% if is_reply %}ml-12 md:ml-16 mt-4 border-l-4 border-l-emerald-200{% else %}mb-6{% endif %}" id="comment-{{ comment.id }}">
@@ -80,7 +82,7 @@
         
         <button onclick="interactComment({{ comment.id }}, 'like')" class="flex items-center gap-1.5 font-bold text-sm transition-colors {% if user_interaction == 'like' %}text-emerald-600{% else %}text-stone-500 hover:text-emerald-600{% endif %}" id="btn-like-{{ comment.id }}">
             <i data-lucide="thumbs-up" class="w-4 h-4 {% if user_interaction == 'like' %}fill-current{% endif %}"></i> 
-            <span id="like-count-{{ comment.id }}" class="min-w-[12px]">{{ comment.like_count|default:"0" }}</span>
+            <span id="like-count-{{ comment.id }}" class="min-w-[12px]">{{ comment|get_comment_likes }}</span>
         </button>
         
         <!-- Dislike Toggle -->
@@ -126,9 +128,6 @@
         {% endif %}
     </div>
     
-    <!-- Child Replies Container -->
-    <div id="replies-list-{{ comment.id }}" class="mt-2 replies-wrapper">
-        <!-- Render replies if passed -->
-    </div>
+
     
 </div>

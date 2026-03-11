@@ -6,6 +6,25 @@
 
 {% block extra_styles %}
 <link rel="stylesheet" href="{% static 'css/shop.css' %}">
+<style>
+    /* Accordion Toggle */
+    .filter-group[data-collapsed="true"] .filter-body { max-height: 0; overflow: hidden; opacity: 0; }
+    .filter-group[data-collapsed="false"] .filter-body { max-height: 600px; overflow: visible; opacity: 1; }
+    .filter-body { transition: max-height 0.35s ease, opacity 0.3s ease; }
+    .filter-group[data-collapsed="true"] .chevron-icon { transform: rotate(0deg); }
+    .filter-group[data-collapsed="false"] .chevron-icon { transform: rotate(180deg); }
+    .chevron-icon { transition: transform 0.3s ease; }
+
+    /* Local scroll for long category lists */
+    .category-scroll { max-height: 260px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #d6d3d1 transparent; }
+    .category-scroll::-webkit-scrollbar { width: 4px; }
+    .category-scroll::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 99px; }
+    .category-scroll::-webkit-scrollbar-track { background: transparent; }
+
+    /* Load More animation */
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+    .product-card-animated { animation: fadeInUp 0.45s ease both; }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -13,195 +32,356 @@
     <div class="max-w-7xl mx-auto">
 
         <!-- HEADER -->
-        <div class="mb-12 text-center">
+        <div class="mb-10 text-center">
             <span class="text-emerald-600 font-bold tracking-widest text-xs uppercase mb-2 block">[ Collection ]</span>
             <h1 class="font-art text-5xl md:text-6xl font-bold text-emerald-950">Tất Cả Sản Phẩm</h1>
-            <p class="text-stone-500 mt-4 max-w-md mx-auto">Khám phá bộ sưu tập trà cao cấp được tuyển chọn kỹ lưỡng.
-            </p>
+            <p class="text-stone-500 mt-4 max-w-md mx-auto">Khám phá bộ sưu tập trà cao cấp được tuyển chọn kỹ lưỡng.</p>
         </div>
 
-        <!-- SEARCH & FILTER BAR -->
-        <div class="mb-10 space-y-6">
-            <!-- Search -->
-            <!-- Search -->
-            <form method="get" class="max-w-2xl mx-auto space-y-4">
+        <!-- SEARCH BAR (centered, above layout) -->
+        <div class="mb-8 max-w-2xl mx-auto">
+            <form method="get" id="searchForm">
                 <div class="flex items-center gap-3">
                     <div class="relative flex-1">
-                        <i data-lucide="search"
-                            class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400"></i>
+                        <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400"></i>
                         <input type="text" name="q" value="{{ current_query }}" placeholder="Tìm kiếm sản phẩm..."
                             class="search-input w-full pl-12 pr-4 py-3 rounded-full border border-stone-300 bg-white focus:outline-none focus:border-emerald-600 text-stone-800 placeholder-stone-400 transition-all">
                     </div>
-                    {% if current_category %}
-                    <input type="hidden" name="category" value="{{ current_category }}">
-                    {% endif %}
+                    {% if current_category %}<input type="hidden" name="category" value="{{ current_category }}">{% endif %}
                     <input type="hidden" name="sort" value="{{ current_sort }}">
+                    {% if min_price %}<input type="hidden" name="min_price" value="{{ min_price }}">{% endif %}
+                    {% if max_price %}<input type="hidden" name="max_price" value="{{ max_price }}">{% endif %}
+                    {% if current_rating %}<input type="hidden" name="rating" value="{{ current_rating }}">{% endif %}
                     <button type="submit"
                         class="bg-emerald-900 text-white px-8 py-3 rounded-full font-bold text-sm uppercase tracking-wider hover:bg-emerald-800 transition-colors shadow-lg">
                         Tìm kiếm
                     </button>
                 </div>
-
-                <!-- Advanced Filters (Visible if 'advanced' param is present or any filter is active) -->
-                <div id="advanced-filters"
-                    class="{% if not request.GET.advanced and not min_price and not max_price and not current_rating %}hidden{% endif %} bg-white/50 backdrop-blur-sm p-6 rounded-3xl border border-stone-200 animate-in fade-in slide-in-from-top-4 duration-500">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <!-- Price Range -->
-                        <div class="space-y-2">
-                            <label class="text-xs font-bold text-emerald-900 uppercase tracking-widest">Khoảng giá
-                                (₫)</label>
-                            <div class="flex items-center gap-3">
-                                <input type="number" name="min_price" value="{{ min_price }}" placeholder="Từ"
-                                    class="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-sm focus:border-emerald-600 outline-none">
-                                <span class="text-stone-400">—</span>
-                                <input type="number" name="max_price" value="{{ max_price }}" placeholder="Đến"
-                                    class="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-sm focus:border-emerald-600 outline-none">
-                            </div>
-                        </div>
-
-                        <!-- Rating Filter -->
-                        <div class="space-y-2">
-                            <label class="text-xs font-bold text-emerald-900 uppercase tracking-widest">Đánh giá tối
-                                thiểu</label>
-                            <select name="rating"
-                                class="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-sm focus:border-emerald-600 outline-none">
-                                <option value="">Tất cả đánh giá</option>
-                                <option value="4" {% if current_rating == '4' %}selected{% endif %}>4★ trở lên</option>
-                                <option value="3" {% if current_rating == '3' %}selected{% endif %}>3★ trở lên</option>
-                                <option value="2" {% if current_rating == '2' %}selected{% endif %}>2★ trở lên</option>
-                            </select>
-                        </div>
-
-                        <!-- Reset Button -->
-                        <div class="flex items-end">
-                            <a href="{% url 'product_list_public' %}"
-                                class="w-full text-center py-2 px-4 rounded-xl border border-stone-300 text-stone-500 text-xs font-bold hover:bg-stone-100 transition-colors">
-                                XÓA TẤT CẢ BỘ LỌC
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="text-center">
-                    <button type="button"
-                        onclick="document.getElementById('advanced-filters').classList.toggle('hidden')"
-                        class="text-xs font-bold text-emerald-800 hover:text-emerald-600 transition-colors flex items-center justify-center mx-auto">
-                        <i data-lucide="sliders-horizontal" class="w-3 h-3 mr-1"></i> TÙY CHỌN TÌM KIẾM NÂNG CAO
-                    </button>
-                </div>
             </form>
-
-            <!-- Category Filter Pills -->
-            <div class="flex flex-wrap justify-center gap-3">
-                <a href="{% url 'product_list_public' %}?{% if current_query %}q={{ current_query }}{% if current_sort %}&{% endif %}{% endif %}{% if current_sort %}sort={{ current_sort }}{% endif %}"
-                    class="category-pill px-5 py-2 rounded-full border border-stone-300 text-sm font-semibold hover:bg-emerald-900 hover:text-white hover:border-emerald-900 {% if not current_category %}active{% endif %}">
-                    Tất cả
-                </a>
-                {% for cat in categories %}
-                <a href="{% url 'product_list_public' %}?category={{ cat.slug }}{% if current_query %}&q={{ current_query }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
-                    class="category-pill px-5 py-2 rounded-full border border-stone-300 text-sm font-semibold hover:bg-emerald-900 hover:text-white hover:border-emerald-900 {% if current_category == cat.slug %}active{% endif %}">
-                    {{ cat.name }}
-                </a>
-                {% endfor %}
-            </div>
-
-            <!-- Sort & Count -->
-            <div class="flex justify-between items-center">
-                <p class="text-sm text-stone-500">
-                    <span class="font-bold text-emerald-800">{{ products|length }}</span> sản phẩm
-                    {% if current_query %} cho "<span class="font-semibold">{{ current_query }}</span>"{% endif %}
-                    {% if current_category %} trong danh mục{% endif %}
-                </p>
-                <div class="flex items-center gap-2">
-                    <span class="text-xs text-stone-500 uppercase tracking-wider font-mono">Sắp xếp:</span>
-                    <select onchange="window.location.href=this.value"
-                        class="text-sm border border-stone-300 rounded-lg px-3 py-2 bg-white text-stone-700 focus:outline-none focus:border-emerald-600">
-                        <option
-                            value="{% url 'product_list_public' %}?sort=-created_at{% if current_query %}&q={{ current_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}"
-                            {% if current_sort == '-created_at' %}selected{% endif %}>Mới nhất</option>
-                        <option
-                            value="{% url 'product_list_public' %}?sort=price{% if current_query %}&q={{ current_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}"
-                            {% if current_sort == 'price' %}selected{% endif %}>Giá: Thấp → Cao</option>
-                        <option
-                            value="{% url 'product_list_public' %}?sort=-price{% if current_query %}&q={{ current_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}"
-                            {% if current_sort == '-price' %}selected{% endif %}>Giá: Cao → Thấp</option>
-                        <option
-                            value="{% url 'product_list_public' %}?sort=title{% if current_query %}&q={{ current_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}"
-                            {% if current_sort == 'title' %}selected{% endif %}>Tên: A → Z</option>
-                    </select>
-                </div>
-            </div>
         </div>
 
-        <!-- PRODUCT GRID -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {% for product in products %}
-            <a href="{{ product.get_absolute_url }}"
-                class="product-card product-hover-trigger group bg-white rounded-[2rem] overflow-hidden shadow-sm border border-stone-100"
-                data-title="{{ product.title }}"
-                data-price="{% if product.price %}{{ product.price|floatformat:0 }}₫{% endif %}"
-                data-excerpt="{{ product.excerpt|default:''|truncatewords:15 }}"
-                data-image="{% if product.image %}{{ product.image.url }}{% endif %}">
-                <!-- Image -->
-                <div class="relative aspect-[4/5] overflow-hidden bg-stone-100">
-                    <img src="{% if product.image %}{{ product.image.url }}{% else %}https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?q=80&w=800&auto=format&fit=crop{% endif %}"
-                        alt="{{ product.title }}"
-                        class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
-                    <!-- Category Badge -->
-                    {% if product.category %}
-                    <div
-                        class="absolute top-4 left-4 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-emerald-800 border border-white/50">
-                        {{ product.category.name }}
+        <!-- ===== TWO-COLUMN LAYOUT: Sidebar + Products ===== -->
+        <div class="flex flex-col lg:flex-row gap-8">
+
+            <!-- ====== LEFT SIDEBAR (Sticky, Accordion) ====== -->
+            <aside class="w-full lg:w-64 flex-shrink-0">
+                <div class="lg:sticky lg:top-24 space-y-4">
+
+                    <!-- Filter Group: Danh mục -->
+                    <div class="filter-group bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden" data-collapsed="false">
+                        <button type="button" onclick="toggleFilter(this)" class="w-full flex items-center justify-between px-5 py-4 hover:bg-stone-50 transition-colors">
+                            <span class="flex items-center gap-2 text-sm font-bold text-emerald-900 uppercase tracking-wider">
+                                <i data-lucide="layers" class="w-4 h-4"></i> Danh mục
+                            </span>
+                            <i data-lucide="chevron-down" class="w-4 h-4 text-stone-400 chevron-icon"></i>
+                        </button>
+                        <div class="filter-body">
+                            <div class="px-5 pb-4 category-scroll space-y-1">
+                                <a href="{% url 'product_list_public' %}?{% if current_query %}q={{ current_query }}&{% endif %}sort={{ current_sort }}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if current_rating %}&rating={{ current_rating }}{% endif %}"
+                                    class="flex items-center justify-between px-3 py-2 rounded-xl text-sm transition-colors {% if not current_category %}bg-emerald-50 text-emerald-800 font-bold{% else %}text-stone-600 hover:bg-stone-50{% endif %}">
+                                    <span>Tất cả</span>
+                                    <span class="text-xs font-mono text-stone-400">{{ total_count }}</span>
+                                </a>
+                                {% for cat in categories %}
+                                <a href="{% url 'product_list_public' %}?category={{ cat.slug }}{% if current_query %}&q={{ current_query }}{% endif %}&sort={{ current_sort }}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if current_rating %}&rating={{ current_rating }}{% endif %}"
+                                    class="flex items-center justify-between px-3 py-2 rounded-xl text-sm transition-colors {% if current_category == cat.slug %}bg-emerald-50 text-emerald-800 font-bold{% else %}text-stone-600 hover:bg-stone-50{% endif %}">
+                                    <span>{{ cat.name }}</span>
+                                    <span class="text-xs font-mono text-stone-400">{% for k, v in category_counts.items %}{% if k == cat.slug %}{{ v }}{% endif %}{% endfor %}</span>
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter Group: Khoảng giá -->
+                    <div class="filter-group bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden" data-collapsed="{% if not min_price and not max_price %}true{% else %}false{% endif %}">
+                        <button type="button" onclick="toggleFilter(this)" class="w-full flex items-center justify-between px-5 py-4 hover:bg-stone-50 transition-colors">
+                            <span class="flex items-center gap-2 text-sm font-bold text-emerald-900 uppercase tracking-wider">
+                                <i data-lucide="banknote" class="w-4 h-4"></i> Khoảng giá
+                            </span>
+                            <i data-lucide="chevron-down" class="w-4 h-4 text-stone-400 chevron-icon"></i>
+                        </button>
+                        <div class="filter-body">
+                            <form method="get" class="px-5 pb-4 space-y-3" id="priceFilterForm">
+                                {% if current_query %}<input type="hidden" name="q" value="{{ current_query }}">{% endif %}
+                                {% if current_category %}<input type="hidden" name="category" value="{{ current_category }}">{% endif %}
+                                <input type="hidden" name="sort" value="{{ current_sort }}">
+                                {% if current_rating %}<input type="hidden" name="rating" value="{{ current_rating }}">{% endif %}
+                                <div class="space-y-2">
+                                    <input type="number" name="min_price" value="{{ min_price }}" placeholder="Giá từ (₫)"
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-sm focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/20 outline-none">
+                                    <input type="number" name="max_price" value="{{ max_price }}" placeholder="Đến (₫)"
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-sm focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/20 outline-none">
+                                </div>
+                                <button type="submit" class="w-full bg-emerald-900 text-white py-2 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-emerald-800 transition-colors">Áp dụng</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Filter Group: Đánh giá -->
+                    <div class="filter-group bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden" data-collapsed="{% if not current_rating %}true{% else %}false{% endif %}">
+                        <button type="button" onclick="toggleFilter(this)" class="w-full flex items-center justify-between px-5 py-4 hover:bg-stone-50 transition-colors">
+                            <span class="flex items-center gap-2 text-sm font-bold text-emerald-900 uppercase tracking-wider">
+                                <i data-lucide="star" class="w-4 h-4"></i> Đánh giá
+                            </span>
+                            <i data-lucide="chevron-down" class="w-4 h-4 text-stone-400 chevron-icon"></i>
+                        </button>
+                        <div class="filter-body">
+                            <div class="px-5 pb-4 space-y-1">
+                                <a href="{% url 'product_list_public' %}?rating=4{% if current_query %}&q={{ current_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}&sort={{ current_sort }}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors {% if current_rating == '4' %}bg-amber-50 text-amber-700 font-bold{% else %}text-stone-600 hover:bg-stone-50{% endif %}">
+                                    <span class="text-amber-400">★★★★</span><span>trở lên</span>
+                                </a>
+                                <a href="{% url 'product_list_public' %}?rating=3{% if current_query %}&q={{ current_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}&sort={{ current_sort }}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors {% if current_rating == '3' %}bg-amber-50 text-amber-700 font-bold{% else %}text-stone-600 hover:bg-stone-50{% endif %}">
+                                    <span class="text-amber-400">★★★</span><span>trở lên</span>
+                                </a>
+                                <a href="{% url 'product_list_public' %}?rating=2{% if current_query %}&q={{ current_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}&sort={{ current_sort }}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors {% if current_rating == '2' %}bg-amber-50 text-amber-700 font-bold{% else %}text-stone-600 hover:bg-stone-50{% endif %}">
+                                    <span class="text-amber-400">★★</span><span>trở lên</span>
+                                </a>
+                                {% if current_rating %}
+                                <a href="{% url 'product_list_public' %}?{% if current_query %}q={{ current_query }}&{% endif %}{% if current_category %}category={{ current_category }}&{% endif %}sort={{ current_sort }}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-stone-400 hover:bg-stone-50 transition-colors">
+                                    <i data-lucide="x" class="w-3 h-3"></i> Bỏ lọc đánh giá
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Filters Summary -->
+                    {% if current_query or current_category or min_price or max_price or current_rating %}
+                    <div class="bg-emerald-50 rounded-2xl border border-emerald-100 p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Bộ lọc đang dùng</span>
+                            <a href="{% url 'product_list_public' %}" class="text-[10px] font-bold text-emerald-600 hover:text-emerald-800 flex items-center gap-1">
+                                <i data-lucide="x" class="w-3 h-3"></i> Xóa tất cả
+                            </a>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                            {% if current_query %}
+                            <span class="bg-white text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-emerald-200">"{{ current_query }}"</span>
+                            {% endif %}
+                            {% if current_category %}
+                            <span class="bg-white text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-emerald-200">{{ current_category }}</span>
+                            {% endif %}
+                            {% if min_price %}
+                            <span class="bg-white text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-emerald-200">Từ {{ min_price }}₫</span>
+                            {% endif %}
+                            {% if max_price %}
+                            <span class="bg-white text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-emerald-200">Đến {{ max_price }}₫</span>
+                            {% endif %}
+                            {% if current_rating %}
+                            <span class="bg-white text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-emerald-200">{{ current_rating }}★+</span>
+                            {% endif %}
+                        </div>
                     </div>
                     {% endif %}
-                    <!-- Action Buttons -->
-                    <div
-                        class="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
-                        <button onclick="event.preventDefault(); window.location.href='{% url 'cart_add' product.id %}'"
-                            class="bg-emerald-900 text-white p-3 rounded-full hover:bg-emerald-700 transition-colors shadow-lg">
-                            <i data-lucide="shopping-bag" class="w-4 h-4"></i>
-                        </button>
-                        {% if user.is_authenticated %}
-                        <button
-                            onclick="event.preventDefault(); window.location.href='{% url 'wishlist_add' product.id %}'"
-                            class="bg-white/90 p-3 rounded-full hover:bg-red-50 hover:text-red-500 transition-colors shadow-lg">
-                            <i data-lucide="heart" class="w-4 h-4"></i>
-                        </button>
-                        {% endif %}
+
+                </div>
+            </aside>
+
+            <!-- ====== RIGHT: Product Grid + Pagination ====== -->
+            <main class="flex-1 min-w-0">
+
+                <!-- Sort & Count Bar -->
+                <div class="flex justify-between items-center mb-6 bg-white rounded-2xl border border-stone-200 px-5 py-3.5 shadow-sm">
+                    <p class="text-sm text-stone-500">
+                        <span class="font-bold text-emerald-800">{{ total_count }}</span> sản phẩm
+                        {% if current_query %} cho "<span class="font-semibold">{{ current_query }}</span>"{% endif %}
+                        {% if current_category %} trong danh mục{% endif %}
+                    </p>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-stone-500 uppercase tracking-wider font-mono hidden sm:inline">Sắp xếp:</span>
+                        <select onchange="window.location.href=this.value"
+                            class="text-sm border border-stone-300 rounded-lg px-3 py-2 bg-white text-stone-700 focus:outline-none focus:border-emerald-600">
+                            <option
+                                value="{% url 'product_list_public' %}?sort=-created_at{% if current_query %}&q={{ current_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if current_rating %}&rating={{ current_rating }}{% endif %}"
+                                {% if current_sort == '-created_at' %}selected{% endif %}>Mới nhất</option>
+                            <option
+                                value="{% url 'product_list_public' %}?sort=price{% if current_query %}&q={{ current_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if current_rating %}&rating={{ current_rating }}{% endif %}"
+                                {% if current_sort == 'price' %}selected{% endif %}>Giá: Thấp → Cao</option>
+                            <option
+                                value="{% url 'product_list_public' %}?sort=-price{% if current_query %}&q={{ current_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if current_rating %}&rating={{ current_rating }}{% endif %}"
+                                {% if current_sort == '-price' %}selected{% endif %}>Giá: Cao → Thấp</option>
+                            <option
+                                value="{% url 'product_list_public' %}?sort=title{% if current_query %}&q={{ current_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if current_rating %}&rating={{ current_rating }}{% endif %}"
+                                {% if current_sort == 'title' %}selected{% endif %}>Tên: A → Z</option>
+                        </select>
                     </div>
                 </div>
-                <!-- Info -->
-                <div class="p-5">
-                    <h3
-                        class="font-art font-bold text-lg text-emerald-950 mb-1 group-hover:text-emerald-700 transition-colors">
-                        {{ product.title }}</h3>
-                    {% if product.excerpt %}
-                    <p class="text-sm text-stone-500 mb-3 line-clamp-2">{{ product.excerpt }}</p>
-                    {% endif %}
-                    <div class="flex justify-between items-center">
-                        {% if product.price %}
-                        <span class="font-bold text-emerald-800 text-lg">{{ product.price|floatformat:0 }}₫</span>
-                        {% endif %}
-                        {% if product.stock_quantity > 0 %}
-                        <span class="text-xs text-stone-400 font-mono">Còn {{ product.stock_quantity }}</span>
-                        {% else %}
-                        <span class="text-xs text-red-500 font-bold">Hết hàng</span>
-                        {% endif %}
+
+                <!-- PRODUCT GRID -->
+                <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {% for product in products %}
+                    <a href="{{ product.get_absolute_url }}"
+                        class="product-card product-hover-trigger group bg-white rounded-[2rem] overflow-hidden shadow-sm border border-stone-100"
+                        data-title="{{ product.title }}"
+                        data-price="{% if product.price %}{{ product.price|floatformat:0 }}₫{% endif %}"
+                        data-excerpt="{{ product.excerpt|default:''|truncatewords:15 }}"
+                        data-image="{% if product.image %}{{ product.image.url }}{% endif %}">
+                        <!-- Image -->
+                        <div class="relative aspect-[4/5] overflow-hidden bg-stone-100">
+                            <img src="{% if product.image %}{{ product.image.url }}{% else %}https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?q=80&w=800&auto=format&fit=crop{% endif %}"
+                                alt="{{ product.title }}" loading="lazy"
+                                class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                            {% if product.category %}
+                            <div class="absolute top-4 left-4 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-emerald-800 border border-white/50">
+                                {{ product.category.name }}
+                            </div>
+                            {% endif %}
+                            <!-- Action Buttons -->
+                            <div class="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
+                                <button onclick="event.preventDefault(); window.location.href='{% url 'cart_add' product.id %}'"
+                                    class="bg-emerald-900 text-white p-3 rounded-full hover:bg-emerald-700 transition-colors shadow-lg">
+                                    <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+                                </button>
+                                {% if user.is_authenticated %}
+                                <button onclick="event.preventDefault(); window.location.href='{% url 'wishlist_add' product.id %}'"
+                                    class="bg-white/90 p-3 rounded-full hover:bg-red-50 hover:text-red-500 transition-colors shadow-lg">
+                                    <i data-lucide="heart" class="w-4 h-4"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                            {% if product.stock_quantity == 0 %}
+                            <div class="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                <span class="bg-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider">Hết hàng</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <!-- Info -->
+                        <div class="p-5">
+                            <h3 class="font-art font-bold text-lg text-emerald-950 mb-1 group-hover:text-emerald-700 transition-colors">{{ product.title }}</h3>
+                            {% if product.excerpt %}
+                            <p class="text-sm text-stone-500 mb-3 line-clamp-2">{{ product.excerpt }}</p>
+                            {% endif %}
+                            <div class="flex justify-between items-center">
+                                {% if product.price %}
+                                <span class="font-bold text-emerald-800 text-lg">{{ product.price|floatformat:0 }}₫</span>
+                                {% endif %}
+                                {% if product.stock_quantity > 0 %}
+                                <span class="text-xs text-stone-400 font-mono">Còn {{ product.stock_quantity }}</span>
+                                {% else %}
+                                <span class="text-xs text-red-500 font-bold">Hết hàng</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% empty %}
+                    <div class="col-span-full text-center py-24">
+                        <i data-lucide="search-x" class="w-16 h-16 mx-auto mb-6 text-stone-300"></i>
+                        <h3 class="font-art text-2xl text-stone-600 mb-2">Không tìm thấy sản phẩm</h3>
+                        <p class="text-stone-500 mb-6">Hãy thử tìm kiếm với từ khóa khác hoặc chọn danh mục khác.</p>
+                        <a href="{% url 'product_list_public' %}"
+                            class="inline-flex items-center gap-2 bg-emerald-900 text-white px-6 py-3 rounded-full font-bold text-sm uppercase tracking-wider hover:bg-emerald-800 transition-colors">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i> Xem tất cả
+                        </a>
                     </div>
+                    {% endfor %}
                 </div>
-            </a>
-            {% empty %}
-            <div class="col-span-full text-center py-24">
-                <i data-lucide="search-x" class="w-16 h-16 mx-auto mb-6 text-stone-300"></i>
-                <h3 class="font-art text-2xl text-stone-600 mb-2">Không tìm thấy sản phẩm</h3>
-                <p class="text-stone-500 mb-6">Hãy thử tìm kiếm với từ khóa khác hoặc chọn danh mục khác.</p>
-                <a href="{% url 'product_list_public' %}"
-                    class="inline-flex items-center gap-2 bg-emerald-900 text-white px-6 py-3 rounded-full font-bold text-sm uppercase tracking-wider hover:bg-emerald-800 transition-colors">
-                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Xem tất cả
-                </a>
-            </div>
-            {% endfor %}
+
+                <!-- LOAD MORE / PAGINATION -->
+                {% if has_more %}
+                <div class="mt-12 text-center" id="loadMoreSection">
+                    <p class="text-xs text-stone-400 mb-3">
+                        Đang hiển thị <span class="font-bold text-stone-600">{{ products|length }}</span> / <span class="font-bold text-stone-600">{{ total_count }}</span> sản phẩm
+                    </p>
+                    <div class="w-full bg-stone-200 rounded-full h-1.5 max-w-xs mx-auto mb-5">
+                        <div class="bg-emerald-600 h-1.5 rounded-full transition-all" style="width: {% widthratio products|length total_count 100 %}%"></div>
+                    </div>
+                    <button type="button" id="loadMoreBtn" onclick="loadMoreProducts()"
+                        class="inline-flex items-center gap-2 bg-emerald-900 text-white px-8 py-3.5 rounded-full font-bold text-sm uppercase tracking-wider hover:bg-emerald-800 transition-all shadow-lg hover:shadow-xl">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        Tải thêm {{ remaining }} sản phẩm
+                    </button>
+                    <p class="text-[10px] text-stone-400 mt-3 italic">Mỗi lần tải thêm {{ per_page }} sản phẩm</p>
+                </div>
+                {% elif total_count > 0 %}
+                <div class="mt-12 text-center">
+                    <p class="text-xs text-stone-400">Đã hiển thị tất cả <span class="font-bold text-stone-600">{{ total_count }}</span> sản phẩm</p>
+                </div>
+                {% endif %}
+
+            </main>
         </div>
     </div>
 </div>
+
+<script>
+// === Accordion Filter Toggle ===
+function toggleFilter(btn) {
+    const group = btn.closest('.filter-group');
+    const isCollapsed = group.getAttribute('data-collapsed') === 'true';
+    group.setAttribute('data-collapsed', isCollapsed ? 'false' : 'true');
+}
+
+// === Load More (preserves all current filters, appends next page via AJAX) ===
+let currentPage = {{ current_page }};
+const totalCount = {{ total_count }};
+const perPage = {{ per_page }};
+
+function loadMoreProducts() {
+    const btn = document.getElementById('loadMoreBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<svg class="animate-spin w-4 h-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.37 0 0 5.37 0 12h4z"/></svg> Đang tải...';
+    btn.disabled = true;
+
+    currentPage++;
+
+    // Build URL with all current filters
+    const params = new URLSearchParams(window.location.search);
+    params.set('page', currentPage);
+
+    fetch(window.location.pathname + '?' + params.toString(), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.text())
+    .then(html => {
+        // Parse the response and extract product cards
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newGrid = doc.getElementById('productGrid');
+        const grid = document.getElementById('productGrid');
+
+        if (newGrid) {
+            // Get only truly new cards (beyond what we currently show)
+            const existingCount = grid.children.length;
+            const newCards = Array.from(newGrid.children).slice(existingCount);
+
+            newCards.forEach((card, i) => {
+                card.classList.add('product-card-animated');
+                card.style.animationDelay = (i * 0.06) + 's';
+                grid.appendChild(card);
+            });
+
+            // Re-init Lucide icons for new cards
+            if (window.lucide) lucide.createIcons();
+        }
+
+        // Update load more section
+        const shownCount = grid.children.length;
+        const remaining = totalCount - shownCount;
+
+        if (remaining <= 0) {
+            document.getElementById('loadMoreSection').innerHTML =
+                '<p class="text-xs text-stone-400">Đã hiển thị tất cả <span class="font-bold text-stone-600">' + totalCount + '</span> sản phẩm</p>';
+        } else {
+            btn.innerHTML = '<i data-lucide="plus" class="w-4 h-4"></i> Tải thêm ' + remaining + ' sản phẩm';
+            btn.disabled = false;
+            if (window.lucide) lucide.createIcons();
+            // Update progress bar
+            const progressBar = document.querySelector('#loadMoreSection .bg-emerald-600');
+            if (progressBar) progressBar.style.width = Math.round(shownCount / totalCount * 100) + '%';
+            // Update count text
+            const countText = document.querySelector('#loadMoreSection > p:first-child');
+            if (countText) countText.innerHTML = 'Đang hiển thị <span class="font-bold text-stone-600">' + shownCount + '</span> / <span class="font-bold text-stone-600">' + totalCount + '</span> sản phẩm';
+        }
+    })
+    .catch(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
+</script>
 {% endblock %}

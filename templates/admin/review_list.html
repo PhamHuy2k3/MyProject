@@ -1,0 +1,86 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}Quản Lý Đánh Giá{% endblock %}
+{% block page_subtitle %}{{ total_count }} đánh giá{% endblock %}
+
+{% block admin_content %}
+<!-- Search & Filter Bar -->
+<div class="flex flex-col gap-3 mb-6">
+    <form method="get" class="flex flex-col md:flex-row gap-2">
+        <div class="relative flex-1">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400"></i>
+            <input type="text" name="q" value="{{ current_query }}" placeholder="Tìm theo tiêu đề, nội dung, người dùng, sản phẩm..."
+                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-300 text-sm focus:outline-none focus:border-emerald-600 bg-white">
+        </div>
+        <select name="rating" onchange="this.form.submit()" class="rounded-xl border border-stone-300 px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-emerald-600">
+            <option value="">Tất cả sao</option>
+            {% for star in "54321" %}
+            <option value="{{ star }}" {% if current_rating == star %}selected{% endif %}>{{ star }} ★</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="bg-emerald-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-800 transition-colors">Tìm</button>
+        {% if current_query or current_rating %}
+        <a href="{% url 'admin_review_list' %}" class="flex items-center justify-center px-3 py-2.5 rounded-xl border border-stone-300 text-stone-500 hover:bg-stone-100 transition-colors" title="Xóa bộ lọc">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </a>
+        {% endif %}
+    </form>
+</div>
+
+{% if reviews %}
+<div class="space-y-4">
+    {% for review in reviews %}
+    <div class="bg-white rounded-2xl border border-stone-100 shadow-sm p-6 hover:shadow-md transition-shadow">
+        <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+            <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
+                        {{ review.user.username|first|upper }}
+                    </div>
+                    <div>
+                        <span class="font-bold text-stone-800 text-sm">{{ review.user.username }}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-amber-400 text-sm">
+                                {% for i in "12345" %}{% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}{% endfor %}
+                            </span>
+                            <span class="text-[10px] text-stone-400">{{ review.created_at|timesince }} trước</span>
+                        </div>
+                    </div>
+                </div>
+                <a href="{% url 'product_detail' review.product.slug %}" class="text-xs text-emerald-600 hover:underline font-medium mb-2 inline-block">
+                    <i data-lucide="package" class="w-3 h-3 inline"></i> {{ review.product.title }}
+                </a>
+                <p class="font-bold text-stone-700 text-sm mt-1">{{ review.title }}</p>
+                <p class="text-stone-500 text-xs mt-1">{{ review.content|truncatewords:40 }}</p>
+                <div class="flex items-center gap-3 mt-2 text-[10px] text-stone-400">
+                    <span class="flex items-center gap-1"><i data-lucide="thumbs-up" class="w-3 h-3"></i> {{ review.helpful_votes }} hữu ích</span>
+                    {% if review.images.exists %}
+                    <span class="flex items-center gap-1"><i data-lucide="image" class="w-3 h-3"></i> {{ review.images.count }} ảnh</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <a href="{% url 'admin_review_delete' review.pk %}" class="p-2 rounded-xl hover:bg-red-50 transition-colors" title="Xóa đánh giá">
+                    <i data-lucide="trash-2" class="w-5 h-5 text-red-400"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% include 'admin/includes/pagination.html' %}
+{% else %}
+<div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-16 text-center">
+    <div class="w-16 h-16 rounded-2xl bg-stone-50 flex items-center justify-center mx-auto mb-4">
+        <i data-lucide="star" class="w-8 h-8 text-stone-300"></i>
+    </div>
+    {% if current_query or current_rating %}
+    <p class="text-stone-400 font-medium">Không tìm thấy đánh giá phù hợp.</p>
+    <a href="{% url 'admin_review_list' %}" class="text-emerald-600 hover:underline mt-2 inline-block">Xóa bộ lọc →</a>
+    {% else %}
+    <p class="text-stone-400 font-medium">Chưa có đánh giá nào.</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

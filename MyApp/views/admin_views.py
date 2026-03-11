@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.template.loader import render_to_string
 from django.db.models import Count, Sum, Avg, F, Q, DecimalField, IntegerField
 from django.db.models.functions import Coalesce
+from django.core.paginator import Paginator
 from decimal import Decimal
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 
@@ -168,8 +169,31 @@ def admin_order_detail_manage(request, order_number):
 
 @admin_required
 def product_list(request):
-    products = Product.objects.all()
-    return render(request, 'admin/product_list.html', {'products': products})
+    products = Product.objects.select_related('category').all().order_by('-created_at')
+    q = request.GET.get('q', '').strip()
+    category_filter = request.GET.get('category', '')
+    stock_filter = request.GET.get('stock', '')
+    if q:
+        products = products.filter(Q(title__icontains=q) | Q(slug__icontains=q) | Q(excerpt__icontains=q))
+    if category_filter:
+        products = products.filter(category__slug=category_filter)
+    if stock_filter == 'low':
+        products = products.filter(stock_quantity__lte=5, stock_quantity__gt=0)
+    elif stock_filter == 'out':
+        products = products.filter(stock_quantity=0)
+    total_count = products.count()
+    paginator = Paginator(products, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    categories = Category.objects.filter(is_active=True)
+    return render(request, 'admin/product_list.html', {
+        'products': page_obj,
+        'page_obj': page_obj,
+        'total_count': total_count,
+        'current_query': q,
+        'current_category': category_filter,
+        'current_stock': stock_filter,
+        'categories': categories,
+    })
 
 
 @admin_required
@@ -194,7 +218,7 @@ def product_edit(request, pk):
             return redirect('product_list')
     else:
         form = ProductForm(instance=product)
-    return render(request, 'admin/product_form.html', {'form': form, 'product': product})
+    return render(request, 'admin/product_form.html', {'form': form, 'product': product, 'title': 'Chỉnh Sửa Sản Phẩm'})
 
 
 @admin_required
@@ -210,8 +234,14 @@ def product_delete(request, pk):
 
 @admin_required
 def storyboard_list(request):
-    items = StoryboardItem.objects.all()
-    return render(request, 'admin/storyboard_list.html', {'items': items})
+    items = StoryboardItem.objects.all().order_by('-created_at')
+    q = request.GET.get('q', '').strip()
+    if q:
+        items = items.filter(Q(title__icontains=q) | Q(excerpt__icontains=q))
+    total_count = items.count()
+    paginator = Paginator(items, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    return render(request, 'admin/storyboard_list.html', {'items': page_obj, 'page_obj': page_obj, 'total_count': total_count, 'current_query': q})
 
 
 @admin_required
@@ -252,8 +282,14 @@ def storyboard_delete(request, pk):
 
 @admin_required
 def raw_list(request):
-    items = RawItem.objects.all()
-    return render(request, 'admin/raw_list.html', {'items': items})
+    items = RawItem.objects.all().order_by('-created_at')
+    q = request.GET.get('q', '').strip()
+    if q:
+        items = items.filter(Q(title__icontains=q) | Q(caption__icontains=q))
+    total_count = items.count()
+    paginator = Paginator(items, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    return render(request, 'admin/raw_list.html', {'items': page_obj, 'page_obj': page_obj, 'total_count': total_count, 'current_query': q})
 
 
 @admin_required
@@ -294,8 +330,14 @@ def raw_delete(request, pk):
 
 @admin_required
 def cabinet_list(request):
-    items = CabinetItem.objects.all()
-    return render(request, 'admin/cabinet_list.html', {'items': items})
+    items = CabinetItem.objects.all().order_by('-created_at')
+    q = request.GET.get('q', '').strip()
+    if q:
+        items = items.filter(Q(title__icontains=q) | Q(note__icontains=q))
+    total_count = items.count()
+    paginator = Paginator(items, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    return render(request, 'admin/cabinet_list.html', {'items': page_obj, 'page_obj': page_obj, 'total_count': total_count, 'current_query': q})
 
 
 @admin_required
@@ -336,8 +378,14 @@ def cabinet_delete(request, pk):
 
 @admin_required
 def category_list(request):
-    items = Category.objects.all()
-    return render(request, 'admin/category_list.html', {'items': items})
+    items = Category.objects.annotate(product_count=Count('products')).all().order_by('-created_at')
+    q = request.GET.get('q', '').strip()
+    if q:
+        items = items.filter(Q(name__icontains=q) | Q(slug__icontains=q))
+    total_count = items.count()
+    paginator = Paginator(items, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    return render(request, 'admin/category_list.html', {'items': page_obj, 'page_obj': page_obj, 'total_count': total_count, 'current_query': q})
 
 
 @admin_required
@@ -478,3 +526,135 @@ def admin_return_detail(request, return_id):
         return redirect('admin_return_detail', return_id=return_id)
 
     return render(request, 'admin/returns/return_detail.html', {'return_req': return_req})
+
+
+# ==================== COUPON CRUD ====================
+
+@admin_required
+def coupon_list(request):
+    coupons = Coupon.objects.all().order_by('-valid_to')
+    q = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', '')
+    if q:
+        coupons = coupons.filter(Q(code__icontains=q))
+    if status_filter == 'active':
+        coupons = coupons.filter(active=True, valid_from__lte=timezone.now(), valid_to__gte=timezone.now())
+    elif status_filter == 'inactive':
+        coupons = coupons.filter(active=False)
+    elif status_filter == 'expired':
+        coupons = coupons.filter(valid_to__lt=timezone.now())
+    total_count = coupons.count()
+    paginator = Paginator(coupons, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    return render(request, 'admin/coupon_list.html', {'coupons': page_obj, 'page_obj': page_obj, 'total_count': total_count, 'current_query': q, 'current_status': status_filter})
+
+
+@admin_required
+def coupon_create(request):
+    if request.method == 'POST':
+        form = CouponForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Đã tạo mã giảm giá mới.')
+            return redirect('coupon_list')
+    else:
+        form = CouponForm()
+    return render(request, 'admin/coupon_form.html', {'form': form, 'title': 'Thêm Mã Giảm Giá'})
+
+
+@admin_required
+def coupon_edit(request, pk):
+    coupon = get_object_or_404(Coupon, pk=pk)
+    if request.method == 'POST':
+        form = CouponForm(request.POST, instance=coupon)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Đã cập nhật mã giảm giá.')
+            return redirect('coupon_list')
+    else:
+        form = CouponForm(instance=coupon)
+    return render(request, 'admin/coupon_form.html', {'form': form, 'coupon': coupon, 'title': 'Chỉnh Sửa Mã Giảm Giá'})
+
+
+@admin_required
+def coupon_delete(request, pk):
+    coupon = get_object_or_404(Coupon, pk=pk)
+    if request.method == 'POST':
+        coupon.delete()
+        messages.success(request, 'Đã xóa mã giảm giá.')
+        return redirect('coupon_list')
+    return render(request, 'admin/confirm_delete.html', {
+        'object': coupon,
+        'object_name': f'mã giảm giá "{coupon.code}"',
+        'cancel_url': 'coupon_list',
+        'title': 'Xóa Mã Giảm Giá'
+    })
+
+
+@admin_required
+def coupon_toggle(request, pk):
+    coupon = get_object_or_404(Coupon, pk=pk)
+    coupon.active = not coupon.active
+    coupon.save()
+    status = 'kích hoạt' if coupon.active else 'tắt'
+    messages.success(request, f'Đã {status} mã {coupon.code}.')
+    return redirect('coupon_list')
+
+
+# ==================== REVIEW & COMMENT MODERATION ====================
+
+@admin_required
+def admin_review_list(request):
+    reviews = Review.objects.select_related('product', 'user').order_by('-created_at')
+    q = request.GET.get('q', '').strip()
+    rating_filter = request.GET.get('rating')
+    if q:
+        reviews = reviews.filter(Q(title__icontains=q) | Q(content__icontains=q) | Q(user__username__icontains=q) | Q(product__title__icontains=q))
+    if rating_filter:
+        reviews = reviews.filter(rating=rating_filter)
+    total_count = reviews.count()
+    paginator = Paginator(reviews, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    return render(request, 'admin/review_list.html', {'reviews': page_obj, 'page_obj': page_obj, 'total_count': total_count, 'current_rating': rating_filter, 'current_query': q})
+
+
+@admin_required
+def admin_review_delete(request, pk):
+    review = get_object_or_404(Review, pk=pk)
+    if request.method == 'POST':
+        review.delete()
+        messages.success(request, 'Đã xóa đánh giá.')
+        return redirect('admin_review_list')
+    return render(request, 'admin/confirm_delete.html', {
+        'object': review,
+        'object_name': f'đánh giá của {review.user.username} cho "{review.product.title}"',
+        'cancel_url': 'admin_review_list',
+        'title': 'Xóa Đánh Giá'
+    })
+
+
+@admin_required
+def admin_comment_list(request):
+    comments = Comment.objects.select_related('product', 'user').filter(parent__isnull=True).order_by('-created_at')
+    q = request.GET.get('q', '').strip()
+    if q:
+        comments = comments.filter(Q(content__icontains=q) | Q(user__username__icontains=q) | Q(product__title__icontains=q))
+    total_count = comments.count()
+    paginator = Paginator(comments, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    return render(request, 'admin/comment_list.html', {'comments': page_obj, 'page_obj': page_obj, 'total_count': total_count, 'current_query': q})
+
+
+@admin_required
+def admin_comment_delete(request, pk):
+    comment = get_object_or_404(Comment, pk=pk)
+    if request.method == 'POST':
+        comment.delete()
+        messages.success(request, 'Đã xóa bình luận.')
+        return redirect('admin_comment_list')
+    return render(request, 'admin/confirm_delete.html', {
+        'object': comment,
+        'object_name': f'bình luận của {comment.user.username}: "{comment.content[:50]}..."',
+        'cancel_url': 'admin_comment_list',
+        'title': 'Xóa Bình Luận'
+    })

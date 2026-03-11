@@ -1,0 +1,42 @@
+{% if page_obj.has_other_pages %}
+<div class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 bg-white rounded-2xl border border-stone-200 px-5 py-4">
+    <p class="text-xs text-stone-500">
+        Trang <span class="font-bold text-stone-700">{{ page_obj.number }}</span> / {{ page_obj.paginator.num_pages }}
+        — Hiển thị {{ page_obj.start_index }}-{{ page_obj.end_index }} trong <span class="font-bold text-stone-700">{{ page_obj.paginator.count }}</span> mục
+    </p>
+    <div class="flex items-center gap-1">
+        {% if page_obj.has_previous %}
+        <a href="?page=1{% for key, val in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ val }}{% endif %}{% endfor %}"
+            class="w-9 h-9 flex items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition-colors" title="Trang đầu">
+            <i data-lucide="chevrons-left" class="w-4 h-4"></i>
+        </a>
+        <a href="?page={{ page_obj.previous_page_number }}{% for key, val in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ val }}{% endif %}{% endfor %}"
+            class="w-9 h-9 flex items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition-colors" title="Trang trước">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        </a>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <span class="w-9 h-9 flex items-center justify-center rounded-xl bg-emerald-900 text-white text-sm font-bold">{{ num }}</span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <a href="?page={{ num }}{% for key, val in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ val }}{% endif %}{% endfor %}"
+                class="w-9 h-9 flex items-center justify-center rounded-xl text-stone-600 hover:bg-stone-100 text-sm font-medium transition-colors">{{ num }}</a>
+            {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
+            <span class="w-9 h-9 flex items-center justify-center text-stone-400 text-xs">…</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% for key, val in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ val }}{% endif %}{% endfor %}"
+            class="w-9 h-9 flex items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition-colors" title="Trang sau">
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        </a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% for key, val in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ val }}{% endif %}{% endfor %}"
+            class="w-9 h-9 flex items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition-colors" title="Trang cuối">
+            <i data-lucide="chevrons-right" class="w-4 h-4"></i>
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

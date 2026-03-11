@@ -72,6 +72,19 @@ urlpatterns = [
     path('manage/categories/<int:pk>/delete/', views.category_delete, name='category_delete'),
     path('manage/categories/<int:pk>/toggle/', views.category_toggle_active, name='category_toggle_active'),
     
+    # Coupon CRUD
+    path('manage/coupons/', views.coupon_list, name='coupon_list'),
+    path('manage/coupons/add/', views.coupon_create, name='coupon_create'),
+    path('manage/coupons/<int:pk>/edit/', views.coupon_edit, name='coupon_edit'),
+    path('manage/coupons/<int:pk>/delete/', views.coupon_delete, name='coupon_delete'),
+    path('manage/coupons/<int:pk>/toggle/', views.coupon_toggle, name='coupon_toggle'),
+    
+    # Admin Review & Comment Moderation
+    path('manage/reviews/', views.admin_review_list, name='admin_review_list'),
+    path('manage/reviews/<int:pk>/delete/', views.admin_review_delete, name='admin_review_delete'),
+    path('manage/comments/', views.admin_comment_list, name='admin_comment_list'),
+    path('manage/comments/<int:pk>/delete/', views.admin_comment_delete, name='admin_comment_delete'),
+    
     # Reviews & Comments
     path('product/<slug:slug>/review/', views.review_create, name='review_create'),
     path('product/<slug:slug>/reviews-ajax/', views.product_reviews_ajax, name='product_reviews_ajax'),
@@ -93,6 +106,9 @@ urlpatterns = [
     path('notifications/', views.notification_list, name='notification_list'),
     path('notifications/mark-read/', views.notification_mark_read, name='notification_mark_read'),
     path('api/notifications/count/', views.notification_count_api, name='notification_count_api'),
+    path('api/notifications/list/', views.notification_list_ajax, name='notification_list_ajax'),
+    path('api/notifications/dropdown/', views.notification_dropdown_api, name='notification_dropdown_api'),
+    path('api/notifications/stream/', views.notification_sse, name='notification_sse'),
     # Orders & Invoices
     path('orders/', views.order_list, name='order_list'),
     path('order/<str:order_number>/', views.order_detail, name='order_detail'),

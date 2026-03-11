@@ -192,7 +192,7 @@ def product_reviews_ajax(request, slug):
 
 
 def product_list_view(request):
-    """Trang danh sách sản phẩm với tìm kiếm và lọc nâng cao"""
+    """Trang danh sách sản phẩm với tìm kiếm, lọc nâng cao và phân trang"""
     active_filter = Q(category__isnull=True) | Q(category__is_active=True)
     products = Product.objects.select_related('category').filter(active_filter)
     categories = Category.objects.filter(is_active=True)
@@ -227,15 +227,49 @@ def product_list_view(request):
     if sort in valid_sorts:
         products = products.order_by(sort)
 
+    total_count = products.count()
+
+    # Pagination — Load More style (12 per page)
+    per_page = 12
+    try:
+        page = int(request.GET.get('page', 1))
+    except (ValueError, TypeError):
+        page = 1
+    page = max(1, page)
+
+    end_idx = page * per_page
+    product_list = products[:end_idx]
+    has_more = total_count > end_idx
+    remaining = total_count - end_idx if has_more else 0
+
+    # Category counts for sidebar
+    category_counts = {}
+    all_products_in_filter = Product.objects.select_related('category').filter(active_filter)
+    if query:
+        all_products_in_filter = all_products_in_filter.filter(
+            Q(title__icontains=query) | Q(excerpt__icontains=query) | Q(description__icontains=query)
+        )
+    for cat_count in all_products_in_filter.values('category__slug', 'category__name').annotate(count=Count('id')):
+        if cat_count['category__slug']:
+            category_counts[cat_count['category__slug']] = cat_count['count']
+    uncategorized_count = all_products_in_filter.filter(category__isnull=True).count()
+
     context = {
-        'products': products,
+        'products': product_list,
         'categories': categories,
+        'category_counts': category_counts,
+        'uncategorized_count': uncategorized_count,
         'current_query': query,
         'current_category': category_slug,
         'current_sort': sort,
         'min_price': min_price,
         'max_price': max_price,
         'current_rating': rating,
+        'total_count': total_count,
+        'current_page': page,
+        'has_more': has_more,
+        'remaining': remaining,
+        'per_page': per_page,
     }
     return render(request, 'shop/products.html', context)
 

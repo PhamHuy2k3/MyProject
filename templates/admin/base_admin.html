@@ -1,42 +1,98 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<style>
+    .sidebar-group .sidebar-body { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.3s ease, opacity 0.25s ease; }
+    .sidebar-group.open .sidebar-body { max-height: 500px; opacity: 1; }
+    .sidebar-group .sidebar-chevron { transition: transform 0.25s ease; }
+    .sidebar-group.open .sidebar-chevron { transform: rotate(180deg); }
+</style>
 <div class="min-h-screen bg-stone-50 py-12">
     <div class="container mx-auto px-6">
         <div class="flex flex-col md:flex-row gap-8">
             <!-- Sidebar -->
-            <aside class="w-full md:w-64 flex-shrink-0">
-                <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 sticky top-24">
-                    <h3 class="font-art text-xl font-bold text-emerald-900 mb-6">Quản Trị</h3>
-                    <nav class="space-y-2">
-                        <a href="{% url 'admin_dashboard' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if request.resolver_match.url_name == 'admin_dashboard' %}bg-emerald-50 text-emerald-800 font-medium{% endif %}">
-                            <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
+            <aside class="w-full md:w-60 flex-shrink-0">
+                <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-5 sticky top-24">
+                    <h3 class="font-art text-lg font-bold text-emerald-900 mb-4 px-2">Quản Trị</h3>
+                    <nav class="space-y-1">
+
+                        <!-- Tổng quan (always visible) -->
+                        <a href="{% url 'admin_dashboard' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if request.resolver_match.url_name == 'admin_dashboard' %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                            <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
                         </a>
-                        <a href="{% url 'admin_statistics' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if request.resolver_match.url_name == 'admin_statistics' %}bg-emerald-50 text-emerald-800 font-medium{% endif %}">
-                            <i data-lucide="bar-chart-3" class="w-5 h-5"></i> Thống Kê
+                        <a href="{% url 'admin_statistics' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if request.resolver_match.url_name == 'admin_statistics' %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                            <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Thống Kê
                         </a>
-                        <a href="{% url 'admin_inventory' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if request.resolver_match.url_name == 'admin_inventory' or 'admin_order' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-medium{% endif %}">
-                            <i data-lucide="package" class="w-5 h-5"></i> Kho & Đơn Hàng
-                        </a>
-                        <a href="{% url 'admin_return_list' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'return' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-medium{% endif %}">
-                            <i data-lucide="refresh-cw" class="w-5 h-5"></i> Đổi Trả Hàng
-                        </a>
-                        <div class="border-t border-stone-100 my-2"></div>
-                        <a href="{% url 'product_list' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'product' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-medium{% endif %}">
-                            <i data-lucide="coffee" class="w-5 h-5"></i> Sản Phẩm
-                        </a>
-                        <a href="{% url 'category_list' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'category' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-medium{% endif %}">
-                            <i data-lucide="layers" class="w-5 h-5"></i> Danh Mục
-                        </a>
-                        <a href="{% url 'storyboard_list' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'storyboard' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-medium{% endif %}">
-                            <i data-lucide="film" class="w-5 h-5"></i> Storyboard
-                        </a>
-                         <a href="{% url 'raw_list' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'raw' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-medium{% endif %}">
-                            <i data-lucide="image" class="w-5 h-5"></i> Raw Gallery
-                        </a>
-                         <a href="{% url 'cabinet_list' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'cabinet' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-medium{% endif %}">
-                            <i data-lucide="archive" class="w-5 h-5"></i> Cabinet
-                        </a>
+
+                        <!-- Kinh doanh -->
+                        <div class="sidebar-group {% if 'inventory' in request.resolver_match.url_name or 'order' in request.resolver_match.url_name or 'return' in request.resolver_match.url_name %}open{% endif %} pt-1">
+                            <button type="button" onclick="this.closest('.sidebar-group').classList.toggle('open')"
+                                class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold text-stone-500 hover:bg-stone-50 uppercase tracking-wider transition-colors">
+                                <span class="flex items-center gap-2"><i data-lucide="briefcase" class="w-4 h-4"></i> Kinh doanh</span>
+                                <i data-lucide="chevron-down" class="w-3.5 h-3.5 sidebar-chevron"></i>
+                            </button>
+                            <div class="sidebar-body">
+                                <div class="pl-3 space-y-0.5 pt-1 pb-1">
+                                    <a href="{% url 'admin_inventory' %}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'inventory' in request.resolver_match.url_name or 'admin_order' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                                        <i data-lucide="package" class="w-4 h-4"></i> Kho & Đơn Hàng
+                                    </a>
+                                    <a href="{% url 'admin_return_list' %}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'return' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> Đổi Trả Hàng
+                                    </a>
+                                    <a href="{% url 'coupon_list' %}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'coupon' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                                        <i data-lucide="ticket" class="w-4 h-4"></i> Mã Giảm Giá
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sản phẩm & Nội dung -->
+                        <div class="sidebar-group {% if 'product' in request.resolver_match.url_name or 'category' in request.resolver_match.url_name or 'storyboard' in request.resolver_match.url_name or 'raw' in request.resolver_match.url_name or 'cabinet' in request.resolver_match.url_name %}open{% endif %}">
+                            <button type="button" onclick="this.closest('.sidebar-group').classList.toggle('open')"
+                                class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold text-stone-500 hover:bg-stone-50 uppercase tracking-wider transition-colors">
+                                <span class="flex items-center gap-2"><i data-lucide="box" class="w-4 h-4"></i> Nội dung</span>
+                                <i data-lucide="chevron-down" class="w-3.5 h-3.5 sidebar-chevron"></i>
+                            </button>
+                            <div class="sidebar-body">
+                                <div class="pl-3 space-y-0.5 pt-1 pb-1">
+                                    <a href="{% url 'product_list' %}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'product' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                                        <i data-lucide="coffee" class="w-4 h-4"></i> Sản Phẩm
+                                    </a>
+                                    <a href="{% url 'category_list' %}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'category' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                                        <i data-lucide="layers" class="w-4 h-4"></i> Danh Mục
+                                    </a>
+                                    <a href="{% url 'storyboard_list' %}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'storyboard' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                                        <i data-lucide="film" class="w-4 h-4"></i> Storyboard
+                                    </a>
+                                    <a href="{% url 'raw_list' %}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'raw' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                                        <i data-lucide="image" class="w-4 h-4"></i> Raw Gallery
+                                    </a>
+                                    <a href="{% url 'cabinet_list' %}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'cabinet' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                                        <i data-lucide="archive" class="w-4 h-4"></i> Cabinet
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cộng đồng -->
+                        <div class="sidebar-group {% if 'review' in request.resolver_match.url_name or 'comment' in request.resolver_match.url_name %}open{% endif %}">
+                            <button type="button" onclick="this.closest('.sidebar-group').classList.toggle('open')"
+                                class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold text-stone-500 hover:bg-stone-50 uppercase tracking-wider transition-colors">
+                                <span class="flex items-center gap-2"><i data-lucide="users" class="w-4 h-4"></i> Cộng đồng</span>
+                                <i data-lucide="chevron-down" class="w-3.5 h-3.5 sidebar-chevron"></i>
+                            </button>
+                            <div class="sidebar-body">
+                                <div class="pl-3 space-y-0.5 pt-1 pb-1">
+                                    <a href="{% url 'admin_review_list' %}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'review' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                                        <i data-lucide="star" class="w-4 h-4"></i> Đánh Giá
+                                    </a>
+                                    <a href="{% url 'admin_comment_list' %}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'comment' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                                        <i data-lucide="message-circle" class="w-4 h-4"></i> Bình Luận
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
                     </nav>
                 </div>
             </aside>

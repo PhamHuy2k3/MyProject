@@ -1,0 +1,93 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}Quản Lý Bình Luận{% endblock %}
+{% block page_subtitle %}{{ total_count }} bình luận gốc{% endblock %}
+
+{% block admin_content %}
+<!-- Search Bar -->
+<div class="flex flex-col md:flex-row gap-3 mb-6">
+    <form method="get" class="flex-1 flex gap-2">
+        <div class="relative flex-1">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400"></i>
+            <input type="text" name="q" value="{{ current_query }}" placeholder="Tìm theo nội dung, người dùng, sản phẩm..."
+                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-300 text-sm focus:outline-none focus:border-emerald-600 bg-white">
+        </div>
+        <button type="submit" class="bg-emerald-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-800 transition-colors">Tìm</button>
+        {% if current_query %}
+        <a href="{% url 'admin_comment_list' %}" class="flex items-center justify-center px-3 py-2.5 rounded-xl border border-stone-300 text-stone-500 hover:bg-stone-100 transition-colors" title="Xóa bộ lọc">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </a>
+        {% endif %}
+    </form>
+</div>
+
+{% if comments %}
+<div class="space-y-4">
+    {% for comment in comments %}
+    <div class="bg-white rounded-2xl border border-stone-100 shadow-sm p-6 hover:shadow-md transition-shadow">
+        <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+            <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">
+                        {{ comment.user.username|first|upper }}
+                    </div>
+                    <div>
+                        <span class="font-bold text-stone-800 text-sm">{{ comment.user.username }}</span>
+                        <p class="text-[10px] text-stone-400">{{ comment.created_at|timesince }} trước</p>
+                    </div>
+                </div>
+                <a href="{% url 'product_detail' comment.product.slug %}" class="text-xs text-emerald-600 hover:underline font-medium mb-2 inline-block">
+                    <i data-lucide="package" class="w-3 h-3 inline"></i> {{ comment.product.title }}
+                </a>
+                <p class="text-stone-600 text-sm mt-1">{{ comment.content|truncatewords:50 }}</p>
+                {% if comment.media.exists %}
+                <div class="flex items-center gap-2 mt-2">
+                    {% for media in comment.media.all %}
+                    {% if media.file_type == 'image' %}
+                    <img src="{{ media.file.url }}" class="w-12 h-12 object-cover rounded-lg border" loading="lazy">
+                    {% else %}
+                    <div class="w-12 h-12 rounded-lg bg-stone-100 flex items-center justify-center">
+                        <i data-lucide="video" class="w-5 h-5 text-stone-400"></i>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <div class="flex items-center gap-4 mt-2 text-[10px] text-stone-400">
+                    {% with reply_count=comment.replies.count %}
+                    {% if reply_count > 0 %}
+                    <span class="flex items-center gap-1"><i data-lucide="message-circle" class="w-3 h-3"></i> {{ reply_count }} phản hồi</span>
+                    {% endif %}
+                    {% endwith %}
+                    {% with like_count=comment.interactions.count %}
+                    {% if like_count > 0 %}
+                    <span class="flex items-center gap-1"><i data-lucide="heart" class="w-3 h-3"></i> {{ like_count }} tương tác</span>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <a href="{% url 'admin_comment_delete' comment.pk %}" class="p-2 rounded-xl hover:bg-red-50 transition-colors" title="Xóa bình luận">
+                    <i data-lucide="trash-2" class="w-5 h-5 text-red-400"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% include 'admin/includes/pagination.html' %}
+{% else %}
+<div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-16 text-center">
+    <div class="w-16 h-16 rounded-2xl bg-stone-50 flex items-center justify-center mx-auto mb-4">
+        <i data-lucide="message-circle" class="w-8 h-8 text-stone-300"></i>
+    </div>
+    {% if current_query %}
+    <p class="text-stone-400 font-medium">Không tìm thấy bình luận phù hợp.</p>
+    <a href="{% url 'admin_comment_list' %}" class="text-emerald-600 hover:underline mt-2 inline-block">Xóa bộ lọc →</a>
+    {% else %}
+    <p class="text-stone-400 font-medium">Chưa có bình luận nào.</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -794,20 +794,72 @@ class Notification(models.Model):
 		('reply', 'Phản hồi bình luận'),
 		('message', 'Tin nhắn mới'),
 		('order', 'Cập nhật đơn hàng'),
+		('system', 'Hệ thống'),
+		('promotion', 'Khuyến mãi'),
+		('wishlist', 'Sản phẩm yêu thích'),
+		('stock', 'Cập nhật tồn kho'),
 	]
 
+	CATEGORY_MAP = {
+		'order': 'transactional',
+		'stock': 'transactional',
+		'review': 'interactive',
+		'comment': 'interactive',
+		'reply': 'interactive',
+		'message': 'interactive',
+		'system': 'system',
+		'wishlist': 'promotional',
+		'promotion': 'promotional',
+	}
+
+	CATEGORY_ICONS = {
+		'transactional': {'icon': 'package', 'bg': 'bg-purple-100', 'text': 'text-purple-600'},
+		'interactive': {'icon': 'message-circle', 'bg': 'bg-blue-100', 'text': 'text-blue-600'},
+		'system': {'icon': 'shield', 'bg': 'bg-stone-100', 'text': 'text-stone-600'},
+		'promotional': {'icon': 'tag', 'bg': 'bg-amber-100', 'text': 'text-amber-600'},
+	}
+
+	TYPE_ICONS = {
+		'review': 'star',
+		'comment': 'message-circle',
+		'reply': 'corner-down-right',
+		'message': 'mail',
+		'order': 'package',
+		'system': 'shield',
+		'promotion': 'tag',
+		'wishlist': 'heart',
+		'stock': 'archive',
+	}
+
 	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+	actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='triggered_notifications')
 	notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
 	title = models.CharField(max_length=200)
 	message = models.TextField()
 	link = models.CharField(max_length=500, blank=True)
 	is_read = models.BooleanField(default=False)
+	read_at = models.DateTimeField(null=True, blank=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 
 	class Meta:
 		ordering = ['-created_at']
 		verbose_name = "Thông báo"
 		verbose_name_plural = "Thông báo"
+		indexes = [
+			models.Index(fields=['user', 'is_read', '-created_at']),
+		]
+
+	@property
+	def category(self):
+		return self.CATEGORY_MAP.get(self.notification_type, 'system')
+
+	@property
+	def icon(self):
+		return self.TYPE_ICONS.get(self.notification_type, 'bell')
+
+	@property
+	def category_style(self):
+		return self.CATEGORY_ICONS.get(self.category, self.CATEGORY_ICONS['system'])
 
 	def __str__(self):
 		return f"[{self.notification_type}] {self.title}"

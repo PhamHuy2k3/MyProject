@@ -1,0 +1,170 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_subtitle %}{% if coupon %}Đang chỉnh sửa: {{ coupon.code }}{% else %}Tạo mã khuyến mãi mới{% endif %}{% endblock %}
+
+{% block admin_content %}
+<div class="max-w-4xl mx-auto">
+    <form method="post" class="space-y-8" id="couponForm">
+        {% csrf_token %}
+
+        {% if form.errors %}
+        <div class="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"></i>
+            <div>
+                <p class="text-sm font-bold text-red-700">Vui lòng kiểm tra lại thông tin</p>
+                <ul class="text-xs text-red-600 mt-1 list-disc list-inside">
+                    {% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <!-- Left Column -->
+            <div class="lg:col-span-3 space-y-6">
+                <div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-8">
+                    <h3 class="text-lg font-bold text-stone-800 mb-6 flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
+                            <i data-lucide="ticket" class="w-4 h-4 text-rose-600"></i>
+                        </div>
+                        Thông tin mã giảm giá
+                    </h3>
+                    <div class="space-y-6">
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Mã giảm giá *</label>
+                            {{ form.code }}
+                            <p class="text-[10px] text-stone-400 italic">Mã duy nhất, chỉ gồm chữ và số. VD: SALE20, FREESHIP.</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Loại giảm giá *</label>
+                                {{ form.discount_type }}
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Giá trị giảm *</label>
+                                {{ form.discount_value }}
+                                <p class="text-[10px] text-stone-400 italic" id="discountHint">% hoặc số tiền cố định.</p>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Đơn hàng tối thiểu</label>
+                            {{ form.min_purchase }}
+                            <p class="text-[10px] text-stone-400 italic">Giá trị đơn hàng tối thiểu để áp dụng mã (₫).</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-8">
+                    <h3 class="text-lg font-bold text-stone-800 mb-6 flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                            <i data-lucide="calendar" class="w-4 h-4 text-blue-600"></i>
+                        </div>
+                        Thời hạn hiệu lực
+                    </h3>
+                    <div class="grid grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Bắt đầu từ *</label>
+                            {{ form.valid_from }}
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Kết thúc vào *</label>
+                            {{ form.valid_to }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <button type="submit" class="btn-primary flex-1 py-4 text-base shadow-lg shadow-emerald-900/10 inline-flex items-center justify-center gap-2">
+                        <i data-lucide="{% if coupon %}save{% else %}plus-circle{% endif %}" class="w-5 h-5"></i>
+                        {% if coupon %}Cập nhật mã giảm giá{% else %}Tạo mã giảm giá{% endif %}
+                    </button>
+                    <a href="{% url 'coupon_list' %}" class="btn-secondary py-4 px-8 inline-flex items-center gap-2">
+                        <i data-lucide="x" class="w-4 h-4"></i> Hủy
+                    </a>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-6">
+                    <h3 class="text-sm font-bold text-stone-800 mb-4 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="settings" class="w-4 h-4 text-rose-600"></i> Cài đặt
+                    </h3>
+                    <div class="space-y-5">
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Số lượt sử dụng tối đa</label>
+                            {{ form.usage_limit }}
+                        </div>
+                        <div class="flex items-center justify-between p-4 rounded-2xl bg-stone-50">
+                            <div>
+                                <span class="text-sm font-bold text-stone-700">Kích hoạt</span>
+                                <p class="text-[10px] text-stone-400">Bật/tắt mã giảm giá.</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                {{ form.active }}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                {% if coupon %}
+                <div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-6">
+                    <h3 class="text-sm font-bold text-stone-800 mb-4 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="bar-chart-2" class="w-4 h-4 text-rose-600"></i> Thống kê
+                    </h3>
+                    <div class="space-y-3 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-stone-400">Đã sử dụng</span>
+                            <span class="font-bold text-stone-600">{{ coupon.used }} / {{ coupon.usage_limit }} lượt</span>
+                        </div>
+                        <div class="w-full bg-stone-100 rounded-full h-2">
+                            <div class="bg-rose-500 h-2 rounded-full" style="width: {% widthratio coupon.used coupon.usage_limit 100 %}%"></div>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-stone-400">Trạng thái</span>
+                            {% if coupon.is_valid %}
+                            <span class="font-bold text-emerald-600">Đang hoạt động</span>
+                            {% else %}
+                            <span class="font-bold text-red-500">Không hoạt động</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+    #couponForm input[type="text"], #couponForm input[type="number"], #couponForm input[type="datetime-local"], #couponForm textarea, #couponForm select {
+        width: 100%; padding: 0.75rem 1rem; border-radius: 0.75rem; border: 1px solid #e7e5e4;
+        background: #fafaf9; font-size: 0.875rem; color: #292524; transition: all 0.2s; outline: none;
+    }
+    #couponForm input:focus, #couponForm select:focus, #couponForm textarea:focus {
+        border-color: #f43f5e; box-shadow: 0 0 0 3px rgba(244,63,94,0.1); background: #fff;
+    }
+    #couponForm input[type="checkbox"] { width: 1.25rem; height: 1.25rem; accent-color: #10b981; cursor: pointer; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const discountType = document.querySelector('#couponForm [name="discount_type"]');
+    const discountHint = document.getElementById('discountHint');
+    if (discountType && discountHint) {
+        function updateHint() {
+            const v = discountType.value;
+            if (v === 'percent') discountHint.textContent = 'Nhập phần trăm giảm giá (VD: 20 = giảm 20%).';
+            else if (v === 'fixed') discountHint.textContent = 'Nhập số tiền giảm trực tiếp (₫).';
+            else discountHint.textContent = 'Không cần nhập giá trị cho miễn phí vận chuyển.';
+        }
+        discountType.addEventListener('change', updateHint);
+        updateHint();
+    }
+    // Auto uppercase code
+    const codeInput = document.querySelector('#couponForm [name="code"]');
+    if (codeInput) codeInput.addEventListener('input', function() { this.value = this.value.toUpperCase(); });
+});
+</script>
+{% endblock %}

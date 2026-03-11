@@ -269,26 +269,92 @@ def message_search_users(request):
 
 @login_required(login_url='login')
 def notification_list(request):
-    notifications = request.user.notifications.all()[:50]
+    """Full notification page with category filtering."""
+    category_filter = request.GET.get('category', '')
+    qs = request.user.notifications.all()
+    if category_filter:
+        type_map = {
+            'transactional': ['order', 'stock'],
+            'interactive': ['review', 'comment', 'reply', 'message'],
+            'system': ['system'],
+            'promotional': ['promotion', 'wishlist'],
+        }
+        allowed_types = type_map.get(category_filter, [])
+        if allowed_types:
+            qs = qs.filter(notification_type__in=allowed_types)
     unread_count = request.user.notifications.filter(is_read=False).count()
-    # Tự động đánh dấu đã đọc khi người dùng xem trang thông báo
-    request.user.notifications.filter(is_read=False).update(is_read=True)
-    return render(request, 'core/notifications.html', {'notifications': notifications, 'unread_count': unread_count})
+    notifications = qs[:20]
+    return render(request, 'core/notifications.html', {
+        'notifications': notifications,
+        'unread_count': unread_count,
+        'current_category': category_filter,
+        'has_more': qs.count() > 20,
+    })
+
+
+@login_required(login_url='login')
+def notification_list_ajax(request):
+    """Infinite scroll endpoint — returns JSON page of notifications."""
+    page = int(request.GET.get('page', 1))
+    category_filter = request.GET.get('category', '')
+    per_page = 20
+    qs = request.user.notifications.all()
+    if category_filter:
+        type_map = {
+            'transactional': ['order', 'stock'],
+            'interactive': ['review', 'comment', 'reply', 'message'],
+            'system': ['system'],
+            'promotional': ['promotion', 'wishlist'],
+        }
+        allowed_types = type_map.get(category_filter, [])
+        if allowed_types:
+            qs = qs.filter(notification_type__in=allowed_types)
+    total = qs.count()
+    start = (page - 1) * per_page
+    end = start + per_page
+    notifications = qs[start:end]
+    items = []
+    for n in notifications:
+        items.append({
+            'id': n.id,
+            'type': n.notification_type,
+            'category': n.category,
+            'icon': n.icon,
+            'style': n.category_style,
+            'title': n.title,
+            'message': n.message,
+            'link': n.link,
+            'is_read': n.is_read,
+            'created_at': n.created_at.strftime('%d/%m/%Y %H:%M'),
+            'time_ago': _timesince_short(n.created_at),
+        })
+    return JsonResponse({
+        'items': items,
+        'has_more': end < total,
+        'page': page,
+        'total': total,
+    })
 
 
 @login_required(login_url='login')
 def notification_mark_read(request):
+    """AJAX mark single or all notifications as read."""
     if request.method == 'POST':
         notification_id = request.POST.get('notification_id')
+        now = timezone.now()
         if notification_id:
-            request.user.notifications.filter(id=notification_id).update(is_read=True)
+            request.user.notifications.filter(id=notification_id, is_read=False).update(is_read=True, read_at=now)
         else:
-            request.user.notifications.filter(is_read=False).update(is_read=True)
-    return redirect('notification_list')
+            request.user.notifications.filter(is_read=False).update(is_read=True, read_at=now)
+        new_count = request.user.notifications.filter(is_read=False).count()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'unread_count': new_count})
+        return redirect('notification_list')
+    return JsonResponse({'error': 'POST required'}, status=405)
 
 
 def notification_count_api(request):
-    from django.http import JsonResponse
+    """Badge count endpoint — supports SSE via Accept header."""
     if request.user.is_authenticated:
         notif_count = request.user.notifications.filter(is_read=False).count()
         msg_count = Message.objects.filter(
@@ -297,5 +363,88 @@ def notification_count_api(request):
         ).exclude(sender=request.user).count()
         return JsonResponse({'notification_count': notif_count, 'message_count': msg_count})
     return JsonResponse({'notification_count': 0, 'message_count': 0})
+
+
+@login_required(login_url='login')
+def notification_dropdown_api(request):
+    """Returns latest 8 unread/recent notifications for the dropdown."""
+    notifications = request.user.notifications.all()[:8]
+    unread_count = request.user.notifications.filter(is_read=False).count()
+    items = []
+    for n in notifications:
+        items.append({
+            'id': n.id,
+            'type': n.notification_type,
+            'icon': n.icon,
+            'style': n.category_style,
+            'title': n.title,
+            'message': n.message[:80],
+            'link': n.link,
+            'is_read': n.is_read,
+            'time_ago': _timesince_short(n.created_at),
+        })
+    return JsonResponse({'items': items, 'unread_count': unread_count})
+
+
+@login_required(login_url='login')
+def notification_sse(request):
+    """Server-Sent Events endpoint for real-time notification push."""
+    import time
+    from django.http import StreamingHttpResponse
+
+    def event_stream():
+        last_count = -1
+        while True:
+            try:
+                count = Notification.objects.filter(user=request.user, is_read=False).count()
+                if count != last_count:
+                    last_count = count
+                    latest = Notification.objects.filter(user=request.user, is_read=False).first()
+                    data = {
+                        'unread_count': count,
+                        'latest': None,
+                    }
+                    if latest:
+                        data['latest'] = {
+                            'id': latest.id,
+                            'type': latest.notification_type,
+                            'icon': latest.icon,
+                            'style': latest.category_style,
+                            'title': latest.title,
+                            'message': latest.message[:80],
+                            'link': latest.link,
+                            'time_ago': _timesince_short(latest.created_at),
+                        }
+                    import json
+                    yield f"data: {json.dumps(data)}\n\n"
+                time.sleep(5)
+            except GeneratorExit:
+                break
+            except Exception:
+                break
+
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    return response
+
+
+def _timesince_short(dt):
+    """Return compact Vietnamese time-since string."""
+    diff = timezone.now() - dt
+    seconds = int(diff.total_seconds())
+    if seconds < 60:
+        return 'Vừa xong'
+    minutes = seconds // 60
+    if minutes < 60:
+        return f'{minutes} phút trước'
+    hours = minutes // 60
+    if hours < 24:
+        return f'{hours} giờ trước'
+    days = hours // 24
+    if days < 30:
+        return f'{days} ngày trước'
+    months = days // 30
+    return f'{months} tháng trước'
 
 

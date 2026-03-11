@@ -1,21 +1,35 @@
 {% extends 'admin/base_admin.html' %}
 
 {% block page_title %}Quản Lý Cabinet{% endblock %}
-{% block page_subtitle %}{{ items.count }} mục{% endblock %}
+{% block page_subtitle %}{{ total_count }} mục{% endblock %}
 
-{% block header_actions %}
-<a href="{% url 'cabinet_create' %}" class="btn-primary inline-flex items-center gap-2">
-    <i data-lucide="plus" class="w-4 h-4"></i> Thêm Cabinet
-</a>
-{% endblock %}
+{% block admin_content %}
+<!-- Search Bar -->
+<div class="flex flex-col md:flex-row gap-3 mb-6">
+    <form method="get" class="flex-1 flex gap-2">
+        <div class="relative flex-1">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400"></i>
+            <input type="text" name="q" value="{{ current_query }}" placeholder="Tìm theo tiêu đề, ghi chú..."
+                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-300 text-sm focus:outline-none focus:border-emerald-600 bg-white">
+        </div>
+        <button type="submit" class="bg-emerald-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-800 transition-colors">Tìm</button>
+        {% if current_query %}
+        <a href="{% url 'cabinet_list' %}" class="flex items-center justify-center px-3 py-2.5 rounded-xl border border-stone-300 text-stone-500 hover:bg-stone-100 transition-colors" title="Xóa bộ lọc">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </a>
+        {% endif %}
+    </form>
+    <a href="{% url 'cabinet_create' %}" class="inline-flex items-center gap-2 bg-emerald-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-800 transition-colors whitespace-nowrap">
+        <i data-lucide="plus" class="w-4 h-4"></i> Thêm Cabinet
+    </a>
+</div>
 
-{% block content %}
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
     {% for item in items %}
     <div class="card overflow-hidden group">
         <div class="aspect-[4/3] bg-stone-200 overflow-hidden">
             {% if item.image %}
-            <img src="{{ item.image.url }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+            <img src="{{ item.image.url }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
             {% else %}
             <div class="w-full h-full flex items-center justify-center text-stone-400">
                 <i data-lucide="archive" class="w-12 h-12"></i>
@@ -38,9 +52,16 @@
     {% empty %}
     <div class="col-span-full card p-12 text-center">
         <i data-lucide="archive" class="w-12 h-12 mx-auto mb-4 text-stone-300"></i>
+        {% if current_query %}
+        <p class="text-stone-500">Không tìm thấy cabinet item cho "{{ current_query }}"</p>
+        <a href="{% url 'cabinet_list' %}" class="text-emerald-600 hover:underline mt-2 inline-block">Xóa bộ lọc →</a>
+        {% else %}
         <p class="text-stone-500">Chưa có cabinet item nào</p>
         <a href="{% url 'cabinet_create' %}" class="text-emerald-600 hover:underline mt-2 inline-block">Thêm cabinet đầu tiên →</a>
+        {% endif %}
     </div>
     {% endfor %}
 </div>
+
+{% include 'admin/includes/pagination.html' %}
 {% endblock %}

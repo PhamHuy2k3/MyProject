@@ -12,9 +12,10 @@ def admin_required(view_func):
     )(view_func)
     return login_required(login_url='login')(decorated_view)
 
-def create_notification(user, notification_type, title, message_text, link=''):
+def create_notification(user, notification_type, title, message_text, link='', actor=None):
     Notification.objects.create(
         user=user,
+        actor=actor,
         notification_type=notification_type,
         title=title,
         message=message_text,

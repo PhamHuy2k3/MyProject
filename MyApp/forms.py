@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
 
-from .models import Product, StoryboardItem, RawItem, CabinetItem, Category, UserProfile, Payment
+from .models import Product, StoryboardItem, RawItem, CabinetItem, Category, UserProfile, Payment, Coupon
 
 
 # ==================== AUTH FORMS ====================
@@ -84,28 +84,31 @@ class CategoryForm(forms.ModelForm):
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ['category', 'title', 'slug', 'excerpt', 'image', 'description', 'price', 'stock_quantity']
+        fields = ['category', 'title', 'slug', 'excerpt', 'image', 'description', 'ingredients', 'brewing_guide', 'price', 'stock_quantity']
         widgets = {
             'category': forms.Select(attrs={'class': 'form-input'}),
             'title': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Tên sản phẩm'}),
             'slug': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'slug-san-pham'}),
-            'excerpt': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Mô tả ngắn'}),
-            'description': forms.Textarea(attrs={'class': 'form-input', 'rows': 4, 'placeholder': 'Mô tả chi tiết'}),
-            'price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': 'Giá (VNĐ)'}),
-            'stock_quantity': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': 'Số lượng tồn kho'}),
-            'image': forms.FileInput(attrs={'class': 'form-file'}),
+            'excerpt': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Mô tả ngắn gọn về sản phẩm'}),
+            'description': forms.Textarea(attrs={'class': 'form-input', 'rows': 5, 'placeholder': 'Mô tả chi tiết về sản phẩm...'}),
+            'ingredients': forms.Textarea(attrs={'class': 'form-input', 'rows': 3, 'placeholder': 'Thành phần, nguyên liệu...'}),
+            'brewing_guide': forms.Textarea(attrs={'class': 'form-input', 'rows': 3, 'placeholder': 'Hướng dẫn pha chế, sử dụng...'}),
+            'price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '0'}),
+            'stock_quantity': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '0'}),
+            'image': forms.FileInput(attrs={'class': 'form-file', 'accept': 'image/*'}),
         }
 
 
 class StoryboardItemForm(forms.ModelForm):
     class Meta:
         model = StoryboardItem
-        fields = ['title', 'slug', 'image', 'excerpt']
+        fields = ['title', 'slug', 'image', 'excerpt', 'content']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Tiêu đề'}),
             'slug': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'slug-tieu-de'}),
             'excerpt': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Mô tả ngắn'}),
-            'image': forms.FileInput(attrs={'class': 'form-file'}),
+            'content': forms.Textarea(attrs={'class': 'form-input', 'rows': 8, 'placeholder': 'Nội dung bài viết...'}),
+            'image': forms.FileInput(attrs={'class': 'form-file', 'accept': 'image/*'}),
         }
 
 
@@ -123,11 +126,30 @@ class RawItemForm(forms.ModelForm):
 class CabinetItemForm(forms.ModelForm):
     class Meta:
         model = CabinetItem
-        fields = ['title', 'image', 'note']
+        fields = ['title', 'image', 'note', 'link_url']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Tiêu đề'}),
             'note': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Ghi chú'}),
-            'image': forms.FileInput(attrs={'class': 'form-file'}),
+            'link_url': forms.URLInput(attrs={'class': 'form-input', 'placeholder': 'https://...'}),
+            'image': forms.FileInput(attrs={'class': 'form-file', 'accept': 'image/*'}),
+        }
+
+
+# ==================== COUPON FORMS ====================
+
+class CouponForm(forms.ModelForm):
+    class Meta:
+        model = Coupon
+        fields = ['code', 'discount_type', 'discount_value', 'min_purchase', 'active', 'valid_from', 'valid_to', 'usage_limit']
+        widgets = {
+            'code': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'VD: SALE20'}),
+            'discount_type': forms.Select(attrs={'class': 'form-select'}),
+            'discount_value': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '20'}),
+            'min_purchase': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '100000'}),
+            'active': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+            'valid_from': forms.DateTimeInput(attrs={'class': 'form-input', 'type': 'datetime-local'}),
+            'valid_to': forms.DateTimeInput(attrs={'class': 'form-input', 'type': 'datetime-local'}),
+            'usage_limit': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '100'}),
         }
 
 

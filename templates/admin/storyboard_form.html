@@ -3,50 +3,167 @@
 {% block page_title %}{{ title }}{% endblock %}
 {% block page_subtitle %}{% if item %}Đang chỉnh sửa: {{ item.title }}{% else %}Tạo storyboard mới{% endif %}{% endblock %}
 
-{% block header_actions %}
-<a href="{% url 'storyboard_list' %}" class="btn-secondary inline-flex items-center gap-2">
-    <i data-lucide="arrow-left" class="w-4 h-4"></i> Quay lại
-</a>
-{% endblock %}
-
-{% block content %}
-<div class="card p-8 max-w-3xl">
-    <form method="post" enctype="multipart/form-data" class="space-y-6">
+{% block admin_content %}
+<div class="max-w-5xl mx-auto">
+    <form method="post" enctype="multipart/form-data" class="space-y-8" id="storyboardForm">
         {% csrf_token %}
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        {% if form.errors %}
+        <div class="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"></i>
             <div>
-                <label class="block text-sm font-semibold text-stone-700 mb-2">Tiêu đề *</label>
-                {{ form.title }}
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-stone-700 mb-2">Slug *</label>
-                {{ form.slug }}
+                <p class="text-sm font-bold text-red-700">Vui lòng kiểm tra lại thông tin</p>
+                <ul class="text-xs text-red-600 mt-1 list-disc list-inside">
+                    {% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+                </ul>
             </div>
         </div>
+        {% endif %}
         
-        <div>
-            <label class="block text-sm font-semibold text-stone-700 mb-2">Mô tả ngắn</label>
-            {{ form.excerpt }}
-        </div>
-        
-        <div>
-            <label class="block text-sm font-semibold text-stone-700 mb-2">Hình ảnh</label>
-            {% if item and item.image %}
-            <div class="mb-3 flex items-center gap-4">
-                <img src="{{ item.image.url }}" class="w-24 h-24 object-cover rounded-xl border">
-                <span class="text-sm text-stone-500">Ảnh hiện tại</span>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-8">
+                    <h3 class="text-lg font-bold text-stone-800 mb-6 flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                            <i data-lucide="film" class="w-4 h-4 text-emerald-600"></i>
+                        </div>
+                        Thông tin cơ bản
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Tiêu đề *</label>
+                            {{ form.title }}
+                            {% if form.title.errors %}<p class="text-red-500 text-xs font-medium">{{ form.title.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Slug (URL) *</label>
+                            {{ form.slug }}
+                            {% if form.slug.errors %}<p class="text-red-500 text-xs font-medium">{{ form.slug.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="pt-6 space-y-2">
+                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Mô tả ngắn</label>
+                        {{ form.excerpt }}
+                        <p class="text-[10px] text-stone-400 italic">Hiển thị dưới tiêu đề trong danh sách storyboard.</p>
+                    </div>
+                </div>
+
+                <!-- Card: Nội dung bài viết -->
+                <div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-8">
+                    <h3 class="text-lg font-bold text-stone-800 mb-6 flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                            <i data-lucide="file-text" class="w-4 h-4 text-blue-600"></i>
+                        </div>
+                        Nội dung bài viết
+                    </h3>
+                    <div class="space-y-2">
+                        {{ form.content }}
+                        <p class="text-[10px] text-stone-400 italic">Nội dung chi tiết sẽ hiển thị khi người đọc click vào bài viết.</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <button type="submit" class="btn-primary flex-1 py-4 text-base shadow-lg shadow-emerald-900/10 inline-flex items-center justify-center gap-2">
+                        <i data-lucide="{% if item %}save{% else %}plus-circle{% endif %}" class="w-5 h-5"></i>
+                        {% if item %}Cập nhật storyboard{% else %}Thêm storyboard mới{% endif %}
+                    </button>
+                    <a href="{% url 'storyboard_list' %}" class="btn-secondary py-4 px-8 inline-flex items-center gap-2">
+                        <i data-lucide="x" class="w-4 h-4"></i> Hủy
+                    </a>
+                </div>
             </div>
-            {% endif %}
-            {{ form.image }}
-        </div>
-        
-        <div class="flex gap-4 pt-4">
-            <button type="submit" class="btn-primary">
-                {% if item %}Cập nhật{% else %}Thêm mới{% endif %}
-            </button>
-            <a href="{% url 'storyboard_list' %}" class="btn-secondary">Hủy</a>
+
+            <!-- Right Column -->
+            <div class="space-y-6">
+                <div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-6">
+                    <h3 class="text-sm font-bold text-stone-800 mb-4 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="image" class="w-4 h-4 text-emerald-600"></i> Hình ảnh bìa
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="relative aspect-[4/3] w-full rounded-2xl bg-stone-50 border-2 border-dashed border-stone-200 overflow-hidden group hover:border-emerald-300 transition-colors cursor-pointer" id="imageDropZone">
+                            {% if item and item.image %}
+                            <img src="{{ item.image.url }}" id="imgPreview" class="w-full h-full object-cover rounded-2xl">
+                            {% else %}
+                            <div id="imgPlaceholder" class="w-full h-full flex flex-col items-center justify-center text-stone-300 group-hover:text-emerald-400 transition-colors">
+                                <i data-lucide="image-plus" class="w-10 h-10 mb-3"></i>
+                                <span class="text-xs font-bold uppercase tracking-wider">Kéo thả hoặc click</span>
+                            </div>
+                            <img id="imgPreview" class="hidden w-full h-full object-cover rounded-2xl absolute inset-0">
+                            {% endif %}
+                        </div>
+                        <div>
+                            {{ form.image }}
+                            <p class="text-[10px] text-stone-400 mt-2">JPG, PNG, WEBP — Tối đa 2MB.</p>
+                        </div>
+                    </div>
+                </div>
+
+                {% if item %}
+                <div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-6">
+                    <h3 class="text-sm font-bold text-stone-800 mb-4 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="info" class="w-4 h-4 text-emerald-600"></i> Thông tin
+                    </h3>
+                    <div class="space-y-3 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-stone-400">Ngày tạo</span>
+                            <span class="font-bold text-stone-600">{{ item.created_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-stone-400">Slug</span>
+                            <code class="bg-stone-100 px-2 py-0.5 rounded text-stone-600">{{ item.slug }}</code>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
         </div>
     </form>
 </div>
+
+<style>
+    #storyboardForm input[type="text"], #storyboardForm textarea, #storyboardForm select {
+        width: 100%; padding: 0.75rem 1rem; border-radius: 0.75rem; border: 1px solid #e7e5e4;
+        background: #fafaf9; font-size: 0.875rem; color: #292524; transition: all 0.2s; outline: none;
+    }
+    #storyboardForm input[type="text"]:focus, #storyboardForm textarea:focus {
+        border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); background: #fff;
+    }
+    #storyboardForm textarea { resize: vertical; min-height: 5rem; }
+    #storyboardForm input[type="file"] { width: 100%; font-size: 0.75rem; color: #78716c; }
+    #storyboardForm input[type="file"]::file-selector-button {
+        padding: 0.5rem 1rem; border-radius: 0.75rem; border: 1px solid #e7e5e4; background: #f5f5f4;
+        font-size: 0.75rem; font-weight: 600; color: #57534e; cursor: pointer; transition: all 0.2s; margin-right: 0.75rem;
+    }
+    #storyboardForm input[type="file"]::file-selector-button:hover { background: #e7e5e4; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const titleInput = document.querySelector('#storyboardForm [name="title"]');
+    const slugInput = document.querySelector('#storyboardForm [name="slug"]');
+    if (titleInput && slugInput && !slugInput.value) {
+        titleInput.addEventListener('input', function() {
+            slugInput.value = this.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+                .replace(/đ/g,'d').replace(/Đ/g,'d').replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+        });
+    }
+    const fileInput = document.querySelector('#storyboardForm [name="image"]');
+    const imgPreview = document.getElementById('imgPreview');
+    const imgPlaceholder = document.getElementById('imgPlaceholder');
+    if (fileInput && imgPreview) {
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) { imgPreview.src = e.target.result; imgPreview.classList.remove('hidden'); if (imgPlaceholder) imgPlaceholder.classList.add('hidden'); };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    }
+    const dropZone = document.getElementById('imageDropZone');
+    if (dropZone && fileInput) { dropZone.addEventListener('click', () => fileInput.click()); }
+});
+</script>
 {% endblock %}

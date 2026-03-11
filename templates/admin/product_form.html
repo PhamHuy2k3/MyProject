@@ -1,75 +1,317 @@
 {% extends 'admin/base_admin.html' %}
 
 {% block page_title %}{{ title }}{% endblock %}
-{% block page_subtitle %}{% if product %}Đang chỉnh sửa: {{ product.title }}{% else %}Tạo sản phẩm mới{% endif %}{% endblock %}
+{% block page_subtitle %}{% if product %}Đang chỉnh sửa: {{ product.title }}{% else %}Tạo sản phẩm mới cho cửa hàng{% endif %}{% endblock %}
 
-{% block header_actions %}
-<a href="{% url 'product_list' %}" class="btn-secondary inline-flex items-center gap-2">
-    <i data-lucide="arrow-left" class="w-4 h-4"></i> Quay lại
-</a>
-{% endblock %}
-
-{% block content %}
-<div class="card p-8 max-w-3xl">
-    <form method="post" enctype="multipart/form-data" class="space-y-6">
+{% block admin_content %}
+<div class="max-w-5xl mx-auto">
+    <form method="post" enctype="multipart/form-data" class="space-y-8" id="productForm">
         {% csrf_token %}
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        {% if form.errors %}
+        <div class="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"></i>
             <div>
-                <label class="block text-sm font-semibold text-stone-700 mb-2">Danh mục</label>
-                {{ form.category }}
-            </div>
-            <div></div>
-            <div>
-                <label class="block text-sm font-semibold text-stone-700 mb-2">Tên sản phẩm *</label>
-                {{ form.title }}
-                {% if form.title.errors %}<p class="text-red-500 text-sm mt-1">{{ form.title.errors.0 }}</p>{% endif %}
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-stone-700 mb-2">Slug *</label>
-                {{ form.slug }}
-                {% if form.slug.errors %}<p class="text-red-500 text-sm mt-1">{{ form.slug.errors.0 }}</p>{% endif %}
+                <p class="text-sm font-bold text-red-700">Vui lòng kiểm tra lại thông tin</p>
+                <ul class="text-xs text-red-600 mt-1 list-disc list-inside">
+                    {% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+                </ul>
             </div>
         </div>
+        {% endif %}
         
-        <div>
-            <label class="block text-sm font-semibold text-stone-700 mb-2">Mô tả ngắn</label>
-            {{ form.excerpt }}
-        </div>
-        
-        <div>
-            <label class="block text-sm font-semibold text-stone-700 mb-2">Hình ảnh</label>
-            {% if product and product.image %}
-            <div class="mb-3 flex items-center gap-4">
-                <img src="{{ product.image.url }}" class="w-24 h-24 object-cover rounded-xl border">
-                <span class="text-sm text-stone-500">Ảnh hiện tại</span>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- ═══ Left Column: Main Info ═══ -->
+            <div class="lg:col-span-2 space-y-6">
+
+                <!-- Card: Thông tin cơ bản -->
+                <div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-8">
+                    <h3 class="text-lg font-bold text-stone-800 mb-6 flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                            <i data-lucide="package" class="w-4 h-4 text-emerald-600"></i>
+                        </div>
+                        Thông tin cơ bản
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Tên sản phẩm *</label>
+                            {{ form.title }}
+                            {% if form.title.errors %}<p class="text-red-500 text-xs font-medium">{{ form.title.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Slug (URL) *</label>
+                            {{ form.slug }}
+                            {% if form.slug.errors %}<p class="text-red-500 text-xs font-medium">{{ form.slug.errors.0 }}</p>{% endif %}
+                            <p class="text-[10px] text-stone-400 italic">Tự động tạo từ tên sản phẩm nếu bỏ trống.</p>
+                        </div>
+                    </div>
+
+                    <div class="pt-6 space-y-2">
+                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Mô tả ngắn</label>
+                        {{ form.excerpt }}
+                        <p class="text-[10px] text-stone-400 italic">Hiển thị trong danh sách sản phẩm và kết quả tìm kiếm.</p>
+                    </div>
+                </div>
+
+                <!-- Card: Mô tả chi tiết -->
+                <div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-8">
+                    <h3 class="text-lg font-bold text-stone-800 mb-6 flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                            <i data-lucide="file-text" class="w-4 h-4 text-blue-600"></i>
+                        </div>
+                        Mô tả & Chi tiết
+                    </h3>
+                    
+                    <div class="space-y-6">
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Mô tả chi tiết</label>
+                            {{ form.description }}
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">
+                                <i data-lucide="list" class="w-3.5 h-3.5 inline mr-1"></i>Thành phần / Thông số
+                            </label>
+                            {{ form.ingredients }}
+                            <p class="text-[10px] text-stone-400 italic">Liệt kê thành phần, nguyên liệu hoặc thông số kỹ thuật.</p>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">
+                                <i data-lucide="coffee" class="w-3.5 h-3.5 inline mr-1"></i>Hướng dẫn pha chế
+                            </label>
+                            {{ form.brewing_guide }}
+                            <p class="text-[10px] text-stone-400 italic">Hướng dẫn cách pha, nhiệt độ nước, thời gian hãm...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-4">
+                    <button type="submit" class="btn-primary flex-1 py-4 text-base shadow-lg shadow-emerald-900/10 inline-flex items-center justify-center gap-2">
+                        <i data-lucide="{% if product %}save{% else %}plus-circle{% endif %}" class="w-5 h-5"></i>
+                        {% if product %}Cập nhật sản phẩm{% else %}Thêm sản phẩm mới{% endif %}
+                    </button>
+                    <a href="{% url 'product_list' %}" class="btn-secondary py-4 px-8 inline-flex items-center gap-2">
+                        <i data-lucide="x" class="w-4 h-4"></i> Hủy bỏ
+                    </a>
+                </div>
             </div>
-            {% endif %}
-            {{ form.image }}
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label class="block text-sm font-semibold text-stone-700 mb-2">Giá (VNĐ)</label>
-                {{ form.price }}
+
+            <!-- ═══ Right Column: Sidebar ═══ -->
+            <div class="space-y-6">
+
+                <!-- Danh mục -->
+                <div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-6">
+                    <h3 class="text-sm font-bold text-stone-800 mb-4 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="layers" class="w-4 h-4 text-emerald-600"></i> Danh mục
+                    </h3>
+                    <div class="space-y-2">
+                        {{ form.category }}
+                        <p class="text-[10px] text-stone-400 italic">Chọn danh mục phù hợp cho sản phẩm.</p>
+                    </div>
+                </div>
+
+                <!-- Giá & Kho -->
+                <div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-6">
+                    <h3 class="text-sm font-bold text-stone-800 mb-4 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="tag" class="w-4 h-4 text-emerald-600"></i> Giá & Tồn kho
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Giá bán (VNĐ)</label>
+                            <div class="relative">
+                                {{ form.price }}
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-stone-400">₫</span>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Số lượng tồn kho</label>
+                            {{ form.stock_quantity }}
+                        </div>
+                        {% if product %}
+                        <div class="pt-3 border-t border-stone-100">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-stone-400">Lượt xem</span>
+                                <span class="font-bold text-stone-600">{{ product.views_count|default:"0" }}</span>
+                            </div>
+                            <div class="flex items-center justify-between text-xs mt-2">
+                                <span class="text-stone-400">Ngày tạo</span>
+                                <span class="font-bold text-stone-600">{{ product.created_at|date:"d/m/Y" }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Hình ảnh đại diện -->
+                <div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-6">
+                    <h3 class="text-sm font-bold text-stone-800 mb-4 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="image" class="w-4 h-4 text-emerald-600"></i> Ảnh đại diện
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="relative aspect-square w-full rounded-2xl bg-stone-50 border-2 border-dashed border-stone-200 overflow-hidden group hover:border-emerald-300 transition-colors cursor-pointer" id="imageDropZone">
+                            {% if product and product.image %}
+                            <img src="{{ product.image.url }}" id="imgPreview" class="w-full h-full object-cover rounded-2xl">
+                            {% else %}
+                            <div id="imgPlaceholder" class="w-full h-full flex flex-col items-center justify-center text-stone-300 group-hover:text-emerald-400 transition-colors">
+                                <i data-lucide="image-plus" class="w-10 h-10 mb-3"></i>
+                                <span class="text-xs font-bold uppercase tracking-wider">Kéo thả hoặc click</span>
+                                <span class="text-[10px] mt-1">để tải ảnh lên</span>
+                            </div>
+                            <img id="imgPreview" class="hidden w-full h-full object-cover rounded-2xl absolute inset-0">
+                            {% endif %}
+                        </div>
+                        <div>
+                            {{ form.image }}
+                            <p class="text-[10px] text-stone-400 mt-2">JPG, PNG, WEBP — Tối đa 2MB.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Biến thể (chỉ hiện khi edit) -->
+                {% if product and product.variations.exists %}
+                <div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-6">
+                    <h3 class="text-sm font-bold text-stone-800 mb-4 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="copy" class="w-4 h-4 text-emerald-600"></i> Biến thể
+                    </h3>
+                    <div class="space-y-2">
+                        {% for var in product.variations.all %}
+                        <div class="flex items-center justify-between p-3 rounded-xl bg-stone-50 border border-stone-100">
+                            <span class="text-sm font-medium text-stone-700">{{ var.title }}</span>
+                            <div class="text-right">
+                                <span class="text-sm font-bold text-emerald-700">{{ var.price|floatformat:0 }}₫</span>
+                                <span class="block text-[10px] text-stone-400">SL: {{ var.stock_quantity }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Ảnh phụ (chỉ hiện khi edit) -->
+                {% if product and product.images.exists %}
+                <div class="bg-white rounded-3xl border border-stone-100 shadow-sm p-6">
+                    <h3 class="text-sm font-bold text-stone-800 mb-4 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="images" class="w-4 h-4 text-emerald-600"></i> Ảnh bổ sung
+                    </h3>
+                    <div class="grid grid-cols-3 gap-2">
+                        {% for img in product.images.all %}
+                        <img src="{{ img.image.url }}" alt="{{ img.alt_text }}" class="aspect-square w-full object-cover rounded-xl border border-stone-100">
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
             </div>
-            <div>
-                <label class="block text-sm font-semibold text-stone-700 mb-2">Số lượng tồn kho</label>
-                {{ form.stock_quantity }}
-            </div>
-        </div>
-        
-        <div>
-            <label class="block text-sm font-semibold text-stone-700 mb-2">Mô tả chi tiết</label>
-            {{ form.description }}
-        </div>
-        
-        <div class="flex gap-4 pt-4">
-            <button type="submit" class="btn-primary">
-                {% if product %}Cập nhật{% else %}Thêm mới{% endif %}
-            </button>
-            <a href="{% url 'product_list' %}" class="btn-secondary">Hủy</a>
         </div>
     </form>
 </div>
+
+<style>
+    /* Premium Form Styling */
+    #productForm input[type="text"],
+    #productForm input[type="number"],
+    #productForm textarea,
+    #productForm select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid #e7e5e4;
+        background: #fafaf9;
+        font-size: 0.875rem;
+        color: #292524;
+        transition: all 0.2s;
+        outline: none;
+    }
+    #productForm input[type="text"]:focus,
+    #productForm input[type="number"]:focus,
+    #productForm textarea:focus,
+    #productForm select:focus {
+        border-color: #10b981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        background: #fff;
+    }
+    #productForm input[type="text"]:hover,
+    #productForm input[type="number"]:hover,
+    #productForm textarea:hover,
+    #productForm select:hover {
+        border-color: #d6d3d1;
+    }
+    #productForm input[type="file"] {
+        width: 100%;
+        font-size: 0.75rem;
+        color: #78716c;
+    }
+    #productForm input[type="file"]::file-selector-button {
+        padding: 0.5rem 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid #e7e5e4;
+        background: #f5f5f4;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #57534e;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-right: 0.75rem;
+    }
+    #productForm input[type="file"]::file-selector-button:hover {
+        background: #e7e5e4;
+        border-color: #d6d3d1;
+    }
+    #productForm textarea {
+        resize: vertical;
+        min-height: 5rem;
+    }
+
+    /* Auto-generate slug from title */
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto slug from title
+    const titleInput = document.querySelector('#productForm [name="title"]');
+    const slugInput = document.querySelector('#productForm [name="slug"]');
+    
+    if (titleInput && slugInput && !slugInput.value) {
+        titleInput.addEventListener('input', function() {
+            const slug = this.value
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/đ/g, 'd').replace(/Đ/g, 'd')
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+            slugInput.value = slug;
+        });
+    }
+
+    // Image preview
+    const fileInput = document.querySelector('#productForm [name="image"]');
+    const imgPreview = document.getElementById('imgPreview');
+    const imgPlaceholder = document.getElementById('imgPlaceholder');
+
+    if (fileInput && imgPreview) {
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imgPreview.src = e.target.result;
+                    imgPreview.classList.remove('hidden');
+                    if (imgPlaceholder) imgPlaceholder.classList.add('hidden');
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    }
+
+    // Click drop zone to trigger file input
+    const dropZone = document.getElementById('imageDropZone');
+    if (dropZone && fileInput) {
+        dropZone.addEventListener('click', function() {
+            fileInput.click();
+        });
+    }
+});
+</script>
 {% endblock %}

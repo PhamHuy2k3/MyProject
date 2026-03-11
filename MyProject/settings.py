@@ -28,6 +28,9 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-)n)$k$&%*v$6!5
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = ['*'] if DEBUG else os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
+
+# Gemini AI API Key
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

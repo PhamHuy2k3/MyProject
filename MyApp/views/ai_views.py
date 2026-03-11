@@ -14,10 +14,12 @@ from django.db.models.functions import Coalesce
 from decimal import Decimal
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 
+from django.conf import settings
 from MyApp.models import *
 from MyApp.forms import *
 import requests
 import json
+import re
 from .utils import *
 
 # ==================== AI CHATBOT VIEWS ====================
@@ -36,7 +38,6 @@ def get_or_create_ai_session(request):
 def api_chat_history(request):
     """Trả về lịch sử chat của session hiện tại"""
     from django.http import JsonResponse
-    import re
     session = get_or_create_ai_session(request)
     messages = session.messages.all().order_by('created_at')
     data = []
@@ -54,7 +55,6 @@ def api_chat_history(request):
 def api_chat_message(request):
     """Xử lý tin nhắn mới từ người dùng và gọi Gemini API"""
     from django.http import JsonResponse
-    import json
     
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid method'}, status=405)
@@ -81,15 +81,22 @@ def api_chat_message(request):
         price = f"{p.price:,.0f} VNĐ" if p.price else "Liên hệ"
         product_context += f"- [ID: {p.id}] {p.title}: {price}. {p.excerpt}\n"
         
-    # Lấy lịch sử chat
+    # Lấy lịch sử chat (đảm bảo role xen kẽ đúng user/model cho Gemini API)
     recent_messages = session.messages.order_by('-created_at')[:10]
     history_context = []
     for m in reversed(recent_messages):
         role = "user" if m.sender == "user" else "model"
-        history_context.append({
-            "role": role,
-            "parts": [{"text": m.content}]
-        })
+        # Gemini yêu cầu role phải xen kẽ, gộp các tin nhắn liên tiếp cùng role
+        if history_context and history_context[-1]["role"] == role:
+            history_context[-1]["parts"][0]["text"] += "\n" + m.content
+        else:
+            history_context.append({
+                "role": role,
+                "parts": [{"text": m.content}]
+            })
+    # Đảm bảo tin nhắn đầu tiên luôn là user (Gemini API yêu cầu)
+    if history_context and history_context[0]["role"] == "model":
+        history_context = history_context[1:]
         
     system_instruction = """
     Bạn là một chuyên gia tư vấn trà đạo thanh lịch, làm việc cho thương hiệu TeaZen.
@@ -111,8 +118,13 @@ def api_chat_message(request):
         "parts": [{"text": f"Context dữ liệu cửa hàng:\n{product_context}\n\nTin nhắn người dùng:\n{user_content}"}]
     })
 
-    api_key = "AIzaSyDDfy0lCWyTxBEvJwSwDA6K8LGEO9l0iTU"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    api_key = settings.GEMINI_API_KEY
+    if not api_key:
+        AIChatMessage.objects.create(session=session, sender='ai', content='Hệ thống chưa được cấu hình API key. Vui lòng liên hệ quản trị viên.')
+        return JsonResponse({'sender': 'ai', 'content': 'Hệ thống chưa được cấu hình API key. Vui lòng liên hệ quản trị viên.', 'recommended_products': []})
+    
+    # Thử lần lượt các model Gemini (phòng trường hợp quota hết ở model chính)
+    gemini_models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite']
     
     payload = {
         "systemInstruction": {
@@ -127,24 +139,37 @@ def api_chat_message(request):
     
     headers = {'Content-Type': 'application/json'}
     
-    try:
-        response = requests.post(url, headers=headers, json=payload, timeout=15)
-        resp_data = response.json()
-        
-        if response.status_code == 200:
-            ai_content = resp_data['candidates'][0]['content']['parts'][0]['text']
-        else:
-            print("Gemini API Error Status Code:", response.status_code)
-            print("Gemini API Error Response:", resp_data)
-            ai_content = "Xin thứ lỗi, hiện tại tôi đang gặp chút vấn đề kỹ thuật. Quý khách vui lòng thử lại sau giây lát nhé."
-    except Exception as e:
-        import traceback
-        print("Exception calling Gemini API:")
-        traceback.print_exc()
-        ai_content = "Vô cùng xin lỗi quý khách, hệ thống tư vấn đang tạm gián đoạn. Xin vui lòng thử lại sau."
+    ai_content = None
+    import time
+    for model_name in gemini_models:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
+            resp_data = response.json()
+            
+            if response.status_code == 200:
+                ai_content = resp_data['candidates'][0]['content']['parts'][0]['text']
+                break
+            elif response.status_code == 429:
+                print(f"Gemini API 429 (quota exceeded) for model {model_name}, trying next model...")
+                continue
+            else:
+                print(f"Gemini API Error ({model_name}) Status: {response.status_code}")
+                print(f"Gemini API Error Response: {resp_data}")
+                continue
+        except requests.exceptions.Timeout:
+            print(f"Gemini API timeout for model {model_name}")
+            continue
+        except Exception as e:
+            import traceback
+            print(f"Exception calling Gemini API ({model_name}):")
+            traceback.print_exc()
+            continue
+    
+    if ai_content is None:
+        ai_content = "Xin thứ lỗi, hiện tại tôi đang gặp chút vấn đề kỹ thuật. Quý khách vui lòng thử lại sau giây lát nhé."
         
     # Xử lý parse [PRODUCTS: id1, id2]
-    import re
     recommended_products = []
     product_match = re.search(r'\[PRODUCTS:\s*([\d,\s]+)\]', ai_content)
     if product_match:

@@ -86,6 +86,7 @@ def comment_create(request, slug):
             create_notification(
                 parent.user, 'reply',
                 f'{request.user.username} đã trả lời bình luận',
+                f'Trả lời bình luận tại sản phẩm {product.title}',
                 link=f'/product/{slug}/#comment-{comment.id}'
             )
             

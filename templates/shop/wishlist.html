@@ -62,7 +62,11 @@
 
                 <!-- Product Image -->
                 <a href="{{ item.product.get_absolute_url }}"
-                    class="block relative aspect-[4/5] overflow-hidden bg-stone-100">
+                    class="product-hover-trigger block relative aspect-[4/5] overflow-hidden bg-stone-100"
+                    data-title="{{ item.product.title }}"
+                    data-price="{% if item.product.price %}{{ item.product.price|floatformat:0 }}₫{% endif %}"
+                    data-excerpt="{{ item.product.excerpt|default:''|truncatewords:15 }}"
+                    data-image="{% if item.product.image %}{{ item.product.image.url }}{% endif %}">
                     {% if item.product.image %}
                     <img src="{{ item.product.image.url }}" alt="{{ item.product.title }}"
                         class="w-full h-full object-cover wishlist-image-zoom">

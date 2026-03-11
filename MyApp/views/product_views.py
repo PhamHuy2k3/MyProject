@@ -95,6 +95,9 @@ def product_detail(request, slug):
     active_filter = Q(category__isnull=True) | Q(category__is_active=True)
     product = get_object_or_404(Product.objects.select_related('category').filter(active_filter), slug=slug)
     
+    # Gallery images
+    gallery_images = list(product.images.all())
+    
     if product.category:
         related_products = Product.objects.filter(active_filter, category=product.category).exclude(id=product.id)[:4]
     else:
@@ -123,6 +126,7 @@ def product_detail(request, slug):
 
     context = {
         'product': product,
+        'gallery_images': gallery_images,
         'related_products': related_products,
         'reviews': reviews,
         'avg_rating': round(avg_rating, 1),
@@ -166,7 +170,7 @@ def product_reviews_ajax(request, slug):
     except ValueError:
         page = 1
         
-    per_page = 5
+    per_page = 4
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
     
@@ -264,6 +268,18 @@ def search_suggestions(request):
         })
     
     return JsonResponse({'results': results})
+
+
+@login_required(login_url='login')
+def review_vote_helpful(request, review_id):
+    from django.http import JsonResponse
+    if request.method == 'POST':
+        review = get_object_or_404(Review, id=review_id)
+        review.helpful_votes = F('helpful_votes') + 1
+        review.save(update_fields=['helpful_votes'])
+        review.refresh_from_db()
+        return JsonResponse({'success': True, 'helpful_votes': review.helpful_votes})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
 

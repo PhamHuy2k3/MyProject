@@ -18,12 +18,20 @@ class ProductVariationInline(admin.TabularInline):
 	extra = 1
 
 
+from .models import ProductImage
+
+class ProductImageInline(admin.TabularInline):
+	model = ProductImage
+	extra = 3
+	fields = ('image', 'alt_text', 'order')
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
 	list_display = ('title', 'slug', 'category', 'price', 'stock_quantity', 'created_at')
 	list_filter = ('category',)
 	prepopulated_fields = {'slug': ('title',)}
-	inlines = [ProductVariationInline]
+	inlines = [ProductVariationInline, ProductImageInline]
 
 
 @admin.register(StoryboardItem)

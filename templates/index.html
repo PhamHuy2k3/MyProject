@@ -95,7 +95,11 @@
                     {% for product in products %}
                     <div class="slide-card {% if forloop.first %}active{% elif forloop.counter == 2 %}next{% elif forloop.last %}prev{% else %}hidden-slide{% endif %} w-80 md:w-[28rem] h-[600px] cursor-pointer hover-trigger group rounded-[2.5rem] overflow-hidden shadow-2xl transition-all duration-700 border border-white/60 bg-white"
                         data-index="{{ forloop.counter0 }}" onclick="goToSlide({{ forloop.counter0 }})">
-                        <a href="{{ product.get_absolute_url }}" class="relative w-full h-full block">
+                        <a href="{{ product.get_absolute_url }}" class="product-hover-trigger relative w-full h-full block"
+                            data-title="{{ product.title }}"
+                            data-price="{% if product.price %}{{ product.price }}₫{% endif %}"
+                            data-excerpt="{{ product.excerpt|default:''|truncatewords:15 }}"
+                            data-image="{% if product.image %}{{ product.image.url }}{% endif %}">
                             <img src="{% if product.image %}{{ product.image.url }}{% else %}https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?q=80&w=1200&auto=format&fit=crop{% endif %}"
                                 alt="{{ product.title }}"
                                 class="absolute inset-0 w-full h-full object-cover blur-[2px] brightness-110 transition-all duration-700 group-hover:scale-105 group-hover:blur-0">
@@ -433,7 +437,11 @@
             <div id="top-viewed-scroll" class="flex overflow-x-auto gap-6 px-4 pb-12 snap-x hide-scrollbar">
                 {% for product in top_viewed_products %}
                 <a href="{{ product.get_absolute_url }}"
-                    class="hover-trigger relative flex-shrink-0 w-80 group snap-center cursor-pointer">
+                    class="hover-trigger product-hover-trigger relative flex-shrink-0 w-80 group snap-center cursor-pointer"
+                    data-title="{{ product.title }}"
+                    data-price="{% if product.price %}{{ product.price }}₫{% endif %}"
+                    data-excerpt="{{ product.excerpt|default:''|truncatewords:15 }}"
+                    data-image="{% if product.image %}{{ product.image.url }}{% endif %}">
                     <div class="relative overflow-hidden rounded-[2rem] aspect-[3/4] mb-4">
                         <img src="{% if product.image %}{{ product.image.url }}{% else %}https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?q=80&w=800{% endif %}"
                             class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
@@ -491,7 +499,11 @@
             <div id="newest-scroll" class="flex overflow-x-auto gap-6 px-4 pb-12 snap-x hide-scrollbar">
                 {% for product in newest_products %}
                 <a href="{{ product.get_absolute_url }}"
-                    class="hover-trigger relative flex-shrink-0 w-80 group snap-center cursor-pointer">
+                    class="hover-trigger product-hover-trigger relative flex-shrink-0 w-80 group snap-center cursor-pointer"
+                    data-title="{{ product.title }}"
+                    data-price="{% if product.price %}{{ product.price }}₫{% endif %}"
+                    data-excerpt="{{ product.excerpt|default:''|truncatewords:15 }}"
+                    data-image="{% if product.image %}{{ product.image.url }}{% endif %}">
                     <div class="relative overflow-hidden rounded-[2rem] aspect-[3/4] mb-4 shadow-sm border border-black/5">
                         <img src="{% if product.image %}{{ product.image.url }}{% else %}https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?q=80&w=800{% endif %}"
                             class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />

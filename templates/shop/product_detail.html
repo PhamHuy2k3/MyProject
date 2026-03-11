@@ -23,25 +23,51 @@
     <div class="max-w-7xl mx-auto">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
             
-            <!-- LEFT: PRODUCT IMAGE (Polaroid Style) -->
+            <!-- LEFT: PRODUCT IMAGE GALLERY -->
             <div class="lg:sticky lg:top-24">
-                <div class="relative max-w-lg mx-auto group">
+                <div class="relative max-w-lg mx-auto">
                     <!-- Tape -->
                     <div class="tape -top-4 left-1/2 -translate-x-1/2 -rotate-2"></div>
                     
-                    <!-- Image Frame -->
-                    <div class="image-frame rotate-1 transition-transform duration-500 group-hover:rotate-0">
-                        <div class="aspect-[4/5] overflow-hidden bg-stone-100">
-                            <img src="{% if product.image %}{{ product.image.url }}{% else %}https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?q=80&w=1200&auto=format&fit=crop{% endif %}" 
+                    <!-- Main Image with Zoom -->
+                    <div class="image-frame rotate-1 transition-transform duration-500 hover:rotate-0">
+                        <div id="zoom-container" class="relative aspect-[4/5] overflow-hidden bg-stone-100 cursor-crosshair" 
+                             onmousemove="handleZoom(event)" onmouseleave="hideZoom()">
+                            <img id="main-product-img"
+                                 src="{% if product.image %}{{ product.image.url }}{% else %}https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?q=80&w=1200&auto=format&fit=crop{% endif %}" 
                                  alt="{{ product.title }}"
-                                 class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                                 class="w-full h-full object-cover transition-all duration-300">
+                            <!-- Zoom Lens -->
+                            <div id="zoom-lens" class="hidden absolute w-32 h-32 border-2 border-white/80 rounded-full pointer-events-none shadow-lg" style="backdrop-filter:blur(1px);"></div>
                         </div>
+                        <!-- Zoom Preview -->
+                        <div id="zoom-preview" class="hidden absolute top-0 left-[calc(100%+16px)] w-80 h-80 rounded-2xl border-2 border-stone-200 bg-white shadow-2xl overflow-hidden z-50"
+                             style="background-repeat:no-repeat;"></div>
                         
                         <!-- Caption -->
                         <div class="mt-4 text-center pb-4">
                             <p class="font-mono text-xs text-stone-400 uppercase tracking-widest">TeaZen Collection</p>
                         </div>
                     </div>
+                    
+                    <!-- Thumbnails Gallery -->
+                    {% if gallery_images %}
+                    <div class="flex gap-3 mt-6 justify-center flex-wrap">
+                        <!-- Main product image as first thumbnail -->
+                        {% if product.image %}
+                        <button onclick="switchImage('{{ product.image.url }}')" 
+                                class="gallery-thumb w-16 h-16 rounded-xl overflow-hidden border-2 border-emerald-600 hover:border-emerald-500 transition-all opacity-100 flex-shrink-0">
+                            <img src="{{ product.image.url }}" alt="{{ product.title }}" class="w-full h-full object-cover">
+                        </button>
+                        {% endif %}
+                        {% for img in gallery_images %}
+                        <button onclick="switchImage('{{ img.image.url }}')" 
+                                class="gallery-thumb w-16 h-16 rounded-xl overflow-hidden border-2 border-stone-200 hover:border-emerald-500 transition-all opacity-70 hover:opacity-100 flex-shrink-0">
+                            <img src="{{ img.image.url }}" alt="{{ img.alt_text|default:product.title }}" class="w-full h-full object-cover">
+                        </button>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                     
                     <!-- Decorative Stamp -->
                     <div class="absolute -bottom-6 -right-6 w-20 h-20 rounded-full border-2 border-dashed border-emerald-800 text-emerald-800 flex items-center justify-center font-bold text-[10px] uppercase rotate-12 opacity-60 mix-blend-multiply bg-[#f2f0ec] hidden md:flex">
@@ -51,7 +77,7 @@
             </div>
             
             <!-- RIGHT: PRODUCT INFO -->
-            <div class="space-y-8">
+            <div class="space-y-6" id="product-info-panel">
                 <!-- Breadcrumb -->
                 <div class="flex items-center gap-2 text-xs text-stone-500 font-mono uppercase tracking-wider">
                     <a href="{% url 'index' %}" class="hover:text-emerald-900 hover-trigger">Home</a>
@@ -68,8 +94,41 @@
                 <!-- Title -->
                 <div>
                     <h1 class="font-art text-5xl lg:text-6xl font-bold text-emerald-950 leading-tight">{{ product.title }}</h1>
+                    
+                    <!-- Social Proof Anchor -->
+                    <a href="#reviews-section" class="inline-flex items-center gap-2 mt-3 group" onclick="event.preventDefault(); document.getElementById('reviews-section').scrollIntoView({behavior:'smooth'});">
+                        <div class="flex gap-0.5">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= avg_rating %}
+                                <span class="text-amber-400 text-lg">★</span>
+                                {% else %}
+                                <span class="text-stone-200 text-lg">★</span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <span class="font-bold text-sm text-stone-700">{{ avg_rating }}</span>
+                        <span class="text-sm text-stone-500 group-hover:text-emerald-700 group-hover:underline transition-colors">({{ review_count }} đánh giá)</span>
+                    </a>
+                    
                     {% if product.excerpt %}
-                    <p class="mt-4 text-xl text-stone-600 font-light">{{ product.excerpt }}</p>
+                    <p class="mt-3 text-xl text-stone-600 font-light">{{ product.excerpt }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Inventory Status -->
+                <div>
+                    {% if product.stock_quantity > 10 %}
+                    <span class="inline-flex items-center gap-1.5 text-sm font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Còn hàng
+                    </span>
+                    {% elif product.stock_quantity > 0 %}
+                    <span class="inline-flex items-center gap-1.5 text-sm font-bold text-amber-700 bg-amber-50 px-3 py-1.5 rounded-full">
+                        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> Chỉ còn {{ product.stock_quantity }} sản phẩm
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1.5 text-sm font-bold text-red-700 bg-red-50 px-3 py-1.5 rounded-full">
+                        <span class="w-2 h-2 rounded-full bg-red-500"></span> Hết hàng
+                    </span>
                     {% endif %}
                 </div>
                 
@@ -98,7 +157,6 @@
                 <!-- Price -->
                 {% if product.price %}
                 <div class="flex items-baseline gap-4 mt-2">
-                    <!-- Default price is first variation or product price -->
                     {% with default_price=product.variations.first.price|default:product.price %}
                     <span id="product-price-display" class="font-art text-4xl font-bold text-emerald-900">{{ default_price|floatformat:0 }}₫</span>
                     {% endwith %}
@@ -109,14 +167,50 @@
                 <!-- Divider -->
                 <div class="w-16 h-1 bg-emerald-900"></div>
                 
-                <!-- Description -->
-                {% if product.description %}
-                <div class="prose prose-stone max-w-none">
-                    <p class="text-stone-700 leading-relaxed">{{ product.description|linebreaks }}</p>
+                <!-- TABS: Description / Ingredients / Brewing Guide -->
+                <div class="border border-stone-200 rounded-2xl overflow-hidden">
+                    <!-- Tab Headers -->
+                    <div class="flex border-b border-stone-200 bg-stone-50">
+                        <button onclick="switchTab('tab-desc')" id="btn-tab-desc"
+                            class="product-tab-btn flex-1 px-4 py-3 text-sm font-bold text-emerald-900 border-b-2 border-emerald-700 bg-white transition-all">
+                            <i data-lucide="file-text" class="w-4 h-4 inline mr-1"></i> Mô tả
+                        </button>
+                        <button onclick="switchTab('tab-ingredients')" id="btn-tab-ingredients"
+                            class="product-tab-btn flex-1 px-4 py-3 text-sm font-bold text-stone-500 border-b-2 border-transparent hover:text-emerald-700 transition-all">
+                            <i data-lucide="flask-conical" class="w-4 h-4 inline mr-1"></i> Thành phần
+                        </button>
+                        <button onclick="switchTab('tab-brewing')" id="btn-tab-brewing"
+                            class="product-tab-btn flex-1 px-4 py-3 text-sm font-bold text-stone-500 border-b-2 border-transparent hover:text-emerald-700 transition-all">
+                            <i data-lucide="coffee" class="w-4 h-4 inline mr-1"></i> Pha chế
+                        </button>
+                    </div>
+                    <!-- Tab Content -->
+                    <div class="p-6">
+                        <div id="tab-desc" class="product-tab-content">
+                            {% if product.description %}
+                            <div class="prose prose-stone max-w-none text-stone-700 leading-relaxed">{{ product.description|linebreaks }}</div>
+                            {% else %}
+                            <p class="text-stone-400 italic">Chưa có mô tả cho sản phẩm này.</p>
+                            {% endif %}
+                        </div>
+                        <div id="tab-ingredients" class="product-tab-content hidden">
+                            {% if product.ingredients %}
+                            <div class="prose prose-stone max-w-none text-stone-700 leading-relaxed">{{ product.ingredients|linebreaks }}</div>
+                            {% else %}
+                            <p class="text-stone-400 italic">Chưa có thông tin thành phần.</p>
+                            {% endif %}
+                        </div>
+                        <div id="tab-brewing" class="product-tab-content hidden">
+                            {% if product.brewing_guide %}
+                            <div class="prose prose-stone max-w-none text-stone-700 leading-relaxed">{{ product.brewing_guide|linebreaks }}</div>
+                            {% else %}
+                            <p class="text-stone-400 italic">Chưa có hướng dẫn pha chế.</p>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-                {% endif %}
                 
-                <!-- Features (Static for now) -->
+                <!-- Features -->
                 <div class="grid grid-cols-2 gap-4 py-6 border-y border-stone-200">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -156,23 +250,37 @@
                     </div>
                 </div>
                 
-                <!-- Action Buttons -->
-                <form method="POST" action="{% url 'cart_add' product.id %}" class="flex flex-wrap items-center gap-4 pt-4">
+                <!-- Quantity Selector + Action Buttons -->
+                <form method="POST" action="{% url 'cart_add' product.id %}" id="add-to-cart-form" class="space-y-4 pt-4">
                     {% csrf_token %}
                     <input type="hidden" name="variation_id" id="variation-input" value="{% if product.variations.first %}{{ product.variations.first.id }}{% endif %}">
                     
-                    <button type="submit" 
-                       class="hover-trigger flex-1 min-w-[200px] bg-emerald-900 text-white font-bold py-4 px-8 uppercase tracking-widest text-center hover:bg-emerald-800 transition-colors flex items-center justify-center gap-3 shadow-lg hover:shadow-xl">
-                        <i data-lucide="shopping-bag" class="w-5 h-5"></i>
-                        Thêm vào giỏ
-                    </button>
+                    <!-- Quantity Selector -->
+                    <div class="flex items-center gap-4">
+                        <p class="font-bold text-sm text-emerald-900 uppercase">Số lượng:</p>
+                        <div class="flex items-center border border-stone-300 rounded-lg overflow-hidden">
+                            <button type="button" onclick="changeQty(-1)" class="hover-trigger w-11 h-11 flex items-center justify-center text-stone-600 hover:bg-stone-100 transition-colors text-xl font-bold">−</button>
+                            <input type="number" name="quantity" id="qty-input" value="1" min="1" max="{{ product.stock_quantity|default:999 }}"
+                                   class="w-14 h-11 text-center border-x border-stone-300 font-bold text-emerald-900 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                            <button type="button" onclick="changeQty(1)" class="hover-trigger w-11 h-11 flex items-center justify-center text-stone-600 hover:bg-stone-100 transition-colors text-xl font-bold">+</button>
+                        </div>
+                    </div>
                     
-                    {% if user.is_authenticated %}
-                    <a href="{% url 'wishlist_add' product.id %}" 
-                       class="hover-trigger w-14 h-14 border-2 border-stone-300 flex items-center justify-center hover:border-red-500 hover:text-red-500 hover:bg-red-50 transition-all">
-                        <i data-lucide="heart" class="w-6 h-6"></i>
-                    </a>
-                    {% endif %}
+                    <!-- Buttons -->
+                    <div class="flex flex-wrap items-center gap-4">
+                        <button type="submit" {% if product.stock_quantity <= 0 %}disabled{% endif %}
+                           class="hover-trigger flex-1 min-w-[200px] bg-emerald-900 text-white font-bold py-4 px-8 uppercase tracking-widest text-center hover:bg-emerald-800 transition-colors flex items-center justify-center gap-3 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+                            {% if product.stock_quantity > 0 %}Thêm vào giỏ{% else %}Hết hàng{% endif %}
+                        </button>
+                        
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'wishlist_add' product.id %}" 
+                           class="hover-trigger w-14 h-14 border-2 border-stone-300 flex items-center justify-center hover:border-red-500 hover:text-red-500 hover:bg-red-50 transition-all">
+                            <i data-lucide="heart" class="w-6 h-6"></i>
+                        </a>
+                        {% endif %}
+                    </div>
                 </form>
                 
                 <!-- Share -->
@@ -189,8 +297,25 @@
     </div>
 </div>
 
+<!-- STICKY MOBILE CTA -->
+<div id="sticky-cta" class="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-stone-200 shadow-[0_-4px_20px_rgba(0,0,0,.08)] p-4 lg:hidden translate-y-full transition-transform duration-300">
+    <div class="flex items-center justify-between gap-4 max-w-lg mx-auto">
+        <div class="flex-shrink-0">
+            {% with default_price=product.variations.first.price|default:product.price %}
+            <p class="font-art text-2xl font-bold text-emerald-900">{{ default_price|floatformat:0 }}₫</p>
+            {% endwith %}
+        </div>
+        <button onclick="document.getElementById('add-to-cart-form').requestSubmit();"
+                {% if product.stock_quantity <= 0 %}disabled{% endif %}
+                class="hover-trigger flex-1 bg-emerald-900 text-white font-bold py-3 px-6 uppercase tracking-widest text-center hover:bg-emerald-800 transition-colors flex items-center justify-center gap-2 rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+            <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+            Thêm vào giỏ
+        </button>
+    </div>
+</div>
+
 <!-- REVIEWS & COMMENTS SECTION -->
-<section class="py-16 px-6 bg-stone-50/50">
+<section id="reviews-section" class="py-16 px-6 bg-stone-50/50">
     <div class="max-w-4xl mx-auto">
         
         <!-- REVIEWS -->
@@ -345,9 +470,12 @@
                 </div>
             </div>
             
-            <div class="text-center mt-8 hidden" id="load-more-container">
-                <button id="load-more-btn" class="border-2 border-stone-200 text-stone-600 px-8 py-3 rounded-xl font-bold hover:border-emerald-600 hover:text-emerald-700 transition-colors bg-white">
-                    Xem thêm đánh giá
+            <div class="flex items-center justify-center gap-4 mt-8 hidden" id="reviews-nav-container">
+                <button id="reviews-collapse-btn" onclick="fetchReviews(1)" class="hidden border-2 border-stone-200 text-stone-600 px-6 py-3 rounded-xl font-bold hover:border-stone-400 transition-colors bg-white inline-flex items-center gap-2">
+                    <i data-lucide="chevrons-up" class="w-4 h-4"></i> Thu gọn
+                </button>
+                <button id="reviews-more-btn" onclick="fetchReviews(currentReviewPage + 1)" class="hidden border-2 border-stone-200 text-stone-600 px-8 py-3 rounded-xl font-bold hover:border-emerald-600 hover:text-emerald-700 transition-colors bg-white inline-flex items-center gap-2">
+                    Xem thêm đánh giá <i data-lucide="chevron-down" class="w-4 h-4"></i>
                 </button>
             </div>
         </div>
@@ -438,47 +566,187 @@
 </section>
 
 <script>
-let currentReviewPage = 1;
+// ========== IMAGE GALLERY + ZOOM ==========
+function switchImage(url) {
+    const img = document.getElementById('main-product-img');
+    if (!img) return;
+    img.src = url;
+    // Update active thumbnail
+    document.querySelectorAll('.gallery-thumb').forEach(t => {
+        const thumbSrc = t.querySelector('img')?.src || '';
+        if (thumbSrc.includes(url.split('/').pop())) {
+            t.classList.add('border-emerald-600', 'opacity-100');
+            t.classList.remove('border-stone-200', 'opacity-70');
+        } else {
+            t.classList.remove('border-emerald-600', 'opacity-100');
+            t.classList.add('border-stone-200', 'opacity-70');
+        }
+    });
+}
 
-function fetchReviews(page = 1, append = false) {
+function handleZoom(e) {
+    const container = document.getElementById('zoom-container');
+    const img = document.getElementById('main-product-img');
+    const lens = document.getElementById('zoom-lens');
+    const preview = document.getElementById('zoom-preview');
+    if (!container || !img || !lens || !preview) return;
+    // Only on desktop
+    if (window.innerWidth < 1024) return;
+
+    const rect = container.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
+    const lw = lens.offsetWidth / 2;
+    const lh = lens.offsetHeight / 2;
+
+    // Clamp
+    x = Math.max(lw, Math.min(x, rect.width - lw));
+    y = Math.max(lh, Math.min(y, rect.height - lh));
+
+    lens.style.left = (x - lw) + 'px';
+    lens.style.top = (y - lh) + 'px';
+    lens.classList.remove('hidden');
+
+    // Preview
+    const zoomFactor = 2.5;
+    const pw = preview.offsetWidth;
+    const ph = preview.offsetHeight;
+    preview.style.backgroundImage = `url(${img.src})`;
+    preview.style.backgroundSize = `${rect.width * zoomFactor}px ${rect.height * zoomFactor}px`;
+    preview.style.backgroundPosition = `-${(x - lw) * zoomFactor - pw / 2 + lw * zoomFactor}px -${(y - lh) * zoomFactor - ph / 2 + lh * zoomFactor}px`;
+    preview.classList.remove('hidden');
+}
+
+function hideZoom() {
+    const lens = document.getElementById('zoom-lens');
+    const preview = document.getElementById('zoom-preview');
+    if (lens) lens.classList.add('hidden');
+    if (preview) preview.classList.add('hidden');
+}
+
+// ========== TABS ==========
+function switchTab(tabId) {
+    document.querySelectorAll('.product-tab-content').forEach(c => c.classList.add('hidden'));
+    document.querySelectorAll('.product-tab-btn').forEach(b => {
+        b.classList.remove('text-emerald-900', 'border-emerald-700', 'bg-white');
+        b.classList.add('text-stone-500', 'border-transparent');
+    });
+    const tab = document.getElementById(tabId);
+    const btn = document.getElementById('btn-' + tabId);
+    if (tab) tab.classList.remove('hidden');
+    if (btn) {
+        btn.classList.add('text-emerald-900', 'border-emerald-700', 'bg-white');
+        btn.classList.remove('text-stone-500', 'border-transparent');
+    }
+}
+
+// ========== QUANTITY SELECTOR ==========
+function changeQty(delta) {
+    const input = document.getElementById('qty-input');
+    if (!input) return;
+    let val = parseInt(input.value) || 1;
+    val = Math.max(1, Math.min(val + delta, parseInt(input.max) || 999));
+    input.value = val;
+}
+
+// ========== STICKY MOBILE CTA ==========
+function initStickyCTA() {
+    const form = document.getElementById('add-to-cart-form');
+    const cta = document.getElementById('sticky-cta');
+    if (!form || !cta || window.innerWidth >= 1024) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+            cta.classList.add('translate-y-full');
+        } else {
+            cta.classList.remove('translate-y-full');
+        }
+    }, { threshold: 0 });
+    observer.observe(form);
+}
+
+let currentReviewPage = 1;
+let hasNextReviewPage = false;
+
+function fetchReviews(page = 1) {
     const sort = document.getElementById('review-sort').value;
     const query = document.getElementById('review-search').value;
     const container = document.getElementById('reviews-list-container');
-    const loadMoreBtn = document.getElementById('load-more-container');
     
-    if (!append) {
-        container.innerHTML = '<div class="flex justify-center py-12"><i data-lucide="loader-2" class="w-8 h-8 text-emerald-600 animate-spin"></i></div>';
-        if (window.lucide) window.lucide.createIcons();
-    }
+    container.innerHTML = '<div class="flex justify-center py-12"><i data-lucide="loader-2" class="w-8 h-8 text-emerald-600 animate-spin"></i></div>';
+    if (window.lucide) window.lucide.createIcons();
     
     const url = `/product/{{ product.slug }}/reviews-ajax/?page=${page}&sort=${sort}&q=${encodeURIComponent(query)}`;
     
     fetch(url)
         .then(response => response.json())
         .then(data => {
-            if (!append) {
-                container.innerHTML = data.html;
-            } else {
-                container.insertAdjacentHTML('beforeend', data.html);
-            }
-            lucide.createIcons();
+            container.innerHTML = data.html;
+            if (window.lucide) window.lucide.createIcons();
             initReviewTruncation();
             
-            if (data.has_next) {
-                loadMoreBtn.classList.remove('hidden');
-                currentReviewPage = page + 1;
-            } else {
-                loadMoreBtn.classList.add('hidden');
-            }
+            currentReviewPage = page;
+            hasNextReviewPage = !!data.has_next;
+            updateReviewNav();
         })
         .catch(error => {
             console.error('Error fetching reviews:', error);
-            if (!append) container.innerHTML = '<p class="text-red-500 text-center py-4">Có lỗi xảy ra khi tải đánh giá.</p>';
+            container.innerHTML = '<p class="text-red-500 text-center py-4">Có lỗi xảy ra khi tải đánh giá.</p>';
         });
 }
 
+function updateReviewNav() {
+    const navContainer = document.getElementById('reviews-nav-container');
+    const moreBtn = document.getElementById('reviews-more-btn');
+    const collapseBtn = document.getElementById('reviews-collapse-btn');
+    if (!navContainer) return;
+
+    if (hasNextReviewPage || currentReviewPage > 1) {
+        navContainer.classList.remove('hidden');
+    } else {
+        navContainer.classList.add('hidden');
+    }
+
+    if (moreBtn) {
+        if (hasNextReviewPage) moreBtn.classList.remove('hidden');
+        else moreBtn.classList.add('hidden');
+    }
+    if (collapseBtn) {
+        if (currentReviewPage > 1) collapseBtn.classList.remove('hidden');
+        else collapseBtn.classList.add('hidden');
+    }
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function voteReviewHelpful(reviewId) {
+    const countEl = document.getElementById('helpful-count-' + reviewId);
+    if (!countEl) return;
+    const prevCount = parseInt(countEl.textContent) || 0;
+    countEl.textContent = prevCount + 1;
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    fetch(`/review/${reviewId}/helpful/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            countEl.textContent = data.helpful_votes;
+        } else {
+            countEl.textContent = prevCount;
+        }
+    })
+    .catch(() => {
+        countEl.textContent = prevCount;
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Other existing code...
+    // Sticky CTA for mobile
+    initStickyCTA();
+    
+    // Variation radio buttons
     const radios = document.querySelectorAll('input[name="variation_radio"]');
     const priceDisplay = document.getElementById('product-price-display');
     const variationInput = document.getElementById('variation-input');
@@ -497,34 +765,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // --- Review AJAX setup ---
-    // Initial load
-    fetchReviews(1, false);
+    fetchReviews(1);
 
-    // Sort Dropdown
     const sortSelect = document.getElementById('review-sort');
     if (sortSelect) {
-        sortSelect.addEventListener('change', () => {
-            fetchReviews(1, false);
-        });
+        sortSelect.addEventListener('change', () => fetchReviews(1));
     }
 
-    // Debounced Search
     const searchInput = document.getElementById('review-search');
     let searchTimeout;
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                fetchReviews(1, false);
-            }, 400); // 400ms debounce
-        });
-    }
-
-    // Load More Button
-    const loadMoreBtn = document.getElementById('load-more-btn');
-    if (loadMoreBtn) {
-        loadMoreBtn.addEventListener('click', () => {
-            fetchReviews(currentReviewPage, true);
+            searchTimeout = setTimeout(() => fetchReviews(1), 400);
         });
     }
 });
@@ -608,22 +861,66 @@ function toggleCommentReply(commentId, username) {
     }
 }
 
-function toggleReplies(commentId, expand) {
-    const hiddenReplies = document.getElementById('hidden-replies-' + commentId);
+const replyWindowState = {};
+
+function showReplyWindow(commentId) {
+    const container = document.getElementById('replies-list-' + commentId);
+    if (!container) return;
+    const items = container.querySelectorAll('.reply-item-' + commentId);
+    const total = items.length;
+    if (total === 0) return;
+
+    if (replyWindowState[commentId] === undefined) replyWindowState[commentId] = 0;
+    const page = replyWindowState[commentId];
+    const start = page * 4;
+    const end = Math.min(start + 4, total);
+
+    items.forEach(item => item.classList.add('hidden'));
+    for (let i = start; i < end; i++) items[i].classList.remove('hidden');
+
     const showBtn = document.getElementById('show-replies-btn-' + commentId);
     const hideBtn = document.getElementById('hide-replies-btn-' + commentId);
-    if (!hiddenReplies) return;
+    const remaining = total - end;
 
-    if (expand) {
-        hiddenReplies.classList.remove('hidden');
+    if (remaining > 0) {
+        if (showBtn) {
+            showBtn.innerHTML = '<i data-lucide="chevron-down" class="w-4 h-4"></i> Xem thêm ' + Math.min(4, remaining) + ' câu trả lời';
+            showBtn.classList.remove('hidden');
+        }
+    } else {
         if (showBtn) showBtn.classList.add('hidden');
-        if (hideBtn) hideBtn.classList.remove('hidden');
-        return;
     }
+    if (hideBtn) hideBtn.classList.remove('hidden');
 
-    hiddenReplies.classList.add('hidden');
-    if (showBtn) showBtn.classList.remove('hidden');
+    replyWindowState[commentId] = page + 1;
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function collapseReplies(commentId) {
+    const container = document.getElementById('replies-list-' + commentId);
+    if (!container) return;
+    const items = container.querySelectorAll('.reply-item-' + commentId);
+    items.forEach(item => item.classList.add('hidden'));
+
+    const showBtn = document.getElementById('show-replies-btn-' + commentId);
+    const hideBtn = document.getElementById('hide-replies-btn-' + commentId);
+    if (showBtn) {
+        showBtn.innerHTML = '<i data-lucide="message-circle" class="w-4 h-4"></i> Xem ' + items.length + ' câu trả lời';
+        showBtn.classList.remove('hidden');
+    }
     if (hideBtn) hideBtn.classList.add('hidden');
+    replyWindowState[commentId] = 0;
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function showReplyWindowAtEnd(commentId) {
+    const container = document.getElementById('replies-list-' + commentId);
+    if (!container) return;
+    const items = container.querySelectorAll('.reply-item-' + commentId);
+    const total = items.length;
+    if (total === 0) return;
+    replyWindowState[commentId] = Math.max(0, Math.ceil(total / 4) - 1);
+    showReplyWindow(commentId);
 }
 
 // User Profile Popup
@@ -705,6 +1002,11 @@ function showCommentToast(message, type = 'success') {
         toast.classList.add('translate-y-2', 'opacity-0');
         setTimeout(() => toast.remove(), 300);
     }, 2200);
+}
+
+function getCsrfToken() {
+    const el = document.querySelector('[name=csrfmiddlewaretoken]');
+    return el ? el.value : '';
 }
 
 function formatCommentCount(value) {
@@ -851,12 +1153,15 @@ function submitComment(e, productId, parentId = null) {
     e.preventDefault();
     const form = e.target;
     const btn = form.querySelector('.submit-btn');
+    if (!btn) return;
+
     const originalBtnHtml = btn ? btn.innerHTML : '';
     const formData = new FormData(form);
     
     // Validate length & files
-    const content = formData.get('content').trim();
-    const files = form.querySelector('.media-upload-input').files;
+    const content = String(formData.get('content') || '').trim();
+    const fileInput = form.querySelector('.media-upload-input');
+    const files = fileInput ? fileInput.files : [];
     
     if (!content && files.length === 0) return;
     
@@ -877,66 +1182,99 @@ function submitComment(e, productId, parentId = null) {
     
     fetch(`/product/{{ product.slug }}/comment/`, {
         method: 'POST',
-        headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+        headers: { 'X-CSRFToken': getCsrfToken() },
         body: formData
     })
-    .then(r => r.json())
-    .then(data => {
-        if(data.success) {
-            form.reset();
-            const previewContainer = form.querySelector('.media-preview-container');
-            if (previewContainer) {
-                previewContainer.innerHTML = '';
-                previewContainer.classList.add('hidden');
-            }
-            const textarea = form.querySelector('textarea');
-            if (textarea) {
-                textarea.value = '';
-                textarea.style.height = 'auto';
-            }
-            const charCounter = form.querySelector('.char-counter');
-            if(charCounter) charCounter.textContent = '0/1000';
-            
-            if(parentId) {
-                const persistedParentId = data.parent_id || parentId;
-                const replyContainer = document.getElementById('reply-container-' + parentId);
-                if (replyContainer) {
-                    replyContainer.classList.add('hidden');
-                }
-
-                // Re-sync from server so UI remains correct when reply count crosses display thresholds.
-                fetchComments(1, false).then(() => {
-                    const targetComment = document.getElementById('comment-' + persistedParentId);
-                    if (targetComment) {
-                        targetComment.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                    const hiddenReplies = document.getElementById('hidden-replies-' + persistedParentId);
-                    if (hiddenReplies) {
-                        toggleReplies(persistedParentId, true);
-                    }
-                });
-            } else {
-                // Client-Side State Update: Prepend list without reloading
-                const container = document.getElementById('comments-list-container');
-                if (container) {
-                    if (container.innerText.includes('Chưa có bình luận nào')) container.innerHTML = '';
-                    container.insertAdjacentHTML('afterbegin', data.html);
-                }
-                
-                if (typeof data.total_count === 'number') {
-                    updateCommentCount(data.total_count);
-                }
-            }
-            // Render new icons
-            if (window.lucide) window.lucide.createIcons();
-            bindCommentEvents();
-            showCommentToast(parentId ? 'Đã gửi trả lời.' : 'Đã gửi bình luận.');
-            
-        } else {
-            showCommentToast(data.error || 'Đã xảy ra lỗi khi gửi bình luận.', 'error');
+    .then(async (r) => {
+        let data = null;
+        try {
+            data = await r.json();
+        } catch {
+            throw new Error('INVALID_JSON_RESPONSE');
         }
+
+        if (!r.ok && !data?.success) {
+            throw new Error(data?.error || 'REQUEST_FAILED');
+        }
+
+        return data;
     })
-    .catch(() => {
+    .then(data => {
+        if (!data || !data.success) {
+            showCommentToast(data.error || 'Đã xảy ra lỗi khi gửi bình luận.', 'error');
+            return;
+        }
+
+        // Always reset the submitted form first.
+        form.reset();
+        const previewContainer = form.querySelector('.media-preview-container');
+        if (previewContainer) {
+            previewContainer.innerHTML = '';
+            previewContainer.classList.add('hidden');
+        }
+        const textarea = form.querySelector('textarea');
+        if (textarea) {
+            textarea.value = '';
+            textarea.style.height = 'auto';
+        }
+        const charCounter = form.querySelector('.char-counter');
+        if(charCounter) charCounter.textContent = '0/1000';
+
+        if(parentId) {
+            const persistedParentId = data.parent_id || parentId;
+            let repliesWrapper = document.getElementById('replies-list-' + persistedParentId);
+
+            if (!repliesWrapper) {
+                const parentBlock = document.getElementById('comment-' + persistedParentId);
+                if (parentBlock) {
+                    repliesWrapper = document.createElement('div');
+                    repliesWrapper.id = 'replies-list-' + persistedParentId;
+                    repliesWrapper.className = 'ml-4 md:ml-8 border-l-2 border-emerald-100 pl-2 mt-4 space-y-4';
+                    parentBlock.insertAdjacentElement('afterend', repliesWrapper);
+                }
+            }
+
+            // Optimistic render
+            if (repliesWrapper) {
+                const navEl = repliesWrapper.querySelector('.reply-nav');
+                if (navEl) {
+                    navEl.insertAdjacentHTML('beforebegin', data.html || '');
+                } else {
+                    repliesWrapper.insertAdjacentHTML('beforeend', data.html || '');
+                }
+            }
+
+            const replyContainer = document.getElementById('reply-container-' + parentId);
+            if (replyContainer) replyContainer.classList.add('hidden');
+
+            // Background re-sync
+            fetchComments(1, false).then(() => {
+                showReplyWindowAtEnd(persistedParentId);
+                const targetComment = document.getElementById('comment-' + persistedParentId);
+                if (targetComment) {
+                    targetComment.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        } else {
+            // Client-Side State Update: Prepend list without reloading
+            const container = document.getElementById('comments-list-container');
+            if (container) {
+                if (container.innerText.includes('Chưa có bình luận nào')) container.innerHTML = '';
+                container.insertAdjacentHTML('afterbegin', data.html || '');
+            }
+
+            if (typeof data.total_count === 'number') {
+                updateCommentCount(data.total_count);
+            }
+        }
+
+        // Render new icons and wire up events for inserted nodes.
+        if (window.lucide) window.lucide.createIcons();
+        bindCommentEvents();
+        showCommentToast(parentId ? 'Đã gửi trả lời.' : 'Đã gửi bình luận.');
+    })
+    .catch((err) => {
+        console.error('submitComment error:', err);
         showCommentToast('Không thể gửi bình luận. Vui lòng thử lại.', 'error');
     })
     .finally(() => {
@@ -1013,7 +1351,7 @@ function interactComment(commentId, action) {
     
     fetch(`/comment/${commentId}/interact/`, {
         method: 'POST',
-        headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+        headers: { 'X-CSRFToken': getCsrfToken() },
         body: formData
     })
     .then(r => r.json())
@@ -1060,7 +1398,7 @@ function deleteComment(commentId) {
     if(confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
         fetch(`/comment/${commentId}/delete/`, {
             method: 'POST',
-            headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+            headers: { 'X-CSRFToken': getCsrfToken() }
         })
         .then(r => r.json())
         .then(data => {
@@ -1097,7 +1435,11 @@ document.addEventListener('DOMContentLoaded', () => {
         {% if related_products %}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {% for rp in related_products %}
-            <a href="{{ rp.get_absolute_url }}" class="group bg-white rounded-[2rem] overflow-hidden shadow-sm border border-stone-100 hover:shadow-xl transition-all hover:-translate-y-2">
+            <a href="{{ rp.get_absolute_url }}" class="product-hover-trigger group bg-white rounded-[2rem] overflow-hidden shadow-sm border border-stone-100 hover:shadow-xl transition-all hover:-translate-y-2"
+                data-title="{{ rp.title }}"
+                data-price="{% if rp.price %}{{ rp.price|floatformat:0 }}₫{% endif %}"
+                data-excerpt="{{ rp.excerpt|default:''|truncatewords:15 }}"
+                data-image="{% if rp.image %}{{ rp.image.url }}{% endif %}">
                 <div class="relative aspect-[4/5] overflow-hidden bg-stone-100">
                     <img src="{% if rp.image %}{{ rp.image.url }}{% else %}https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?q=80&w=800&auto=format&fit=crop{% endif %}" alt="{{ rp.title }}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
                     {% if rp.category %}

@@ -387,6 +387,74 @@
 
         }
     </script>
+
+<!-- Product Hover Tooltip -->
+<div id="product-tooltip" style="position:fixed;z-index:9999;pointer-events:none;opacity:0;transition:opacity .18s ease;max-width:680px;">
+    <div style="display:flex;gap:24px;align-items:flex-start;background:#fff;border:1px solid #e7e5e4;border-radius:24px;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.15);">
+        <img id="tooltip-img" src="" alt="" style="width:128px;height:128px;object-fit:cover;border-radius:16px;flex-shrink:0;background:#f5f5f4;">
+        <div style="min-width:0;flex:1;">
+            <p id="tooltip-title" style="font-weight:700;font-size:22px;color:#1c1917;margin:0 0 8px 0;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></p>
+            <p id="tooltip-price" style="font-weight:700;font-size:20px;color:#065f46;margin:0 0 12px 0;"></p>
+            <p id="tooltip-excerpt" style="font-size:16px;color:#78716c;margin:0;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;"></p>
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    const tooltip = document.getElementById('product-tooltip');
+    const tImg = document.getElementById('tooltip-img');
+    const tTitle = document.getElementById('tooltip-title');
+    const tPrice = document.getElementById('tooltip-price');
+    const tExcerpt = document.getElementById('tooltip-excerpt');
+    const OFFSET = 15;
+
+    function onEnter(e) {
+        const el = e.currentTarget;
+        const title = el.dataset.title || '';
+        const image = el.dataset.image || '';
+        if (!title) return;
+        tTitle.textContent = title;
+        tPrice.textContent = el.dataset.price || '';
+        tExcerpt.textContent = el.dataset.excerpt || '';
+        tImg.src = image;
+        tImg.style.display = image ? '' : 'none';
+        tooltip.style.opacity = '1';
+    }
+
+    function onMove(e) {
+        if (tooltip.style.opacity === '0') return;
+        const rect = tooltip.getBoundingClientRect();
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        let x = e.clientX + OFFSET;
+        let y = e.clientY + OFFSET;
+        if (x + rect.width > vw) x = e.clientX - rect.width - OFFSET;
+        if (y + rect.height > vh) y = e.clientY - rect.height - OFFSET;
+        if (x < 0) x = 4;
+        if (y < 0) y = 4;
+        tooltip.style.left = x + 'px';
+        tooltip.style.top = y + 'px';
+    }
+
+    function onLeave() {
+        tooltip.style.opacity = '0';
+    }
+
+    function bind() {
+        document.querySelectorAll('.product-hover-trigger').forEach(el => {
+            if (el.dataset.tooltipBound) return;
+            el.dataset.tooltipBound = '1';
+            el.addEventListener('mouseenter', onEnter);
+            el.addEventListener('mousemove', onMove);
+            el.addEventListener('mouseleave', onLeave);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', bind);
+    const _mo = new MutationObserver(bind);
+    _mo.observe(document.body, { childList: true, subtree: true });
+})();
+</script>
 </body>
 
 </html>

@@ -75,6 +75,7 @@ urlpatterns = [
     # Reviews & Comments
     path('product/<slug:slug>/review/', views.review_create, name='review_create'),
     path('product/<slug:slug>/reviews-ajax/', views.product_reviews_ajax, name='product_reviews_ajax'),
+    path('review/<int:review_id>/helpful/', views.review_vote_helpful, name='review_vote_helpful'),
     
     # Comments specifically
     path('product/<slug:slug>/comment/', views.comment_create, name='comment_create'),

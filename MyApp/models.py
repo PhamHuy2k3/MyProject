@@ -30,6 +30,8 @@ class Product(models.Model):
 	excerpt = models.CharField(max_length=300, blank=True)
 	image = models.ImageField(upload_to='products/', blank=True, null=True)
 	description = models.TextField(blank=True)
+	ingredients = models.TextField(blank=True, verbose_name="Thành phần / Thông số")
+	brewing_guide = models.TextField(blank=True, verbose_name="Hướng dẫn pha chế")
 	price = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
 	stock_quantity = models.PositiveIntegerField(default=0, verbose_name="Số lượng tồn kho")
 	views_count = models.PositiveIntegerField(default=0, verbose_name="Lượt xem")
@@ -43,6 +45,21 @@ class Product(models.Model):
 
 	def get_absolute_url(self):
 		return reverse('product_detail', args=[self.slug])
+
+
+class ProductImage(models.Model):
+	product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
+	image = models.ImageField(upload_to='products/', verbose_name="Ảnh sản phẩm")
+	alt_text = models.CharField(max_length=200, blank=True)
+	order = models.PositiveIntegerField(default=0, verbose_name="Thứ tự")
+
+	class Meta:
+		ordering = ['order', 'id']
+		verbose_name = "Ảnh sản phẩm"
+		verbose_name_plural = "Ảnh sản phẩm"
+
+	def __str__(self):
+		return f"{self.product.title} - Image {self.order}"
 
 
 class ProductVariation(models.Model):

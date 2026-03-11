@@ -55,15 +55,21 @@ def cart_add(request, product_id):
     if variation_id:
         variation = get_object_or_404(product.variations.all(), id=variation_id)
 
+    try:
+        qty = int(request.POST.get('quantity', 1))
+    except (ValueError, TypeError):
+        qty = 1
+    qty = max(1, qty)
+
     cart_item, created = CartItem.objects.get_or_create(
         cart=cart,
         product=product,
         variation=variation,
-        defaults={'quantity': 1}
+        defaults={'quantity': qty}
     )
     
     if not created:
-        cart_item.quantity += 1
+        cart_item.quantity += qty
         cart_item.save()
     
     messages.success(request, f'Đã thêm "{product.title}" vào giỏ hàng!')

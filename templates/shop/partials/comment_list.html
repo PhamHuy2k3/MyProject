@@ -1,35 +1,26 @@
 {% for comment in comments %}
     {% include 'shop/partials/comment_item_single.html' with comment=comment is_reply=False %}
     
-    <!-- Render Replies recursively or just depth 1 (Product requests depth 2, so parent->child->child is handled by flattening or tagging. We'll just render direct replies here) -->
     {% if comment.replies.all %}
-        <div id="replies-list-{{ comment.id }}" class="ml-4 md:ml-8 border-l-2 border-emerald-100 pl-2 mt-4 space-y-4 reply-group-{{ comment.id }}">
-            
+        <div id="replies-list-{{ comment.id }}" class="ml-4 md:ml-8 border-l-2 border-emerald-100 pl-2 mt-4 space-y-4" data-reply-count="{{ comment.replies.all|length }}">
             {% for reply in comment.replies.all %}
-                {% if forloop.counter <= 4 %}
+                <div class="reply-item reply-item-{{ comment.id }} hidden">
                     {% include 'shop/partials/comment_item_single.html' with comment=reply is_reply=True %}
-                {% endif %}
+                </div>
             {% endfor %}
             
-            {% if comment.replies.all|length > 4 %}
-                <button id="show-replies-btn-{{ comment.id }}" onclick="toggleReplies({{ comment.id }}, true)" class="text-sm font-bold text-emerald-600 ml-12 hover:underline mt-2">
-                    Xem thêm {{ comment.replies.all|length|add:"-4" }} câu trả lời
+            <div class="reply-nav flex items-center gap-3 ml-12 mt-2">
+                <button id="show-replies-btn-{{ comment.id }}" onclick="showReplyWindow({{ comment.id }})" class="text-sm font-bold text-emerald-600 hover:underline flex items-center gap-1">
+                    <i data-lucide="message-circle" class="w-4 h-4"></i>
+                    Xem {{ comment.replies.all|length }} câu trả lời
                 </button>
-                <div id="hidden-replies-{{ comment.id }}" class="hidden space-y-4 mt-4">
-                    {% for reply in comment.replies.all %}
-                        {% if forloop.counter > 4 %}
-                            {% include 'shop/partials/comment_item_single.html' with comment=reply is_reply=True %}
-                        {% endif %}
-                    {% endfor %}
-                </div>
-                <button id="hide-replies-btn-{{ comment.id }}" onclick="toggleReplies({{ comment.id }}, false)" class="hidden text-sm font-bold text-stone-500 ml-12 hover:underline mt-2">
-                    Thu gọn câu trả lời
+                <button id="hide-replies-btn-{{ comment.id }}" onclick="collapseReplies({{ comment.id }})" class="hidden text-sm font-bold text-stone-500 hover:underline flex items-center gap-1">
+                    <i data-lucide="chevrons-up" class="w-4 h-4"></i>
+                    Thu gọn
                 </button>
-            {% endif %}
-            
+            </div>
         </div>
     {% else %}
-        <!-- Child Replies Container (Empty state for new replies) -->
         <div id="replies-list-{{ comment.id }}" class="ml-4 md:ml-8 pl-2 mt-2 space-y-4 replies-wrapper"></div>
     {% endif %}
 {% empty %}

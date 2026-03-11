@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Thông Báo — TeaZen{% endblock %}
+
+{% block content %}
+<div class="min-h-screen pt-28 pb-24 px-6">
+    <div class="max-w-3xl mx-auto">
+
+        <!-- HEADER -->
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <span class="text-emerald-600 font-bold tracking-widest text-xs uppercase block">[ Notifications ]</span>
+                <h1 class="font-art text-4xl font-bold text-emerald-950">Thông Báo</h1>
+            </div>
+            {% if unread_count > 0 %}
+            <form method="post" action="{% url 'notification_mark_read' %}">
+                {% csrf_token %}
+                <button type="submit" class="text-sm text-emerald-600 font-bold hover:underline flex items-center gap-1">
+                    <i data-lucide="check-check" class="w-4 h-4"></i> Đánh dấu tất cả đã đọc
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
+        <!-- NOTIFICATION LIST -->
+        <div class="space-y-3">
+            {% for notif in notifications %}
+            <div class="flex items-start gap-4 p-5 rounded-2xl transition-all 
+                {% if notif.is_read %}bg-white border border-stone-100{% else %}bg-emerald-50 border border-emerald-200 shadow-sm{% endif %}">
+                <!-- Icon -->
+                <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0
+                    {% if notif.notification_type == 'review' %}bg-amber-100 text-amber-600
+                    {% elif notif.notification_type == 'comment' or notif.notification_type == 'reply' %}bg-blue-100 text-blue-600
+                    {% elif notif.notification_type == 'message' %}bg-emerald-100 text-emerald-600
+                    {% elif notif.notification_type == 'order' %}bg-purple-100 text-purple-600
+                    {% else %}bg-stone-100 text-stone-600{% endif %}">
+                    {% if notif.notification_type == 'review' %}
+                    <i data-lucide="star" class="w-5 h-5"></i>
+                    {% elif notif.notification_type == 'comment' or notif.notification_type == 'reply' %}
+                    <i data-lucide="message-circle" class="w-5 h-5"></i>
+                    {% elif notif.notification_type == 'message' %}
+                    <i data-lucide="mail" class="w-5 h-5"></i>
+                    {% elif notif.notification_type == 'order' %}
+                    <i data-lucide="package" class="w-5 h-5"></i>
+                    {% else %}
+                    <i data-lucide="bell" class="w-5 h-5"></i>
+                    {% endif %}
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <h3 class="font-bold text-sm {% if not notif.is_read %}text-emerald-900{% else %}text-stone-700{% endif %}">
+                                {{ notif.title }}
+                            </h3>
+                            <p class="text-sm text-stone-500 mt-0.5">{{ notif.message }}</p>
+                        </div>
+                        <span class="text-xs text-stone-400 shrink-0 whitespace-nowrap">{{ notif.created_at|timesince }} trước</span>
+                    </div>
+                    <div class="flex items-center gap-3 mt-2">
+                        {% if notif.link %}
+                        <a href="{{ notif.link }}" class="text-xs text-emerald-600 font-bold hover:underline">Xem chi tiết →</a>
+                        {% endif %}
+                        {% if not notif.is_read %}
+                        <form method="post" action="{% url 'notification_mark_read' %}" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="notification_id" value="{{ notif.id }}">
+                            <button type="submit" class="text-xs text-stone-400 hover:text-stone-600">Đã đọc</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Unread Dot -->
+                {% if not notif.is_read %}
+                <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full shrink-0 mt-2"></div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="text-center py-16">
+                <i data-lucide="bell-off" class="w-16 h-16 mx-auto mb-4 text-stone-300"></i>
+                <h3 class="font-art text-2xl text-stone-600 mb-2">Không có thông báo</h3>
+                <p class="text-stone-500">Chúng tôi sẽ thông báo khi có điều gì mới!</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

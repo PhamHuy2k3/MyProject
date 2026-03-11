@@ -1,0 +1,144 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_subtitle %}{% if item %}Đang chỉnh sửa: {{ item.name }}{% else %}Tạo danh mục mới{% endif %}{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'category_list' %}" class="btn-secondary inline-flex items-center gap-2">
+    <i data-lucide="arrow-left" class="w-4 h-4"></i> Quay lại
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <form method="post" enctype="multipart/form-data" class="space-y-8">
+        {% csrf_token %}
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Basic Info -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="card p-8 bg-white rounded-3xl border border-stone-100 shadow-sm">
+                    <h3 class="text-lg font-bold text-stone-800 mb-6 flex items-center gap-2">
+                        <i data-lucide="info" class="w-5 h-5 text-emerald-600"></i>
+                        Thông tin cơ bản
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Tên danh mục *</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}<p class="text-red-500 text-xs font-medium">{{ form.name.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Slug (URL) *</label>
+                            {{ form.slug }}
+                            {% if form.slug.errors %}<p class="text-red-500 text-xs font-medium">{{ form.slug.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="pt-6 space-y-2">
+                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Mô tả ngắn</label>
+                        {{ form.description }}
+                        <p class="text-[10px] text-stone-400 italic">Mô tả giúp khách hàng hiểu rõ hơn về các sản phẩm trong nhóm này.</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <button type="submit" class="btn-primary flex-1 py-4 text-base shadow-lg shadow-emerald-900/10">
+                        {% if item %}Cập nhật danh mục{% else %}Lưu danh mục mới{% endif %}
+                    </button>
+                    <a href="{% url 'category_list' %}" class="btn-secondary py-4 px-8">Hủy bỏ</a>
+                </div>
+            </div>
+
+            <!-- Right Column: Media & Status -->
+            <div class="space-y-6">
+                <!-- Visibility Section -->
+                <div class="card p-6 bg-white rounded-3xl border border-stone-100 shadow-sm">
+                    <h3 class="text-sm font-bold text-stone-800 mb-4 uppercase tracking-wider">Trạng thái hiển thị</h3>
+                    <label class="flex items-center justify-between p-4 rounded-2xl bg-stone-50 border border-stone-100 cursor-pointer hover:bg-emerald-50 hover:border-emerald-100 transition-all group">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-stone-400 group-hover:text-emerald-600 shadow-sm transition-colors">
+                                <i data-lucide="eye" class="w-5 h-5"></i>
+                            </div>
+                            <span class="text-sm font-bold text-stone-700">Công khai</span>
+                        </div>
+                        <div class="relative inline-flex items-center cursor-pointer">
+                            {{ form.is_active }}
+                        </div>
+                    </label>
+                    <p class="text-[10px] text-stone-400 mt-3 px-1 leading-relaxed">
+                        <i data-lucide="alert-circle" class="w-3 h-3 inline mr-1 text-emerald-600"></i>
+                        Khi tắt, toàn bộ sản phẩm thuộc danh mục này sẽ bị ẩn khỏi website.
+                    </p>
+                </div>
+
+                <!-- Image Section -->
+                <div class="card p-6 bg-white rounded-3xl border border-stone-100 shadow-sm">
+                    <h3 class="text-sm font-bold text-stone-800 mb-4 uppercase tracking-wider">Hình ảnh đại diện</h3>
+                    <div class="space-y-4">
+                        <div class="relative aspect-square w-full rounded-2xl bg-stone-50 border border-dashed border-stone-200 overflow-hidden group">
+                            {% if item and item.image %}
+                            <img src="{{ item.image.url }}" id="imgPreview" class="w-full h-full object-cover">
+                            {% else %}
+                            <div id="imgPlaceholder" class="w-full h-full flex flex-col items-center justify-center text-stone-300">
+                                <i data-lucide="image-plus" class="w-8 h-8 mb-2"></i>
+                                <span class="text-[10px] font-bold uppercase tracking-tighter">Click để tải ảnh</span>
+                            </div>
+                            <img id="imgPreview" class="hidden w-full h-full object-cover">
+                            {% endif %}
+                        </div>
+                        <div class="relative">
+                            {{ form.image }}
+                            <p class="text-[10px] text-stone-400 mt-2">Định dạng hỗ trợ: JPG, PNG, WEBP. Dung lượng tối đa: 2MB.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+    /* Custom Styling for Form Inputs to match Premium Look */
+    input[type="text"], textarea {
+        @apply w-full px-4 py-3 rounded-xl border-stone-200 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all !important;
+    }
+    input[type="checkbox"] {
+        @apply appearance-none w-11 h-6 bg-stone-200 rounded-full relative cursor-pointer transition-colors focus:ring-0 focus:ring-offset-0 !important;
+    }
+    input[type="checkbox"]:checked {
+        @apply bg-emerald-500 !important;
+    }
+    input[type="checkbox"]::after {
+        content: '';
+        @apply absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform !important;
+    }
+    input[type="checkbox"]:checked::after {
+        @apply translate-x-5 !important;
+    }
+</style>
+
+<script>
+    // Simple Image Preview
+    const imgInput = document.querySelector('input[type="file"]');
+    if (imgInput) {
+        imgInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('imgPreview');
+                    const placeholder = document.getElementById('imgPlaceholder');
+                    if (preview) {
+                        preview.src = e.target.result;
+                        preview.classList.remove('hidden');
+                    }
+                    if (placeholder) placeholder.classList.add('hidden');
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+</script>
+{% endblock %}

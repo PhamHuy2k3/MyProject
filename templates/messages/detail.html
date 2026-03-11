@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}Chat với {{ other_user.username }} — TeaZen{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .chat-container {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 280px);
+        min-height: 400px;
+    }
+    .messages-scroll {
+        flex: 1;
+        overflow-y: auto;
+        scroll-behavior: smooth;
+    }
+    .messages-scroll::-webkit-scrollbar {
+        width: 4px;
+    }
+    .messages-scroll::-webkit-scrollbar-thumb {
+        background: #d6d3d1;
+        border-radius: 2px;
+    }
+    .msg-bubble {
+        max-width: 70%;
+        word-wrap: break-word;
+    }
+    .msg-sent {
+        background: #064e3b;
+        color: white;
+        border-radius: 1.25rem 1.25rem 0.25rem 1.25rem;
+    }
+    .msg-received {
+        background: white;
+        color: #1c1917;
+        border-radius: 1.25rem 1.25rem 1.25rem 0.25rem;
+        border: 1px solid #e7e5e4;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen pt-28 pb-8 px-6">
+    <div class="max-w-3xl mx-auto">
+
+        <!-- HEADER -->
+        <div class="flex items-center gap-4 mb-6">
+            <a href="{% url 'message_inbox' %}" class="text-stone-400 hover:text-emerald-800 transition-colors">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </a>
+            <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                {% if other_user %}{{ other_user.username|first|upper }}{% else %}?{% endif %}
+            </div>
+            <div>
+                <h1 class="font-bold text-emerald-950">{% if other_user %}{{ other_user.username }}{% else %}Đã xóa{% endif %}</h1>
+                <p class="text-xs text-stone-400">Trực tuyến</p>
+            </div>
+        </div>
+
+        <!-- CHAT -->
+        <div class="bg-stone-50 rounded-2xl border border-stone-200 overflow-hidden chat-container">
+            <!-- Messages -->
+            <div class="messages-scroll p-6 space-y-4" id="messages-container">
+                {% for msg in messages_list %}
+                <div class="flex {% if msg.sender == request.user %}justify-end{% else %}justify-start{% endif %}">
+                    <div class="msg-bubble p-4 shadow-sm {% if msg.sender == request.user %}msg-sent{% else %}msg-received{% endif %}">
+                        <p class="text-sm">{{ msg.content }}</p>
+                        <p class="text-[10px] mt-1 {% if msg.sender == request.user %}text-emerald-200{% else %}text-stone-400{% endif %}">
+                            {{ msg.created_at|date:"H:i" }}
+                            {% if msg.sender == request.user %}
+                                {% if msg.is_read %} · Đã đọc{% endif %}
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-12 text-stone-400">
+                    <i data-lucide="messages-square" class="w-12 h-12 mx-auto mb-3"></i>
+                    <p>Bắt đầu cuộc trò chuyện!</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Input -->
+            <div class="p-4 bg-white border-t border-stone-200">
+                <form method="post" class="flex gap-3">
+                    {% csrf_token %}
+                    <input type="text" name="content" placeholder="Nhập tin nhắn..." autocomplete="off"
+                        class="flex-1 px-5 py-3 rounded-full border border-stone-300 focus:border-emerald-500 focus:outline-none text-sm" required>
+                    <button type="submit" class="bg-emerald-900 text-white p-3 rounded-full hover:bg-emerald-800 transition-colors">
+                        <i data-lucide="send" class="w-5 h-5"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('messages-container');
+    if (container) container.scrollTop = container.scrollHeight;
+});
+</script>
+{% endblock %}

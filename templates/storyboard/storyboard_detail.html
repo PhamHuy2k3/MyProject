@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% load static %}
+
+
+{% block title %}{{ item.title }} - Storyboard | TeaZen{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{% static 'css/storyboard.css' %}">
+<script>
+    document.addEventListener('scroll', () => {
+        document.documentElement.style.setProperty('--scroll-y', window.scrollY);
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- HERO SECTION -->
+<div class="hero-image-wrapper">
+    <!-- Featured Image -->
+    <img src="{% if item.image %}{{ item.image.url }}{% else %}https://images.unsplash.com/photo-1577002832863-71a2be9bf977?q=80&w=2000&auto=format&fit=crop{% endif %}"
+        class="hero-image" alt="{{ item.title }}">
+    <div class="hero-overlay"></div>
+
+    <!-- Hero Content -->
+    <div class="absolute inset-0 flex flex-col justify-end items-center pb-32 px-6 z-10 text-white text-center">
+        <span class="font-mono text-sm tracking-[0.2em] text-emerald-200 uppercase mb-6 fade-up block">Storyboard / {{
+            item.created_at|date:"F Y" }}</span>
+        <h1 class="font-art text-5xl md:text-7xl font-bold max-w-4xl leading-tight mb-8 fade-up"
+            style="transition-delay: 0.2s;">{{ item.title }}</h1>
+        {% if item.excerpt %}
+        <p class="text-xl md:text-2xl text-stone-200 font-light max-w-2xl fade-up" style="transition-delay: 0.3s;">
+            {{ item.excerpt }}
+        </p>
+        {% endif %}
+    </div>
+
+    <!-- Scroll Indicator -->
+    <div class="absolute bottom-10 left-1/2 -translate-x-1/2 w-[1px] h-16 overflow-hidden scroll-indicator z-10 fade-up"
+        style="transition-delay: 0.4s;"></div>
+</div>
+
+<!-- ARTICLE BODY -->
+<div class="bg-[#fcfbf9] relative">
+
+    <!-- Floating Vertical Decor -->
+    <div
+        class="hidden lg:block absolute top-32 left-12 text-6xl font-jp font-thin text-stone-200/50 writing-vertical select-none pointer-events-none sticky-decor">
+        茶の湯</div>
+
+    <div class="max-w-3xl mx-auto px-6 py-24 md:py-32">
+        <div class="article-content fade-up" style="transition-delay: 0.2s;">
+            {% if item.content %}
+            {{ item.content|safe }}
+            {% else %}
+            <!-- Placeholder if no content exists -->
+            <p class="lead text-2xl font-light text-stone-500 mb-10 italic">
+                Đây là không gian dành cho câu chuyện đằng sau bức ảnh. Trà không chỉ là thức uống, mà là một sự tĩnh
+                lặng được đóng gói trong hương vị.
+            </p>
+
+            <p>
+                Vào những buổi sáng sớm khi sương mù còn giăng kín những đỉnh núi, người hái trà đã bắt đầu công việc
+                của mình. Tiếng nói cười vang vọng khắp đồi, hòa cùng tiếng chim hót tạo nên một bản giao hưởng bình dị.
+                Những búp trà non vừa nhú, óng ánh sương đêm, được hái cẩn thận bằng tay, nâng niu như những báu vật của
+                thiên nhiên. Sự tỉ mỉ trong từng động tác hái không chỉ bảo vệ cây trà mà còn gìn giữ trọn vẹn hương vị
+                tinh khiết của lá trà.
+            </p>
+
+            <h2>Nghệ Thuật Sao Trà</h2>
+            <p>
+                Lá trà sau khi hái được mang về xưởng, nơi nghệ nhân đang chờ đợi. Bàn tay chai sần nhưng khéo léo lật
+                từng lá trà trên chảo gang nóng rực. Nhiệt độ phải vừa đủ - không quá cao để làm cháy lá, không quá thấp
+                để giữ nguyên độ ẩm. Sự cảm nhận qua đôi tay, một kỹ năng được rèn luyện qua hàng chục năm, quyết định
+                đến hình dáng và hương vị cuối cùng của mẻ trà. Mùi hương thanh khiết, ngầy ngậy bắt đầu tỏa ra, len lỏi
+                khắp không gian.
+            </p>
+
+            <blockquote>
+                Người ta uống trà không chỉ để giải khát, mà để cảm nhận thời gian dừng lại, để tìm thấy sự tĩnh lặng
+                giữa thế giới muôn màu.
+            </blockquote>
+
+            <p>
+                Sau khi sao, trà vò và sấy khô, hình thành nên những cánh trà xoăn tít, ẩn chứa tinh hoa của đất trời.
+                Trà không chỉ là một thức uống, đó là một hành trình từ thiên nhiên đến tâm hồn. Hành trình đó mang theo
+                công sức, mồ hôi, và tình yêu của những người gắn bó cả cuộc đời với cây trà. Khi rót một tách trà, bạn
+                đang thưởng thức một phần của lịch sử, một câu chuyện dài và một tác phẩm nghệ thuật thực sự.
+            </p>
+
+            <img src="{% if item.image %}{{ item.image.url }}{% else %}https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=1200&auto=format&fit=crop{% endif %}"
+                alt="{{ item.title }}">
+
+            <p>
+                Mỗi tách trà là một cơ hội để giao tiếp – với bản thân, với người khác, và với thế giới xung quanh. Dù
+                là trong một không gian yên tĩnh hay giữa những cuộc trò chuyện rôm rả, tách trà luôn mang đến một sự
+                kết nối kỳ diệu. Hãy pha một tách trà, hít một hơi thật sâu, và để hương vị đưa bạn vào một chuyến đi
+                đến những ngọn đồi xanh mướt, nơi sương mù và ánh nắng tạo nên những phép màu.
+            </p>
+            {% endif %}
+        </div>
+
+        <!-- Share & Tags bottom -->
+        <div class="mt-20 pt-10 border-t border-stone-200 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex gap-3">
+                <span
+                    class="px-4 py-1.5 rounded-full border border-stone-200 text-xs font-mono tracking-widest uppercase text-stone-500 hover:border-emerald-500 hover:text-emerald-700 transition cursor-pointer">Heritage</span>
+                <span
+                    class="px-4 py-1.5 rounded-full border border-stone-200 text-xs font-mono tracking-widest uppercase text-stone-500 hover:border-emerald-500 hover:text-emerald-700 transition cursor-pointer">Story</span>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <span class="text-xs font-mono tracking-widest uppercase text-stone-400">Share</span>
+                <a href="#"
+                    class="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 hover:bg-emerald-900 hover:text-white transition-colors duration-300">
+                    <i data-lucide="facebook" class="w-4 h-4"></i>
+                </a>
+                <a href="#"
+                    class="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 hover:bg-emerald-900 hover:text-white transition-colors duration-300">
+                    <i data-lucide="twitter" class="w-4 h-4"></i>
+                </a>
+                <a href="#"
+                    class="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 hover:bg-emerald-900 hover:text-white transition-colors duration-300">
+                    <i data-lucide="link" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- LATEST STORIES GRID -->
+{% if related_items %}
+<section class="py-24 bg-white border-t border-stone-100">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-16 fade-up">
+            <h2 class="font-art text-4xl text-emerald-950 font-bold mb-4">Các Câu Chuyện Khác</h2>
+            <p class="text-stone-500 max-w-xl mx-auto">Tham gia vào cuộc hành trình khám phá những câu chuyện thú vị
+                khác từ TeaZen.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {% for rel_item in related_items %}
+            <a href="{% url 'storyboard_detail' rel_item.pk %}" class="group block fade-up"
+                style="transition-delay: 0.1s;">
+                <div class="aspect-[4/5] rounded-[2rem] overflow-hidden mb-6 relative">
+                    <img src="{% if rel_item.image %}{{ rel_item.image.url }}{% else %}https://images.unsplash.com/photo-1531980863769-529e84318d87?q=80&w=800{% endif %}"
+                        alt="{{ rel_item.title }}"
+                        class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110">
+                    <div
+                        class="absolute inset-0 bg-emerald-900/0 group-hover:bg-emerald-900/20 transition-colors duration-500">
+                    </div>
+                </div>
+                <div class="px-2">
+                    <span class="text-xs font-mono tracking-widest uppercase text-stone-400 block mb-2">{{
+                        rel_item.created_at|date:"F d, Y" }}</span>
+                    <h3
+                        class="font-art text-2xl font-bold text-stone-800 group-hover:text-emerald-700 transition-colors">
+                        {{ rel_item.title }}</h3>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+
+        <div class="text-center mt-16 fade-up">
+            <a href="{% url 'index' %}#storyboard"
+                class="inline-flex items-center justify-center gap-3 px-8 py-4 bg-emerald-50 text-emerald-900 rounded-full font-bold uppercase tracking-widest text-sm hover:bg-emerald-900 hover:text-white transition-colors duration-500 group">
+                Về Trang Chuỗi Truyện
+                <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+            </a>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% endblock %}

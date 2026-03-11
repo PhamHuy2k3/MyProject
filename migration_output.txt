@@ -1,0 +1,9 @@
+Running makemigrations MyApp...
+Migrations for 'MyApp':
+  MyApp\migrations\0016_category_is_active.py
+    + Add field is_active to category
+Running migrate...
+Operations to perform:
+  Apply all migrations: MyApp, admin, auth, contenttypes, sessions
+Running migrations:
+  Applying MyApp.0016_category_is_active... OK

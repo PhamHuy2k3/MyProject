@@ -1,0 +1,134 @@
+{% load static %}
+
+<!-- Single Comment Item -->
+<div class="comment-item bg-white rounded-[2rem] p-6 shadow-sm border border-stone-100 transition-all hover:shadow-md {% if is_reply %}ml-12 md:ml-16 mt-4 border-l-4 border-l-emerald-200{% else %}mb-6{% endif %}" id="comment-{{ comment.id }}">
+    
+    <!-- Header: Avatar, Name, Badge, Time -->
+    <div class="flex items-start justify-between gap-4 mb-3">
+        <div class="flex items-center gap-3">
+            <button type="button" onclick="showUserPopup(event, '{{ comment.user.username }}', {{ comment.user.id }})" 
+                class="w-10 h-10 rounded-full {% if comment.user.is_staff %}bg-amber-100 text-amber-800 ring-2 ring-amber-300{% else %}bg-emerald-100 text-emerald-800{% endif %} flex items-center justify-center font-bold text-sm shrink-0 cursor-pointer hover:ring-2 hover:ring-emerald-400 transition-all shadow-sm">
+                {{ comment.user.username|first|upper }}
+            </button>
+            
+            <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button type="button" onclick="showUserPopup(event, '{{ comment.user.username }}', {{ comment.user.id }})" class="font-bold text-stone-800 text-[15px] hover:text-emerald-700 cursor-pointer transition-colors">
+                        {{ comment.user.username }}
+                    </button>
+                    
+                    {% if comment.user.is_staff %}
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider">
+                        <i data-lucide="shield-check" class="w-3 h-3"></i> Quản trị viên
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <div class="flex items-center gap-2 mt-0.5">
+                    <span class="text-[11px] text-stone-400 font-medium">{{ comment.created_at|timesince }} trước</span>
+                    {% if comment.updated_at|date:"Y-m-d H:i:s" != comment.created_at|date:"Y-m-d H:i:s" %}
+                    <span class="text-[10px] text-stone-300 italic">(đã chỉnh sửa)</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Options (Edit/Delete) for Author or Admin -->
+        {% if user.is_authenticated and user.id == comment.user.id or user.is_staff %}
+        <div class="relative group">
+            <button type="button" class="w-8 h-8 rounded-full hover:bg-stone-100 text-stone-400 flex items-center justify-center transition-colors">
+                <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+            </button>
+            <div class="absolute right-0 top-full mt-1 w-32 bg-white rounded-xl shadow-xl border border-stone-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 py-1">
+                <button onclick="deleteComment({{ comment.id }})" class="w-full text-left px-4 py-2 text-sm text-red-600 font-medium hover:bg-red-50 flex items-center gap-2 transition-colors">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> Xóa
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Content: Text -->
+    <div class="comment-text-container mb-4">
+        <!-- Prevent XSS by standard template escaping. content is safe by default text -->
+        <p class="text-stone-700 leading-relaxed text-[15px] whitespace-pre-line comment-content break-words">{{ comment.content }}</p>
+    </div>
+    
+    <!-- Content: Media (Images/Videos) -->
+    {% if comment.media.all %}
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
+        {% for media in comment.media.all %}
+            {% if media.file_type == 'image' %}
+                <div class="aspect-square rounded-xl overflow-hidden bg-stone-100 cursor-pointer border border-stone-200 hover:border-emerald-300 transition-colors" onclick="openLightbox('{{ media.file.url }}')">
+                    <img src="{{ media.file.url }}" class="w-full h-full object-cover hover:scale-110 transition-transform duration-500">
+                </div>
+            {% elif media.file_type == 'video' %}
+                <div class="aspect-video col-span-2 md:col-span-2 rounded-xl overflow-hidden bg-black border border-stone-200">
+                    <video src="{{ media.file.url }}" controls class="w-full h-full object-contain" preload="metadata"></video>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Action Bar -->
+    <div class="flex items-center gap-6 mt-4 pt-4 border-t border-stone-100">
+        <!-- Reply Button -->
+        <button onclick="toggleCommentReply({{ comment.id }}, '{{ comment.user.username }}')" class="flex items-center gap-1.5 text-stone-500 hover:text-emerald-700 font-bold text-sm transition-colors">
+            <i data-lucide="message-square" class="w-4 h-4"></i> Trả lời
+        </button>
+        
+        <button onclick="interactComment({{ comment.id }}, 'like')" class="flex items-center gap-1.5 font-bold text-sm transition-colors {% if user_interaction == 'like' %}text-emerald-600{% else %}text-stone-500 hover:text-emerald-600{% endif %}" id="btn-like-{{ comment.id }}">
+            <i data-lucide="thumbs-up" class="w-4 h-4 {% if user_interaction == 'like' %}fill-current{% endif %}"></i> 
+            <span id="like-count-{{ comment.id }}" class="min-w-[12px]">{{ comment.like_count|default:"0" }}</span>
+        </button>
+        
+        <!-- Dislike Toggle -->
+        <button onclick="interactComment({{ comment.id }}, 'dislike')" class="flex items-center gap-1.5 font-bold text-sm transition-colors {% if user_interaction == 'dislike' %}text-red-500{% else %}text-stone-500 hover:text-red-500{% endif %}" id="btn-dislike-{{ comment.id }}">
+            <i data-lucide="thumbs-down" class="w-4 h-4 {% if user_interaction == 'dislike' %}fill-current{% endif %}"></i>
+        </button>
+    </div>
+    
+    <!-- Reply Form Container (Hidden by default) -->
+    <div id="reply-container-{{ comment.id }}" class="hidden mt-4 pt-4 border-t border-stone-100">
+        {% if user.is_authenticated %}
+        <form onsubmit="submitComment(event, {{ product.id }}, {{ comment.id }})" class="comment-form space-y-4">
+            <div class="flex gap-3">
+                <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs shrink-0 pt-0.5">
+                    {{ user.username|first|upper }}
+                </div>
+                <div class="flex-1 bg-stone-50 border border-stone-200 rounded-2xl p-1 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all">
+                    <textarea name="content" rows="1" class="w-full bg-transparent px-3 py-2 text-sm focus:outline-none resize-none auto-resize-textarea" placeholder="Viết câu trả lời..." required maxlength="1000"></textarea>
+                    
+                    <div class="flex items-center justify-between px-2 pb-1 border-t border-stone-200 border-dashed mt-1 pt-2">
+                        <!-- Media Upload Tools -->
+                        <div class="flex items-center gap-1">
+                            <label class="cursor-pointer w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-200 text-stone-500 transition-colors" title="Đính kèm ảnh/video">
+                                <i data-lucide="paperclip" class="w-4 h-4"></i>
+                                <input type="file" name="media" class="hidden media-upload-input" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/webm">
+                            </label>
+                        </div>
+                        
+                        <div class="flex items-center gap-3">
+                            <span class="text-[10px] text-stone-400 font-mono char-counter">0/1000</span>
+                            <button type="submit" class="bg-emerald-800 text-white px-4 py-1.5 rounded-xl font-bold text-xs hover:bg-emerald-700 transition-colors flex items-center gap-1 shadow-sm submit-btn">
+                                <i data-lucide="send" class="w-3 h-3"></i> Gửi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Preview Container -->
+            <div class="media-preview-container flex flex-wrap gap-2 pl-11 hidden"></div>
+        </form>
+        {% else %}
+        <p class="text-stone-500 text-sm">Vui lòng <a href="{% url 'login' %}?next={{ request.path }}" class="text-emerald-600 font-bold hover:underline">đăng nhập</a> để trả lời.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Child Replies Container -->
+    <div id="replies-list-{{ comment.id }}" class="mt-2 replies-wrapper">
+        <!-- Render replies if passed -->
+    </div>
+    
+</div>

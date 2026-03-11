@@ -1,0 +1,100 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}Quản Lý Đổi Trả{% endblock %}
+{% block page_subtitle %}Danh sách yêu cầu hỗ trợ từ khách hàng{% endblock %}
+
+{% block admin_content %}
+<div class="card overflow-hidden">
+    <!-- Filter Tabs -->
+    <div class="flex border-b border-stone-100">
+        <a href="?status=all" class="px-6 py-4 text-sm font-bold uppercase tracking-wider transition-colors {% if current_status == 'all' %}text-emerald-900 border-b-2 border-emerald-900 bg-emerald-50/30{% else %}text-stone-400 hover:text-stone-800 hover:bg-stone-50{% endif %}">
+            Tất cả
+        </a>
+        <a href="?status=pending" class="px-6 py-4 text-sm font-bold uppercase tracking-wider transition-colors {% if current_status == 'pending' %}text-emerald-900 border-b-2 border-emerald-900 bg-emerald-50/30{% else %}text-stone-400 hover:text-stone-800 hover:bg-stone-50{% endif %}">
+            Chờ xử lý
+        </a>
+        <a href="?status=approved" class="px-6 py-4 text-sm font-bold uppercase tracking-wider transition-colors {% if current_status == 'approved' %}text-emerald-900 border-b-2 border-emerald-900 bg-emerald-50/30{% else %}text-stone-400 hover:text-stone-800 hover:bg-stone-50{% endif %}">
+            Đã duyệt
+        </a>
+        <a href="?status=completed" class="px-6 py-4 text-sm font-bold uppercase tracking-wider transition-colors {% if current_status == 'completed' %}text-emerald-900 border-b-2 border-emerald-900 bg-emerald-50/30{% else %}text-stone-400 hover:text-stone-800 hover:bg-stone-50{% endif %}">
+            Hoàn tất
+        </a>
+        <a href="?status=rejected" class="px-6 py-4 text-sm font-bold uppercase tracking-wider transition-colors {% if current_status == 'rejected' %}text-emerald-900 border-b-2 border-emerald-900 bg-emerald-50/30{% else %}text-stone-400 hover:text-stone-800 hover:bg-stone-50{% endif %}">
+            Từ chối
+        </a>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="bg-stone-50/50 text-[10px] uppercase font-bold tracking-widest text-stone-400 border-b border-stone-100">
+                    <th class="px-6 py-4">Mã YC</th>
+                    <th class="px-6 py-4">Đơn Hàng</th>
+                    <th class="px-6 py-4">Khách Hàng</th>
+                    <th class="px-6 py-4">Loại Yêu Cầu</th>
+                    <th class="px-6 py-4">Ngày Gửi</th>
+                    <th class="px-6 py-4">Trạng Thái</th>
+                    <th class="px-6 py-4 text-right">Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-stone-50">
+                {% for ret in returns %}
+                <tr class="hover:bg-stone-50/80 transition-colors group">
+                    <td class="px-6 py-4 font-mono text-xs font-bold text-emerald-900">#RET-{{ ret.id }}</td>
+                    <td class="px-6 py-4">
+                        <a href="{% url 'admin_order_detail_manage' ret.order.order_number %}" class="text-stone-800 font-medium hover:text-emerald-700 underline underline-offset-4 decoration-stone-200">
+                            {{ ret.order.order_number }}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-bold text-stone-800">{{ ret.order.user.get_full_name|default:ret.order.user.username }}</div>
+                        <div class="text-[10px] text-stone-400">{{ ret.order.user.email }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if ret.request_type == 'refund' %}
+                        <span class="inline-flex items-center gap-1.5 text-amber-700 font-bold text-xs">
+                            <i data-lucide="refresh-ccw" class="w-3 h-3"></i> Hoàn tiền
+                        </span>
+                        {% elif ret.request_type == 'exchange' %}
+                        <span class="inline-flex items-center gap-1.5 text-blue-700 font-bold text-xs">
+                            <i data-lucide="arrow-left-right" class="w-3 h-3"></i> Đổi hàng
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1.5 text-red-700 font-bold text-xs">
+                            <i data-lucide="x-circle" class="w-3 h-3"></i> Hủy & Hoàn
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-xs text-stone-500 font-mono">
+                        {{ ret.created_at|date:"d/m/Y H:i" }}
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if ret.status == 'pending' %}
+                        <span class="badge badge-warning">Chờ xử lý</span>
+                        {% elif ret.status == 'approved' %}
+                        <span class="badge badge-info">Đã duyệt</span>
+                        {% elif ret.status == 'completed' %}
+                        <span class="badge badge-success">Hoàn tất</span>
+                        {% else %}
+                        <span class="badge badge-danger">Từ chối</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <a href="{% url 'admin_return_detail' ret.id %}" class="btn-secondary py-1.5 px-3 text-xs inline-flex items-center gap-1.5">
+                            Chi tiết <i data-lucide="chevron-right" class="w-3 h-3"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center text-stone-500 italic">
+                        Không có yêu cầu nào trong danh sách này.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

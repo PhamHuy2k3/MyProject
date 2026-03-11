@@ -1,0 +1,86 @@
+{% load static %}
+
+{% for review in reviews %}
+<div class="bg-white rounded-[2rem] p-6 shadow-sm border border-stone-100 mb-4 transition-all hover:shadow-md">
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-4">
+        <div class="flex gap-4">
+            <!-- Avatar -->
+            <button type="button" onclick="showUserPopup(event, '{{ review.user.username }}', {{ review.user.id }})" 
+                class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-lg shrink-0 cursor-pointer hover:ring-4 hover:ring-emerald-50 transition-all">
+                {% if review.user.profile.avatar %}
+                    <img src="{{ review.user.profile.avatar.url }}" alt="{{ review.user.username }}" class="w-full h-full object-cover rounded-full">
+                {% else %}
+                    {{ review.user.username|first|upper }}
+                {% endif %}
+            </button>
+            
+            <!-- User Info & Meta -->
+            <div>
+                <button type="button" onclick="showUserPopup(event, '{{ review.user.username }}', {{ review.user.id }})" class="font-bold text-stone-800 hover:text-emerald-700 cursor-pointer transition-colors block mb-0.5 text-left">{{ review.user.username }}</button>
+                <div class="flex items-center gap-2 text-xs text-stone-500">
+                    <span class="flex items-center gap-1"><i data-lucide="edit-2" class="w-3 h-3"></i> {{ review.user.reviews.count }} đánh giá</span>
+                    <span>•</span>
+                    <span class="flex items-center gap-1"><i data-lucide="image" class="w-3 h-3"></i> {{ review.user.reviews.all|length }} ảnh</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Context Menu (Optional placeholder) -->
+        <button type="button" class="text-stone-400 hover:text-stone-600 p-1">
+            <i data-lucide="more-vertical" class="w-5 h-5"></i>
+        </button>
+    </div>
+
+    <!-- Review Meta -->
+    <div class="flex items-center gap-3 mb-3">
+        <div class="flex gap-0.5 text-lg">
+            {% for i in "12345" %}
+                {% if forloop.counter <= review.rating %}
+                    <span class="text-amber-400">★</span>
+                {% else %}
+                    <span class="text-stone-200">★</span>
+                {% endif %}
+            {% endfor %}
+        </div>
+        <span class="text-xs text-stone-400 font-medium">{{ review.created_at|timesince }} trước</span>
+    </div>
+
+    <!-- Content -->
+    <h4 class="font-bold text-stone-900 mb-2">{{ review.title }}</h4>
+    
+    <div class="review-text-container relative">
+        <p class="text-stone-600 text-sm leading-relaxed review-content line-clamp-3 transition-all duration-300">{{ review.content }}</p>
+        <!-- 'Xem thêm' button added via JS if text is truncated -->
+    </div>
+
+    <!-- Images -->
+    {% if review.images.all %}
+    <div class="flex flex-wrap gap-2 mt-4">
+        {% for img in review.images.all %}
+        <button type="button" class="w-20 h-20 rounded-xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity ring-1 ring-stone-200" onclick="openLightbox('{{ img.image.url }}')">
+            <img src="{{ img.image.url }}" alt="Review Image" class="w-full h-full object-cover">
+        </button>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Helpful Votes -->
+    <div class="mt-4 pt-4 border-t border-stone-50 flex items-center justify-between">
+        <button class="flex items-center gap-1.5 text-xs font-semibold text-stone-500 hover:text-emerald-700 transition-colors">
+            <i data-lucide="thumbs-up" class="w-4 h-4"></i>
+            Hữu ích ({% if review.helpful_votes %}{{ review.helpful_votes }}{% else %}0{% endif %})
+        </button>
+    </div>
+</div>
+{% empty %}
+    {% if request.GET.page == '1' or not request.GET.page %}
+    <div class="text-center py-12 text-stone-400 bg-white rounded-[2rem] border border-stone-100">
+        <div class="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i data-lucide="message-square" class="w-8 h-8 text-stone-300"></i>
+        </div>
+        <p class="font-medium text-stone-600 mb-1">Chưa có đánh giá nào phù hợp.</p>
+        <p class="text-sm">Hãy là người đầu tiên chia sẻ cảm nhận của bạn!</p>
+    </div>
+    {% endif %}
+{% endfor %}

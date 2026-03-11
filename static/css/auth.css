@@ -1,0 +1,89 @@
+/*
+ * auth.css
+ * Auth-specific styles only. Shared styles are in styles.css.
+ */
+
+/* Auth page body overrides */
+body.auth-page {
+    overflow-y: auto;
+    min-height: 100vh;
+    width: 100vw;
+    position: relative;
+}
+
+@keyframes float-slow {
+    0%, 100% { transform: translateY(0) rotate(var(--rot)); }
+    50% { transform: translateY(-20px) rotate(calc(var(--rot) + 2deg)); }
+}
+.floating-item { animation: float-slow 8s ease-in-out infinite; }
+
+.tape {
+    position: absolute;
+    width: 120px;
+    height: 35px;
+    background-color: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(2px);
+    border-left: 1px solid rgba(255,255,255,0.8);
+    border-right: 1px solid rgba(255,255,255,0.8);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    z-index: 10;
+}
+
+.input-group { position: relative; margin-bottom: 1.5rem; }
+.input-field {
+    width: 100%;
+    background: #fbfaf9;
+    border: 2px solid #e7e5e4;
+    padding: 15px;
+    font-size: 1rem;
+    color: var(--color-accent);
+    font-family: 'Space Grotesk', sans-serif;
+    outline: none;
+    transition: all 0.3s;
+    box-shadow: 4px 4px 0 #e7e5e4;
+}
+.input-field:focus {
+    border-color: var(--color-accent);
+    box-shadow: 4px 4px 0 var(--color-accent);
+    transform: translate(-2px, -2px);
+}
+.input-field.error {
+    border-color: #dc2626;
+    box-shadow: 4px 4px 0 #dc2626;
+}
+.input-label {
+    position: absolute;
+    left: 15px;
+    top: 15px;
+    color: #78716c;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    font-weight: 500;
+}
+.input-field:focus ~ .input-label,
+.input-field:not(:placeholder-shown) ~ .input-label {
+    transform: translateY(-28px);
+    font-size: 0.75rem;
+    color: var(--color-accent);
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.brutal-btn {
+    transition: transform 0.1s;
+    box-shadow: 6px 6px 0 var(--color-accent);
+}
+.brutal-btn:active {
+    transform: translate(4px, 4px);
+    box-shadow: 2px 2px 0 var(--color-accent);
+}
+
+.page-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    width: 100%;
+    padding: 2rem 0;
+}
+

@@ -1,0 +1,138 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}Quản Lý Kho & Đơn Hàng{% endblock %}
+{% block page_subtitle %}Theo dõi tồn kho và xử lý đơn hàng{% endblock %}
+
+{% block admin_content %}
+
+<!-- Warnings -->
+{% if low_stock_count > 0 %}
+<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-8 flex items-start gap-3">
+    <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600 mt-0.5"></i>
+    <div>
+        <h4 class="font-bold text-yellow-800">Cảnh báo tồn kho thấp</h4>
+        <p class="text-sm text-yellow-700 mt-1">Có {{ low_stock_count }} sản phẩm có số lượng dưới 10. Vui lòng nhập thêm hàng.</p>
+        <div class="mt-3 flex flex-wrap gap-2">
+            {% for product in low_stock_products %}
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                {{ product.title }} ({{ product.stock_quantity }})
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- Inventory Management -->
+    <div class="space-y-6">
+        <div class="flex items-center justify-between">
+            <h3 class="font-art text-xl font-bold text-stone-800">Kho Hàng</h3>
+            <span class="text-sm text-stone-500">{{ total_products }} sản phẩm</span>
+        </div>
+        
+        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
+            <div class="max-h-[600px] overflow-y-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-stone-50 sticky top-0 z-10">
+                        <tr class="text-stone-500 text-xs uppercase tracking-wider border-b border-stone-200">
+                            <th class="p-4 font-medium">Sản Phẩm</th>
+                            <th class="p-4 font-medium text-center">Tồn Kho</th>
+                            <th class="p-4 font-medium text-right">Cập Nhật</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-stone-100">
+                        {% for product in products %}
+                        <tr class="hover:bg-stone-50 transition-colors">
+                            <td class="p-4">
+                                <div class="font-medium text-stone-800">{{ product.title }}</div>
+                                <div class="text-xs text-stone-500">{{ product.price }}₫</div>
+                            </td>
+                            <td class="p-4 text-center">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if product.stock_quantity < 10 %}bg-red-100 text-red-800{% else %}bg-emerald-100 text-emerald-800{% endif %}">
+                                    {{ product.stock_quantity }}
+                                </span>
+                            </td>
+                            <td class="p-4 text-right">
+                                <form method="POST" class="flex items-center justify-end gap-2">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="product_id" value="{{ product.id }}">
+                                    <input type="hidden" name="update_stock" value="true">
+                                    <input type="number" name="stock_quantity" value="{{ product.stock_quantity }}" min="0" class="w-16 px-2 py-1 text-sm border border-stone-300 rounded focus:outline-none focus:border-emerald-500">
+                                    <button type="submit" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors" title="Lưu">
+                                        <i data-lucide="save" class="w-4 h-4"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Management -->
+    <div class="space-y-6">
+        <div class="flex items-center justify-between">
+            <h3 class="font-art text-xl font-bold text-stone-800">Đơn Hàng Mới</h3>
+            {% if pending_orders > 0 %}
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {{ pending_orders }} chờ xử lý
+            </span>
+            {% endif %}
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
+            <div class="max-h-[600px] overflow-y-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-stone-50 sticky top-0 z-10">
+                        <tr class="text-stone-500 text-xs uppercase tracking-wider border-b border-stone-200">
+                            <th class="p-4 font-medium">Mã Đơn</th>
+                            <th class="p-4 font-medium">Khách Hàng</th>
+                            <th class="p-4 font-medium">Trạng Thái</th>
+                            <th class="p-4 font-medium text-right">Hành Động</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-stone-100">
+                        {% for order in orders %}
+                        <tr class="hover:bg-stone-50 transition-colors">
+                            <td class="p-4">
+                                <div class="font-medium text-stone-800">{{ order.order_number }}</div>
+                                <div class="text-xs text-stone-500">{{ order.created_at|date:"d/m/Y H:i" }}</div>
+                            </td>
+                            <td class="p-4">
+                                <div class="text-sm text-stone-800">{{ order.user.username }}</div>
+                                <div class="text-xs text-stone-500 font-mono">{{ order.total_amount }}₫</div>
+                            </td>
+                            <td class="p-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                    {% if order.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                    {% elif order.status == 'confirmed' %}bg-blue-100 text-blue-800
+                                    {% elif order.status == 'shipping' %}bg-purple-100 text-purple-800
+                                    {% elif order.status == 'delivered' %}bg-emerald-100 text-emerald-800
+                                    {% elif order.status == 'completed' %}bg-green-100 text-green-800
+                                    {% else %}bg-stone-100 text-stone-600{% endif %}">
+                                    {{ order.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="p-4 text-right">
+                                <a href="{% url 'admin_order_detail_manage' order.order_number %}" class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-600 hover:bg-emerald-600 hover:text-white transition-colors">
+                                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="p-8 text-center text-stone-500">
+                                Chưa có đơn hàng nào
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

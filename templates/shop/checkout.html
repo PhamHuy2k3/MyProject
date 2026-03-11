@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Thanh toán - TeaZen{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{% static 'css/shop.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Reenie+Beanie&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 pt-24 pb-12">
+    <div class="mb-8">
+        <a href="{% url 'cart' %}"
+            class="inline-flex items-center gap-2 text-stone-500 hover:text-emerald-800 transition-colors font-medium">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Quay lại giỏ hàng
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        <!-- CHECKOUT FORM -->
+        <div class="lg:col-span-8 space-y-8">
+            <div class="relative">
+                <h2 class="font-art text-5xl font-bold text-emerald-950">Thanh toán.</h2>
+                <i data-lucide="credit-card" class="absolute -top-4 -left-8 w-8 h-8 text-emerald-500 animate-pulse"></i>
+            </div>
+
+            <form action="{% url 'checkout' %}" method="POST" id="checkout-form" class="space-y-8">
+                {% csrf_token %}
+
+                <!-- ====== SHIPPING INFO ====== -->
+                <div class="bg-white p-8 shadow-lg border-t-4 border-emerald-900" id="shipping-card">
+                    <h3 class="font-art text-2xl font-bold mb-6 flex items-center gap-2">
+                        <i data-lucide="map-pin" class="w-5 h-5 text-emerald-700"></i> Thông tin giao hàng
+                    </h3>
+
+                    {% if not phone or not address %}
+                    <div class="bg-amber-50 border border-amber-300 rounded-xl p-4 mb-6 flex items-start gap-3"
+                        id="profile-warning">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"></i>
+                        <div>
+                            <p class="font-bold text-amber-800 text-sm">Bạn chưa cập nhật đầy đủ thông tin giao hàng!
+                            </p>
+                            <p class="text-amber-600 text-xs mt-0.5">Vui lòng điền số điện thoại và địa chỉ để tiến hành
+                                đặt hàng.</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- VIEW MODE -->
+                    <div id="info-view">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+                            <div>
+                                <label class="block text-xs text-stone-400 uppercase tracking-widest mb-1">Người
+                                    nhận</label>
+                                <div class="font-bold text-lg text-emerald-950">{{ full_name }}</div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-stone-400 uppercase tracking-widest mb-1">Số điện
+                                    thoại</label>
+                                <div id="view-phone"
+                                    class="font-bold text-lg {% if not phone %}text-amber-500{% else %}text-emerald-950{% endif %}">
+                                    {% if phone %}{{ phone }}{% else %}<span class="italic font-normal text-base">Chưa
+                                        cập nhật ⚠</span>{% endif %}
+                                </div>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs text-stone-400 uppercase tracking-widest mb-1">Địa chỉ giao
+                                    hàng</label>
+                                <div id="view-address"
+                                    class="font-bold text-lg {% if not address %}text-amber-500{% else %}text-emerald-950{% endif %}">
+                                    {% if address %}{{ address }}{% else %}<span
+                                        class="italic font-normal text-base">Chưa cập nhật ⚠</span>{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" onclick="openEdit()"
+                            class="inline-flex items-center gap-1.5 text-sm text-emerald-700 hover:text-emerald-900 font-medium border border-emerald-300 hover:border-emerald-600 rounded-lg px-4 py-2 transition-all">
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                            {% if phone and address %}Chỉnh sửa thông tin{% else %}Cập nhật ngay{% endif %}
+                        </button>
+                    </div>
+
+                    <!-- EDIT MODE -->
+                    <div id="info-edit" class="hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+                            <div>
+                                <label class="block text-xs text-stone-400 uppercase tracking-widest mb-1">Người
+                                    nhận</label>
+                                <input type="text" value="{{ full_name }}" disabled
+                                    class="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-100 text-stone-500 text-sm">
+                                <p class="text-[10px] text-stone-400 mt-1">Đổi tên trong phần Hồ sơ</p>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-stone-400 uppercase tracking-widest mb-1">Số điện thoại
+                                    <span class="text-red-400">*</span></label>
+                                <input type="tel" id="edit-phone" value="{{ phone }}" placeholder="0901 234 567"
+                                    class="w-full border border-stone-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm transition-all"
+                                    oninput="clearErr('phone')">
+                                <p class="text-red-500 text-xs mt-1 hidden" id="err-phone">Vui lòng nhập số điện thoại
+                                </p>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs text-stone-400 uppercase tracking-widest mb-1">Địa chỉ giao
+                                    hàng <span class="text-red-400">*</span></label>
+                                <input type="text" id="edit-address" value="{{ address }}"
+                                    placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"
+                                    class="w-full border border-stone-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm transition-all"
+                                    oninput="clearErr('address')">
+                                <p class="text-red-500 text-xs mt-1 hidden" id="err-address">Vui lòng nhập địa chỉ giao
+                                    hàng</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-3">
+                            <button type="button" onclick="saveProfile()" id="save-btn"
+                                class="inline-flex items-center gap-2 bg-emerald-900 text-white text-sm font-bold px-6 py-2.5 rounded-lg hover:bg-emerald-800 transition-colors">
+                                <i data-lucide="check" class="w-4 h-4"></i> Lưu thông tin
+                            </button>
+                            <button type="button" onclick="closeEdit()"
+                                class="text-stone-500 text-sm px-4 py-2.5 rounded-lg hover:bg-stone-100 transition-colors border border-stone-200">
+                                Hủy
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="save-success"
+                        class="hidden mt-4 bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2 text-green-700 text-sm">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i> Đã lưu thông tin thành công!
+                    </div>
+                </div>
+
+                <!-- Order Notes -->
+                <div
+                    class="bg-white p-8 shadow-lg border-l-4 border-transparent hover:border-emerald-300 transition-all">
+                    <h3 class="font-art text-2xl font-bold mb-4 flex items-center gap-2">
+                        <i data-lucide="message-square" class="w-5 h-5 text-emerald-700"></i> Lời nhắn cho TeaZen
+                    </h3>
+                    <textarea name="note" rows="3" placeholder="Ghi chú về đơn hàng, thời gian giao hàng mong muốn..."
+                        class="w-full bg-stone-50 border border-stone-200 rounded p-4 text-stone-700 focus:outline-none focus:bg-white transition-colors"></textarea>
+                </div>
+
+                <button type="submit" id="submit-checkout" class="hidden"></button>
+            </form>
+        </div>
+
+        <!-- ORDER SUMMARY -->
+        <div class="lg:col-span-4 lg:sticky lg:top-24">
+            <div class="relative">
+                <div class="tape -top-3 left-1/2 -translate-x-1/2 rotate-1"></div>
+                <div class="receipt">
+                    <div class="text-center border-b-2 border-dashed border-stone-300 pb-4 mb-4">
+                        <h3 class="font-mono font-bold text-xl uppercase tracking-widest">Đơn hàng của bạn</h3>
+                        <p class="text-xs text-stone-500">Tiến hành thanh toán</p>
+                    </div>
+
+                    <div class="space-y-4 max-h-60 overflow-y-auto pr-2 mb-4">
+                        {% for item in cart_items %}
+                        <div class="flex gap-3">
+                            <div class="w-12 h-12 bg-stone-100 rounded flex-shrink-0 overflow-hidden">
+                                {% if item.product.image %}<img src="{{ item.product.image.url }}"
+                                    class="w-full h-full object-cover">{% endif %}
+                            </div>
+                            <div class="flex-grow">
+                                <div class="text-sm font-bold leading-tight">{{ item.product.title }}</div>
+                                {% if item.variation %}<div class="text-[10px] text-stone-500">{{ item.variation.title
+                                    }}</div>{% endif %}
+                                <div class="text-xs text-stone-500 mt-1">SL: {{ item.quantity }}</div>
+                            </div>
+                            <div class="font-mono text-sm text-right">{{ item.get_subtotal|floatformat:0 }}₫</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="border-t-2 border-dashed border-stone-300 pt-4 mb-4 space-y-2 font-mono text-sm">
+                        <div class="flex justify-between"><span>Tạm tính</span><span>{{ cart.get_subtotal|floatformat:0
+                                }}₫</span></div>
+                        {% if cart.get_discount_amount > 0 %}
+                        <div class="flex justify-between text-emerald-600"><span>Giảm giá ({{ cart.coupon.code
+                                }})</span><span>-{{ cart.get_discount_amount|floatformat:0 }}₫</span></div>
+                        {% endif %}
+                        <div class="flex justify-between text-stone-500"><span>Phí vận chuyển</span><span>Miễn
+                                phí</span></div>
+                    </div>
+
+                    <div class="border-t-2 border-stone-800 pt-4">
+                        <div class="flex justify-between font-bold text-xl text-emerald-950">
+                            <span class="font-art font-bold">Tổng thanh toán</span>
+                            <span class="font-mono">{{ total_price|floatformat:0 }}₫</span>
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="submitCheckout()"
+                        class="w-full mt-6 bg-emerald-900 text-white font-bold py-4 uppercase tracking-widest hover:bg-emerald-800 transition-colors rounded shadow-lg">
+                        Xác nhận đặt hàng
+                    </button>
+
+                    <div class="mt-4 text-center">
+                        <p class="text-[10px] text-stone-400 font-mono">Bằng việc đặt hàng, bạn đồng ý với Điều khoản
+                            của TeaZen.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-[#e8f5e9] p-6 shadow-md -rotate-2 mt-8 relative">
+                <div
+                    class="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-emerald-400 shadow-sm border border-emerald-500">
+                </div>
+                <p class="font-hand text-xl text-stone-700 text-center">🌿 Đơn hàng sẽ được xử lý ngay sau khi thanh
+                    toán!</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let profileComplete = {% if phone and address %}true{% else %} false{% endif %};
+
+    function openEdit() {
+        document.getElementById('info-view').classList.add('hidden');
+        document.getElementById('info-edit').classList.remove('hidden');
+        document.getElementById('save-success').classList.add('hidden');
+        document.getElementById('edit-phone').focus();
+    }
+
+    function closeEdit() {
+        document.getElementById('info-view').classList.remove('hidden');
+        document.getElementById('info-edit').classList.add('hidden');
+    }
+
+    function clearErr(field) {
+        document.getElementById('err-' + field).classList.add('hidden');
+        document.getElementById('edit-' + field).classList.remove('border-red-400', 'ring-1', 'ring-red-400');
+    }
+
+    function showErr(field) {
+        document.getElementById('err-' + field).classList.remove('hidden');
+        const el = document.getElementById('edit-' + field);
+        el.classList.add('border-red-400', 'ring-1', 'ring-red-400');
+        el.focus();
+    }
+
+    function saveProfile() {
+        const phone = document.getElementById('edit-phone').value.trim();
+        const address = document.getElementById('edit-address').value.trim();
+        let valid = true;
+        if (!phone) { showErr('phone'); valid = false; }
+        if (!address) { showErr('address'); valid = false; }
+        if (!valid) return;
+
+        const btn = document.getElementById('save-btn');
+        btn.innerHTML = '<svg class="animate-spin w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Đang lưu...';
+        btn.disabled = true;
+
+        fetch('{% url "profile_quick_update" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: JSON.stringify({ phone, address }),
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('view-phone').textContent = phone;
+                    document.getElementById('view-phone').className = 'font-bold text-lg text-emerald-950';
+                    document.getElementById('view-address').textContent = address;
+                    document.getElementById('view-address').className = 'font-bold text-lg text-emerald-950';
+                    const warn = document.getElementById('profile-warning');
+                    if (warn) warn.classList.add('hidden');
+                    profileComplete = true;
+                    closeEdit();
+                    document.getElementById('save-success').classList.remove('hidden');
+                    setTimeout(() => document.getElementById('save-success').classList.add('hidden'), 3500);
+                } else {
+                    alert(data.message || 'Lưu thất bại, vui lòng thử lại.');
+                }
+            })
+            .catch(() => alert('Lỗi kết nối. Vui lòng thử lại.'))
+            .finally(() => {
+                btn.innerHTML = '<i data-lucide="check" class="w-4 h-4 inline-block"></i> Lưu thông tin';
+                btn.disabled = false;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+    }
+
+    function submitCheckout() {
+        if (!profileComplete) {
+            document.getElementById('shipping-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            setTimeout(() => openEdit(), 350);
+            return;
+        }
+        document.getElementById('checkout-form').submit();
+    }
+</script>
+{% endblock %}

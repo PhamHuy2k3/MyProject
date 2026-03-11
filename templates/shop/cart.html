@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Giỏ hàng - TeaZen{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{% static 'css/shop.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Reenie+Beanie&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<!-- MAIN CONTENT -->
+<div class="container mx-auto px-6 pt-24 pb-12">
+    <!-- Breadcrumb / Back button -->
+    <div class="mb-8">
+        <a href="{% url 'index' %}"
+            class="inline-flex items-center gap-2 text-stone-500 hover:text-emerald-800 transition-colors font-medium hover-trigger">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            Tiếp tục mua sắm
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+
+        <!-- CART ITEMS -->
+        <div class="lg:col-span-8 space-y-8">
+
+            <!-- Section Title -->
+            <div class="relative">
+                <h2 class="font-art text-5xl font-bold text-emerald-950">Giỏ hàng.</h2>
+                <i data-lucide="shopping-bag"
+                    class="absolute -top-4 -left-8 w-8 h-8 text-emerald-500 animate-pulse"></i>
+            </div>
+
+            {% if cart_items %}
+            <!-- Cart Items List -->
+            <div class="space-y-6">
+                {% for item in cart_items %}
+                <div
+                    class="relative bg-white p-6 shadow-lg border-l-4 border-emerald-900 flex gap-6 items-center hover-trigger group hover:-translate-y-1 transition-transform">
+                    <!-- Product Image -->
+                    <div class="w-24 h-24 bg-gray-100 flex-shrink-0 overflow-hidden rounded-lg">
+                        {% if item.product.image %}
+                        <img src="{{ item.product.image.url }}"
+                            class="w-full h-full object-cover group-hover:scale-110 transition-transform">
+                        {% else %}
+                        <div class="w-full h-full flex items-center justify-center bg-emerald-50">
+                            <i data-lucide="leaf" class="w-10 h-10 text-emerald-200"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Product Info -->
+                    <div class="flex-grow">
+                        <h4 class="font-bold font-art text-xl leading-none">
+                            {{ item.product.title }}
+                            {% if item.variation %}
+                            <span class="text-emerald-700 text-lg">({{ item.variation.title }})</span>
+                            {% endif %}
+                        </h4>
+                        <p class="text-xs text-stone-500 mt-1 uppercase tracking-wider">{{
+                            item.product.excerpt|truncatechars:30 }}</p>
+                        <div class="font-mono text-emerald-900 mt-2">
+                            {% if item.variation and item.variation.price %}
+                            {{ item.variation.price|floatformat:0 }}₫
+                            {% else %}
+                            {{ item.product.price|floatformat:0 }}₫
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Quantity -->
+                    <div class="flex items-center gap-2">
+                        <form action="{% url 'cart_update' item.id %}" method="post" class="flex items-center">
+                            {% csrf_token %}
+                            {% with stock_limit=item.variation.stock_quantity|default:item.product.stock_quantity %}
+                            <input type="number" name="quantity" value="{{ item.quantity }}" min="1"
+                                max="{{ stock_limit }}" title="Số lượng phải từ 1 đến {{ stock_limit }}"
+                                class="qty-input hover-trigger" required>
+                            <button type="submit"
+                                class="ml-2 bg-stone-100 p-2 rounded hover:bg-stone-200 transition-colors hover-trigger"
+                                title="Cập nhật số lượng">
+                                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                            </button>
+                        </form>
+                        <span class="text-xs text-stone-500">(Tồn: {{ stock_limit }})</span>
+                        {% endwith %}
+                    </div>
+
+                    <!-- Subtotal -->
+                    <div class="text-right min-w-[100px]">
+                        <div class="text-xs text-stone-500 uppercase">Tổng</div>
+                        <div class="font-mono font-bold text-lg">{{ item.get_subtotal|floatformat:0 }}₫</div>
+                    </div>
+
+                    <!-- Remove Button -->
+                    <a href="{% url 'cart_remove' item.id %}"
+                        class="text-red-500 hover:text-red-700 transition-colors hover-trigger">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                    </a>
+
+                    <!-- Punch hole effect -->
+                    <div
+                        class="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-[#f2f0ec] rounded-full shadow-inner">
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% else %}
+            <!-- Empty Cart -->
+            <div class="relative group">
+                <div class="tape -top-3 left-1/2 -translate-x-1/2 rotate-1"></div>
+                <div class="receipt text-center py-16">
+                    <i data-lucide="shopping-bag" class="w-24 h-24 mx-auto text-stone-300 mb-4"></i>
+                    <h3 class="font-art text-2xl font-bold text-stone-600 mb-2">Giỏ hàng trống</h3>
+                    <p class="text-stone-500 mb-6">Hãy khám phá và thêm sản phẩm yêu thích vào giỏ hàng!</p>
+                    <a href="{% url 'index' %}"
+                        class="inline-block bg-emerald-900 text-white font-bold py-3 px-8 uppercase tracking-wider hover:bg-emerald-800 transition-colors hover-trigger">
+                        Khám phá ngay
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+
+        <!-- ORDER SUMMARY -->
+        <div class="lg:col-span-4 lg:sticky lg:top-24">
+
+            {% if cart_items %}
+            <!-- Receipt Summary -->
+            <div class="relative group">
+                <div class="tape -top-3 left-1/2 -translate-x-1/2 rotate-1"></div>
+                <div class="receipt">
+                    <div class="text-center border-b-2 border-dashed border-stone-300 pb-4 mb-4">
+                        <h3 class="font-mono font-bold text-xl uppercase tracking-widest">Tóm tắt đơn hàng</h3>
+                        <p class="text-xs text-stone-500">TeaZen - Premium Tea</p>
+                    </div>
+
+                    <div class="space-y-3 font-mono text-sm border-b-2 border-dashed border-stone-300 pb-4 mb-4">
+                        {% for item in cart_items %}
+                        <div class="flex justify-between">
+                            <span class="truncate mr-4">
+                                {{ item.product.title }}
+                                {% if item.variation %} <span class="text-[10px] text-stone-400">({{
+                                    item.variation.title }})</span>{% endif %}
+                                x{{ item.quantity }}
+                            </span>
+                            <span>{{ item.get_subtotal|floatformat:0 }}₫</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- COUPON SECTION -->
+                    <div class="border-b-2 border-dashed border-stone-300 pb-4 mb-4">
+                        <form action="{% url 'apply_coupon' %}" method="POST" class="flex gap-2">
+                            {% csrf_token %}
+                            <input type="text" name="coupon_code" value="{{ cart.coupon.code|default:'' }}"
+                                placeholder="Mã giảm giá"
+                                class="w-full bg-stone-100 border border-stone-300 text-sm p-2 font-mono focus:outline-none focus:border-emerald-600">
+                            <button type="submit"
+                                class="bg-stone-800 text-white px-3 font-mono text-xs uppercase hover:bg-stone-700 transition-colors">Áp
+                                dụng</button>
+                        </form>
+                        {% if cart.coupon %}
+                        {% if cart.get_discount_amount > 0 %}
+                        <div class="text-xs text-emerald-600 mt-2 flex justify-between">
+                            <span><i class="fas fa-check-circle"></i> Đã áp dụng: {{ cart.coupon.code }}</span>
+                            <form action="{% url 'apply_coupon' %}" method="POST" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="coupon_code" value="">
+                                <button type="submit" class="text-red-500 hover:text-red-700 underline"><i
+                                        class="fas fa-times"></i> Gỡ</button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <div class="text-xs text-red-500 mt-2 flex justify-between">
+                            <span><i class="fas fa-exclamation-circle"></i> Chưa đủ điều kiện: {{ cart.coupon.code }}
+                                (Min: {{ cart.coupon.min_purchase|floatformat:0 }}đ)</span>
+                            <form action="{% url 'apply_coupon' %}" method="POST" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="coupon_code" value="">
+                                <button type="submit" class="text-red-500 hover:text-red-700 underline"><i
+                                        class="fas fa-times"></i> Gỡ</button>
+                            </form>
+                        </div>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <div class="space-y-2 font-mono text-sm">
+                        <div class="flex justify-between">
+                            <span>Tạm tính</span>
+                            <span>{{ cart.get_subtotal|floatformat:0 }}₫</span>
+                        </div>
+                        {% if cart.get_discount_amount > 0 %}
+                        <div class="flex justify-between text-emerald-600">
+                            <span>Giảm giá ({{ cart.coupon.code }})</span>
+                            <span>-{{ cart.get_discount_amount|floatformat:0 }}₫</span>
+                        </div>
+                        {% endif %}
+                        <div class="flex justify-between text-stone-500">
+                            <span>Phí vận chuyển</span>
+                            <span>Miễn phí</span>
+                        </div>
+                    </div>
+
+                    <div class="border-t-2 border-stone-800 mt-4 pt-4">
+                        <div class="flex justify-between font-bold text-lg">
+                            <span class="font-art">Tổng cộng</span>
+                            <span class="font-mono text-emerald-900">{{ cart.get_total_price|floatformat:0 }}₫</span>
+                        </div>
+                    </div>
+
+                    <a href="{% url 'checkout' %}"
+                        class="w-full mt-6 bg-emerald-900 text-white font-bold py-4 uppercase tracking-widest hover:bg-emerald-800 transition-colors hover-trigger text-center block rounded">
+                        Thanh toán
+                    </a>
+
+                    <div class="mt-4 text-center">
+                        <div class="h-8 mx-auto opacity-25 flex items-end justify-center gap-px w-32">
+                            <div class="bg-stone-800" style="width:2px;height:32px"></div>
+                            <div class="bg-stone-800" style="width:1px;height:20px"></div>
+                            <div class="bg-stone-800" style="width:3px;height:32px"></div>
+                            <div class="bg-stone-800" style="width:1px;height:24px"></div>
+                            <div class="bg-stone-800" style="width:2px;height:32px"></div>
+                            <div class="bg-stone-800" style="width:1px;height:16px"></div>
+                            <div class="bg-stone-800" style="width:2px;height:28px"></div>
+                            <div class="bg-stone-800" style="width:1px;height:32px"></div>
+                            <div class="bg-stone-800" style="width:3px;height:20px"></div>
+                            <div class="bg-stone-800" style="width:1px;height:32px"></div>
+                            <div class="bg-stone-800" style="width:2px;height:24px"></div>
+                            <div class="bg-stone-800" style="width:1px;height:32px"></div>
+                            <div class="bg-stone-800" style="width:2px;height:16px"></div>
+                            <div class="bg-stone-800" style="width:3px;height:32px"></div>
+                            <div class="bg-stone-800" style="width:1px;height:28px"></div>
+                            <div class="bg-stone-800" style="width:2px;height:32px"></div>
+                        </div>
+                        <p class="text-xs text-stone-400 mt-2 font-mono">{{ cart.get_total_items }} sản phẩm</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Promo Note (Post-it) -->
+            <div class="bg-[#fff9c4] p-6 shadow-md rotate-2 mt-8 relative">
+                <div
+                    class="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-400 shadow-sm border border-red-500">
+                </div>
+                <p class="font-hand text-xl text-stone-700 text-center">
+                    🍵 Miễn phí vận chuyển cho đơn hàng từ 500.000₫!
+                </p>
+            </div>
+            {% endif %}
+
+        </div>
+
+    </div>
+</div>
+{% endblock %}

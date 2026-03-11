@@ -1,0 +1,85 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}Quản Lý Danh Mục{% endblock %}
+{% block page_subtitle %}{{ items.count }} danh mục{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'category_create' %}" class="btn-primary inline-flex items-center gap-2">
+    <i data-lucide="plus" class="w-4 h-4"></i> Thêm Danh Mục
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for item in items %}
+    <div class="group bg-white rounded-3xl shadow-sm border border-stone-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-500">
+        <!-- Image Header -->
+        <div class="relative h-48 overflow-hidden">
+            {% if item.image %}
+            <img src="{{ item.image.url }}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+            {% else %}
+            <div class="w-full h-full bg-stone-100 flex items-center justify-center text-stone-300">
+                <i data-lucide="image" class="w-12 h-12"></i>
+            </div>
+            {% endif %}
+            
+            <!-- Quick Toggle Status -->
+            <div class="absolute top-4 right-4">
+                <form method="POST" action="{% url 'category_toggle_active' item.pk %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm border border-stone-100 shadow-sm hover:bg-white transition-all">
+                        <div class="w-2 h-2 rounded-full {{ item.is_active|yesno:'bg-emerald-500 animate-pulse,bg-stone-400' }}"></div>
+                        <span class="text-xs font-bold text-stone-700 uppercase tracking-wider">
+                            {{ item.is_active|yesno:'Hoạt động,Đã ẩn' }}
+                        </span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Product Count Badge -->
+            <div class="absolute bottom-4 left-4">
+                <div class="px-3 py-1.5 rounded-xl bg-emerald-900/80 backdrop-blur-sm text-white text-xs font-bold border border-white/20">
+                    {{ item.products.count }} Sản phẩm
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6">
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="font-art text-xl font-bold text-stone-800">{{ item.name }}</h3>
+                <code class="text-[10px] bg-stone-100 text-stone-500 px-2 py-0.5 rounded uppercase tracking-tighter">{{ item.slug }}</code>
+            </div>
+            
+            <p class="text-stone-500 text-sm line-clamp-2 mb-6 h-10">
+                {{ item.description|default:"Chưa có mô tả cho danh mục này." }}
+            </p>
+
+            <div class="flex items-center justify-between pt-4 border-t border-stone-50">
+                <span class="text-[10px] text-stone-400 uppercase tracking-widest font-bold">Tạo ngày: {{ item.created_at|date:"d/m/Y" }}</span>
+                
+                <div class="flex gap-2">
+                    <a href="{% url 'category_edit' item.pk %}" class="w-9 h-9 flex items-center justify-center rounded-xl bg-stone-50 text-stone-500 hover:bg-emerald-50 hover:text-emerald-700 transition-all shadow-sm" title="Sửa">
+                        <i data-lucide="edit-3" class="w-4 h-4"></i>
+                    </a>
+                    <a href="{% url 'category_delete' item.pk %}" class="w-9 h-9 flex items-center justify-center rounded-xl bg-stone-50 text-stone-400 hover:bg-red-50 hover:text-red-600 transition-all shadow-sm" title="Xóa">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-span-full py-20 text-center">
+        <div class="w-24 h-24 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i data-lucide="layers" class="w-10 h-10 text-stone-300"></i>
+        </div>
+        <h2 class="text-2xl font-art font-bold text-stone-800 mb-2">Chưa có danh mục nào</h2>
+        <p class="text-stone-500 mb-8">Bắt đầu bằng cách tạo danh mục sản phẩm đầu tiên của bạn.</p>
+        <a href="{% url 'category_create' %}" class="btn-primary inline-flex items-center gap-2">
+            <i data-lucide="plus" class="w-5 h-5"></i> Tạo danh mục mới
+        </a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

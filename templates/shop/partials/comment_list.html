@@ -1,0 +1,35 @@
+{% for comment in comments %}
+    {% include 'shop/partials/comment_item_single.html' with comment=comment is_reply=False %}
+    
+    <!-- Render Replies recursively or just depth 1 (Product requests depth 2, so parent->child->child is handled by flattening or tagging. We'll just render direct replies here) -->
+    {% if comment.replies.all %}
+        <div class="ml-4 md:ml-8 border-l-2 border-emerald-100 pl-2 mt-4 space-y-4 reply-group-{{ comment.id }}">
+            
+            {% for reply in comment.replies.all %}
+                {% if forloop.counter <= 3 %}
+                    {% include 'shop/partials/comment_item_single.html' with comment=reply is_reply=True %}
+                {% endif %}
+            {% endfor %}
+            
+            {% if comment.replies.all|length > 3 %}
+                <button onclick="toggleAllReplies({{ comment.id }})" class="text-sm font-bold text-emerald-600 ml-12 hover:underline mt-2">
+                    Xem thêm {{ comment.replies.all|length|add:"-3" }} câu trả lời
+                </button>
+                <div id="hidden-replies-{{ comment.id }}" class="hidden space-y-4 mt-4">
+                    {% for reply in comment.replies.all %}
+                        {% if forloop.counter > 3 %}
+                            {% include 'shop/partials/comment_item_single.html' with comment=reply is_reply=True %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+        </div>
+    {% endif %}
+{% empty %}
+    <div class="text-center py-12 text-stone-400 bg-white rounded-3xl border border-stone-100 border-dashed">
+        <i data-lucide="messages-square" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
+        <p class="font-medium">Chưa có bình luận nào.</p>
+        <p class="text-sm mt-1">Hãy là người đầu tiên tham gia thảo luận!</p>
+    </div>
+{% endfor %}

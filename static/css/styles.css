@@ -1,16 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;300;400;500&display=swap');
 
+/* //Liên quan đến màu nền trang web các thứ */
 :root {
     --cursor-size: 20px;
     --cursor-hover-size: 60px;
-    --color-accent: #064e3b;
+    --color-accent: #b8d418;
     --color-text: #1c1917;
+    --color-bg: #34eb80;
 }
 
 body {
     font-family: 'Space Grotesk', sans-serif;
-    background-color: #f3f4f1;
+    background-color: var(--color-bg);
     color: var(--color-text);
     cursor: none;
     overflow-x: hidden;
@@ -32,33 +34,19 @@ body {
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
 
-/* AMBIENT BACKGROUND */
-.ambient-bg {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-    overflow: hidden;
-    pointer-events: none;
-    background: #f0fdf4;
-}
-.ambient-blob {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(90px);
-    opacity: 0.5;
-    animation: float-blob 15s infinite ease-in-out alternate;
-}
-.blob-1 { top: -10%; left: -10%; width: 60vw; height: 60vw; background: #a7f3d0; animation-delay: 0s; }
-.blob-2 { top: 30%; right: -20%; width: 50vw; height: 50vw; background: #fef08a; animation-delay: -5s; }
-.blob-3 { bottom: -10%; left: 10%; width: 50vw; height: 50vw; background: #99f6e4; animation-delay: -10s; }
+/* AMBIENT BACKGROUND - removed, using body background only */
 
-@keyframes float-blob {
-    0% { transform: translate(0, 0) scale(1) rotate(0deg); }
-    50% { transform: translate(30px, 50px) scale(1.1) rotate(10deg); }
-    100% { transform: translate(-20px, -30px) scale(0.9) rotate(-5deg); }
+/* TOAST NOTIFICATION */
+.toast {
+    animation: slideIn 0.3s ease-out, fadeOut 0.3s ease-in 2.7s forwards;
+}
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
 }
 
 /* CUSTOM CURSOR */

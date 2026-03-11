@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block title %}Tin Nhắn — TeaZen{% endblock %}
+
+{% block content %}
+<div class="min-h-screen pt-28 pb-24 px-6">
+    <div class="max-w-3xl mx-auto">
+
+        <!-- HEADER -->
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <span class="text-emerald-600 font-bold tracking-widest text-xs uppercase block">[ Messages ]</span>
+                <h1 class="font-art text-4xl font-bold text-emerald-950">Hộp Thư</h1>
+            </div>
+            <div class="flex items-center gap-3">
+                {% if total_unread > 0 %}
+                <span class="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">{{ total_unread }} chưa đọc</span>
+                {% endif %}
+                <button onclick="document.getElementById('new-msg-modal').classList.remove('hidden')"
+                    class="bg-emerald-900 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-emerald-800 transition-colors flex items-center gap-2">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Tin nhắn mới
+                </button>
+            </div>
+        </div>
+
+        <!-- NEW MESSAGE MODAL -->
+        <div id="new-msg-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+                <div class="flex items-center justify-between p-5 border-b border-stone-100">
+                    <h2 class="font-bold text-lg text-emerald-950">Tin nhắn mới</h2>
+                    <button onclick="document.getElementById('new-msg-modal').classList.add('hidden')" class="text-stone-400 hover:text-stone-600">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <div class="p-5">
+                    <input type="text" id="user-search-input" placeholder="Tìm người dùng..." autocomplete="off"
+                        class="w-full px-4 py-3 rounded-xl border border-stone-300 focus:border-emerald-500 focus:outline-none text-sm mb-3">
+                    <div id="user-search-results" class="max-h-60 overflow-y-auto space-y-1">
+                        <p class="text-sm text-stone-400 text-center py-4">Nhập ít nhất 2 ký tự để tìm kiếm</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONVERSATION LIST -->
+        <div class="space-y-3">
+            {% for item in conv_data %}
+            <a href="{% url 'message_detail' item.conv.id %}" 
+               class="flex items-center gap-4 bg-white p-5 rounded-2xl shadow-sm border border-stone-100 hover:shadow-md hover:border-emerald-200 transition-all {% if item.unread > 0 %}ring-2 ring-emerald-200{% endif %}">
+                <!-- Avatar -->
+                <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-lg shrink-0">
+                    {% if item.other %}{{ item.other.username|first|upper }}{% else %}?{% endif %}
+                </div>
+                <!-- Content -->
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="font-bold text-stone-800 {% if item.unread > 0 %}text-emerald-900{% endif %}">
+                            {% if item.other %}{{ item.other.username }}{% else %}Đã xóa{% endif %}
+                        </h3>
+                        {% if item.last_msg %}
+                        <span class="text-xs text-stone-400 shrink-0">{{ item.last_msg.created_at|timesince }} trước</span>
+                        {% endif %}
+                    </div>
+                    {% if item.last_msg %}
+                    <p class="text-sm text-stone-500 truncate {% if item.unread > 0 %}font-semibold text-stone-700{% endif %}">
+                        {% if item.last_msg.sender == request.user %}Bạn: {% endif %}{{ item.last_msg.content|truncatewords:12 }}
+                    </p>
+                    {% else %}
+                    <p class="text-sm text-stone-400 italic">Chưa có tin nhắn</p>
+                    {% endif %}
+                </div>
+                <!-- Unread Badge -->
+                {% if item.unread > 0 %}
+                <span class="bg-emerald-600 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full shrink-0">
+                    {{ item.unread }}
+                </span>
+                {% endif %}
+            </a>
+            {% empty %}
+            <div class="text-center py-16">
+                <i data-lucide="message-circle" class="w-16 h-16 mx-auto mb-4 text-stone-300"></i>
+                <h3 class="font-art text-2xl text-stone-600 mb-2">Chưa có cuộc hội thoại</h3>
+                <p class="text-stone-500">Bấm "Tin nhắn mới" để bắt đầu nhắn tin!</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const input = document.getElementById('user-search-input');
+    const results = document.getElementById('user-search-results');
+    const modal = document.getElementById('new-msg-modal');
+    let timeout;
+
+    if (!input) return;
+
+    input.addEventListener('input', function() {
+        clearTimeout(timeout);
+        const q = this.value.trim();
+        if (q.length < 2) {
+            results.innerHTML = '<p class="text-sm text-stone-400 text-center py-4">Nhập ít nhất 2 ký tự để tìm kiếm</p>';
+            return;
+        }
+        timeout = setTimeout(() => {
+            fetch('/api/messages/search-users/?q=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.users.length === 0) {
+                        results.innerHTML = '<p class="text-sm text-stone-400 text-center py-4">Không tìm thấy người dùng</p>';
+                        return;
+                    }
+                    results.innerHTML = data.users.map(u =>
+                        '<a href="/messages/new/' + u.id + '/" class="flex items-center gap-3 p-3 rounded-xl hover:bg-emerald-50 transition-colors">' +
+                            '<div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">' + u.username.charAt(0).toUpperCase() + '</div>' +
+                            '<span class="font-medium text-stone-800">' + u.username + '</span>' +
+                        '</a>'
+                    ).join('');
+                }).catch(() => {});
+        }, 300);
+    });
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) modal.classList.add('hidden');
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') modal.classList.add('hidden');
+    });
+})();
+</script>
+{% endblock %}

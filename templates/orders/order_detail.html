@@ -1,0 +1,470 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ order.order_number }} | Chi tiết đơn hàng - TeaZen{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{% static 'css/shop.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Reenie+Beanie&display=swap" rel="stylesheet">
+<style>
+    .timeline-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 3px solid #064e3b;
+        background: white;
+        position: relative;
+        z-index: 2;
+        flex-shrink: 0;
+    }
+
+    .timeline-dot.active {
+        background: #064e3b;
+        box-shadow: 0 0 0 4px rgba(6, 78, 59, 0.15);
+    }
+
+    .timeline-line {
+        width: 3px;
+        background: #d6d3d1;
+        flex-shrink: 0;
+        min-height: 24px;
+    }
+
+    .timeline-line.active {
+        background: #064e3b;
+    }
+
+    .status-pulse {
+        animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse-ring {
+
+        0%,
+        100% {
+            box-shadow: 0 0 0 0 rgba(6, 78, 59, 0.3);
+        }
+
+        50% {
+            box-shadow: 0 0 0 8px rgba(6, 78, 59, 0);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 pt-4 pb-12 max-w-6xl">
+
+    <!-- Breadcrumb -->
+    <div class="mb-8">
+        <a href="{% url 'order_list' %}"
+            class="inline-flex items-center gap-2 text-stone-500 hover:text-emerald-800 transition-colors font-medium">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Danh sách đơn hàng
+        </a>
+    </div>
+
+    <!-- Header -->
+    <div class="relative mb-10">
+        <i data-lucide="package" class="absolute -top-4 -left-8 w-8 h-8 text-emerald-500 animate-pulse"></i>
+        <h1 class="font-art text-4xl md:text-5xl font-bold text-emerald-950">Chi tiết đơn hàng</h1>
+        <p class="text-stone-500 mt-1 font-mono text-sm">{{ order.order_number }}</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+
+        <!-- ========== LEFT COLUMN ========== -->
+        <div class="lg:col-span-8 space-y-8">
+
+            <!-- ORDER STATUS CARD -->
+            <div class="bg-white p-6 md:p-8 shadow-lg border-t-4 border-emerald-900">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                    <h3 class="font-art text-2xl font-bold flex items-center gap-2">
+                        <i data-lucide="activity" class="w-5 h-5 text-emerald-700"></i> Trạng thái đơn hàng
+                    </h3>
+                    <div class="flex items-center gap-3">
+                        <!-- Order Status Badge -->
+                        {% if order.status == 'pending' %}
+                        <span
+                            class="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                            <span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span> Chờ xử lý
+                        </span>
+                        {% elif order.status == 'processing' %}
+                        <span
+                            class="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                            <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span> Đang đóng gói
+                        </span>
+                        {% elif order.status == 'shipping' %}
+                        <span
+                            class="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                            <span class="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span> Đang giao hàng
+                        </span>
+                        {% elif order.status == 'delivered' %}
+                        <span
+                            class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                            <i data-lucide="check-circle-2" class="w-3 h-3"></i> Thành công
+                        </span>
+                        {% elif order.status == 'cancelled' %}
+                        <span
+                            class="inline-flex items-center gap-1.5 bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                            <i data-lucide="x-circle" class="w-3 h-3"></i> Đã hủy
+                        </span>
+                        {% elif order.status == 'return_requested' %}
+                        <span
+                            class="inline-flex items-center gap-1.5 bg-purple-50 text-purple-700 border border-purple-200 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                            <i data-lucide="help-circle" class="w-3 h-3"></i> Đang yêu cầu trả hàng
+                        </span>
+                        {% elif order.status == 'returned' or order.status == 'refunded' %}
+                        <span
+                            class="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                            <i data-lucide="rotate-ccw" class="w-3 h-3"></i> Đã hoàn trả/tiền
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="relative mb-2">
+                    {% with status_map="pending:0,processing:1,shipping:2,delivered:3" %}
+                    {% if order.status == 'cancelled' %}
+                    <div class="h-2 rounded-full bg-red-100 overflow-hidden">
+                        <div class="h-full bg-red-500 rounded-full" style="width: 100%"></div>
+                    </div>
+                    {% else %}
+                    <div class="h-2 rounded-full bg-stone-100 overflow-hidden">
+                        <div class="h-full bg-emerald-600 rounded-full transition-all duration-700"
+                            style="width: {% if order.status == 'pending' %}10{% elif order.status == 'processing' %}40{% elif order.status == 'shipping' %}70{% elif order.status == 'delivered' %}100{% else %}0{% endif %}%">
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+
+                {% if order.status != 'cancelled' %}
+                <div class="flex justify-between text-[10px] font-mono text-stone-400 uppercase tracking-wider mt-1">
+                    <span
+                        class="{% if order.status == 'pending' or order.status == 'processing' or order.status == 'shipping' or order.status == 'delivered' %}text-emerald-700 font-bold{% endif %}">Chờ
+                        xử lý</span>
+                    <span
+                        class="{% if order.status == 'processing' or order.status == 'shipping' or order.status == 'delivered' %}text-emerald-700 font-bold{% endif %}">Đóng
+                        gói</span>
+                    <span
+                        class="{% if order.status == 'shipping' or order.status == 'delivered' %}text-emerald-700 font-bold{% endif %}">Đang
+                        giao</span>
+                    <span class="{% if order.status == 'delivered' %}text-emerald-700 font-bold{% endif %}">Hoàn
+                        thành</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ORDER ITEMS -->
+            <div
+                class="bg-white p-6 md:p-8 shadow-lg border-l-4 border-transparent hover:border-emerald-300 transition-all">
+                <h3 class="font-art text-2xl font-bold mb-6 flex items-center gap-2">
+                    <i data-lucide="shopping-bag" class="w-5 h-5 text-emerald-700"></i> Sản phẩm đã đặt
+                </h3>
+
+                <div class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                    {% for item in order.items.all %}
+                    <div
+                        class="flex gap-4 items-center p-4 bg-stone-50/50 rounded-xl border border-stone-100 hover:border-emerald-200 hover:bg-white transition-all group">
+                        <!-- Product Image -->
+                        <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-stone-100">
+                            {% if item.product and item.product.image %}
+                            <img src="{{ item.product.image.url }}"
+                                class="w-full h-full object-cover group-hover:scale-110 transition-transform">
+                            {% else %}
+                            <div class="w-full h-full flex items-center justify-center bg-emerald-50">
+                                <i data-lucide="leaf" class="w-6 h-6 text-emerald-200"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Product Info -->
+                        <div class="flex-grow min-w-0">
+                            <div class="font-bold text-sm text-stone-800 truncate">
+                                {{ item.product_title }}
+                                {% if item.variation %}<span class="text-emerald-600 font-normal text-xs">({{ item.variation.title }})</span>{% endif %}
+                            </div>
+                            <div class="text-xs text-stone-400 font-mono mt-0.5">SL: {{ item.quantity }} × {{ item.price|floatformat:0 }}₫</div>
+                        </div>
+
+                        <!-- Subtotal -->
+                        <div class="text-right flex-shrink-0">
+                            <div class="font-mono font-bold text-emerald-900">{{ item.get_subtotal|floatformat:0 }}₫
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Price Summary -->
+                <div class="border-t-2 border-dashed border-stone-200 mt-6 pt-4 space-y-2 font-mono text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-stone-500">Tạm tính</span>
+                        <span>{{ order.total_amount|floatformat:0 }}₫</span>
+                    </div>
+                    <div class="flex justify-between text-stone-500">
+                        <span>Phí vận chuyển</span>
+                        <span>Miễn phí</span>
+                    </div>
+                    {% if order.discount_amount > 0 %}
+                    <div class="flex justify-between text-emerald-600">
+                        <span>Giảm giá{% if order.coupon %} ({{ order.coupon.code }}){% endif %}</span>
+                        <span>-{{ order.discount_amount|floatformat:0 }}₫</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="border-t-2 border-stone-800 mt-4 pt-4">
+                    <div class="flex justify-between font-bold text-xl text-emerald-950">
+                        <span class="font-art">Tổng cộng</span>
+                        <span class="font-mono">{{ order.total_amount|floatformat:0 }}₫</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ORDER TIMELINE -->
+            {% if order.status_history.all %}
+            <div
+                class="bg-white p-6 md:p-8 shadow-lg border-l-4 border-transparent hover:border-emerald-300 transition-all">
+                <h3 class="font-art text-2xl font-bold mb-6 flex items-center gap-2">
+                    <i data-lucide="clock" class="w-5 h-5 text-emerald-700"></i> Lịch sử trạng thái
+                </h3>
+
+                <div class="space-y-0">
+                    {% for history in order.status_history.all %}
+                    <div class="flex gap-4">
+                        <!-- Timeline Indicator -->
+                        <div class="flex flex-col items-center">
+                            <div class="timeline-dot {% if forloop.first %}active status-pulse{% endif %}"></div>
+                            {% if not forloop.last %}
+                            <div class="timeline-line {% if forloop.first %}active{% endif %} flex-grow"></div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Timeline Content -->
+                        <div class="pb-6 {% if forloop.last %}pb-0{% endif %}">
+                            <div class="font-bold text-sm text-stone-800">
+                                {% if history.status == 'pending' %}📋 Chờ xác nhận
+                                {% elif history.status == 'processing' %}📦 Đang đóng gói
+                                {% elif history.status == 'shipping' %}🚚 Đang giao hàng
+                                {% elif history.status == 'delivered' %}✅ Thành công
+                                {% elif history.status == 'cancelled' %}❌ Đã hủy
+                                {% else %}{{ history.get_status_display }}
+                                {% endif %}
+                            </div>
+                            {% if history.note %}
+                            <p class="text-xs text-stone-500 mt-1">{{ history.note }}</p>
+                            {% endif %}
+                            <p class="text-[10px] text-stone-400 font-mono mt-1">{{ history.created_at|date:"d/m/Y H:i" }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ORDER NOTE -->
+            {% if order.note %}
+            <div class="bg-[#fff9c4] p-6 shadow-md -rotate-1 relative">
+                <div
+                    class="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-400 shadow-sm border border-red-500">
+                </div>
+                <h4 class="font-hand text-2xl text-stone-700 mb-2">📝 Ghi chú đơn hàng</h4>
+                <p class="font-hand text-xl text-stone-600">{{ order.note }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ========== RIGHT COLUMN ========== -->
+        <div class="lg:col-span-4 space-y-6 lg:sticky lg:top-24 self-start">
+
+            <!-- ORDER INFO RECEIPT -->
+            <div class="relative">
+                <div class="tape -top-3 left-1/2 -translate-x-1/2 rotate-1"></div>
+                <div class="receipt">
+                    <div class="text-center border-b-2 border-dashed border-stone-300 pb-4 mb-4">
+                        <h3 class="font-mono font-bold text-lg uppercase tracking-widest">Thông tin đơn hàng</h3>
+                        <p class="text-xs text-stone-500">TeaZen - Premium Tea</p>
+                    </div>
+
+                    <div class="space-y-3 font-mono text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-stone-500">Mã đơn</span>
+                            <span class="font-bold text-stone-800 text-xs">{{ order.order_number }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-stone-500">Ngày tạo</span>
+                            <span class="font-bold text-stone-800">{{ order.created_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-stone-500">Thanh toán</span>
+                            {% if payment %}
+                            {% if payment.payment_status == 'completed' %}
+                            <span class="inline-flex items-center gap-1 text-emerald-700 font-bold text-xs">
+                                <i data-lucide="check-circle-2" class="w-3 h-3"></i> Đã thanh toán
+                            </span>
+                            {% elif payment.payment_status == 'pending' %}
+                            <span class="inline-flex items-center gap-1 text-amber-600 font-bold text-xs">
+                                <span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span> Chờ thanh toán
+                            </span>
+                            {% elif payment.payment_status == 'pending_verification' %}
+                            <span class="inline-flex items-center gap-1 text-amber-600 font-bold text-xs">
+                                <span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span> Đang xác nhận
+                            </span>
+                            {% elif payment.payment_status == 'failed' %}
+                            <span class="inline-flex items-center gap-1 text-red-600 font-bold text-xs">
+                                <i data-lucide="x-circle" class="w-3 h-3"></i> Thất bại
+                            </span>
+                            {% else %}
+                             <span class="text-stone-400 font-bold text-xs">{{ payment.get_payment_status_display }}</span>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-stone-400 text-xs">Chưa tạo</span>
+                            {% endif %}
+                        </div>
+                        {% if payment and payment.payment_method %}
+                        <div class="flex justify-between">
+                            <span class="text-stone-500">Phương thức</span>
+                             <span class="font-bold text-stone-800 text-xs">{{ payment.get_payment_method_display }}</span>
+                        </div>
+                        {% endif %}
+                        {% if payment and payment.transaction_id %}
+                        <div class="flex justify-between">
+                            <span class="text-stone-500">Mã GD</span>
+                            <span class="font-bold text-stone-800 text-[10px]">{{ payment.transaction_id }}</span>
+                        </div>
+                        {% endif %}
+                        {% if payment and payment.payment_date %}
+                        <div class="flex justify-between">
+                            <span class="text-stone-500">Ngày TT</span>
+                             <span class="font-bold text-stone-800 text-xs">{{ payment.payment_date|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Barcode Effect -->
+                    <div class="mt-6 text-center">
+                        <div class="h-8 mx-auto opacity-25 flex items-end justify-center gap-px w-32">
+                            <div class="bg-stone-800" style="width:2px;height:32px"></div>
+                            <div class="bg-stone-800" style="width:1px;height:20px"></div>
+                            <div class="bg-stone-800" style="width:3px;height:32px"></div>
+                            <div class="bg-stone-800" style="width:1px;height:24px"></div>
+                            <div class="bg-stone-800" style="width:2px;height:32px"></div>
+                            <div class="bg-stone-800" style="width:1px;height:16px"></div>
+                            <div class="bg-stone-800" style="width:2px;height:28px"></div>
+                            <div class="bg-stone-800" style="width:1px;height:32px"></div>
+                            <div class="bg-stone-800" style="width:3px;height:20px"></div>
+                            <div class="bg-stone-800" style="width:1px;height:32px"></div>
+                            <div class="bg-stone-800" style="width:2px;height:24px"></div>
+                            <div class="bg-stone-800" style="width:1px;height:32px"></div>
+                            <div class="bg-stone-800" style="width:2px;height:16px"></div>
+                            <div class="bg-stone-800" style="width:3px;height:32px"></div>
+                            <div class="bg-stone-800" style="width:1px;height:28px"></div>
+                            <div class="bg-stone-800" style="width:2px;height:32px"></div>
+                        </div>
+                        <p class="text-[10px] text-stone-400 mt-1 font-mono">{{ order.order_number }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CUSTOMER INFO -->
+            <div class="bg-white p-6 shadow-lg border-t-4 border-emerald-900">
+                <h3 class="font-art text-xl font-bold mb-4 flex items-center gap-2">
+                    <i data-lucide="user" class="w-4 h-4 text-emerald-700"></i> Thông tin nhận hàng
+                </h3>
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <div class="text-[10px] text-stone-400 uppercase tracking-widest mb-0.5">Người nhận</div>
+                         <div class="font-bold text-stone-800">{{ order.user.get_full_name|default:order.user.username }}</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-stone-400 uppercase tracking-widest mb-0.5">Email</div>
+                        <div class="text-stone-700">{{ order.user.email }}</div>
+                    </div>
+                    {% if order.user.profile.phone %}
+                    <div>
+                        <div class="text-[10px] text-stone-400 uppercase tracking-widest mb-0.5">Điện thoại</div>
+                        <div class="font-bold text-stone-800">{{ order.user.profile.phone }}</div>
+                    </div>
+                    {% endif %}
+                    {% if order.user.profile.address %}
+                    <div>
+                        <div class="text-[10px] text-stone-400 uppercase tracking-widest mb-0.5">Địa chỉ</div>
+                        <div class="text-stone-700">{{ order.user.profile.address }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ACTIONS -->
+            <div class="space-y-3">
+                {% if payment and payment.payment_status == 'pending' %}
+                <a href="{% url 'payment' order.order_number %}"
+                    class="w-full bg-emerald-900 text-white font-bold py-4 uppercase tracking-widest hover:bg-emerald-800 transition-all text-sm rounded shadow-lg flex items-center justify-center gap-2">
+                    <i data-lucide="credit-card" class="w-4 h-4"></i> Thanh toán ngay
+                </a>
+                {% endif %}
+
+                <a href="{% url 'invoice_pdf' order.order_number %}" target="_blank"
+                    class="w-full bg-white text-emerald-900 font-bold py-3 uppercase tracking-widest hover:bg-emerald-50 transition-all text-xs rounded shadow border border-emerald-200 flex items-center justify-center gap-2">
+                    <i data-lucide="download" class="w-4 h-4"></i> Tải hóa đơn PDF
+                </a>
+
+                <a href="{% url 'invoice_pdf_with_qr' order.order_number %}" target="_blank"
+                    class="w-full bg-white text-stone-600 font-bold py-3 uppercase tracking-widest hover:bg-stone-50 transition-all text-xs rounded shadow border border-stone-200 flex items-center justify-center gap-2">
+                    <i data-lucide="qr-code" class="w-4 h-4"></i> Hóa đơn PDF (QR)
+                </a>
+
+                <a href="{% url 'export_order_xml' order.order_number %}" target="_blank"
+                    class="w-full bg-stone-800 text-white font-bold py-3 uppercase tracking-widest hover:bg-stone-700 transition-all text-xs rounded shadow flex items-center justify-center gap-2">
+                    <i data-lucide="file-code" class="w-4 h-4"></i> Xuất hóa đơn XML (Kế toán)
+                </a>
+
+                <a href="{% url 'order_list' %}"
+                    class="w-full text-center text-sm text-emerald-700 hover:text-emerald-900 underline transition-colors block py-2">
+                    <i data-lucide="arrow-left" class="w-3 h-3 inline"></i> Quay lại danh sách đơn hàng
+                </a>
+            </div>
+
+            <!-- Post-it Note -->
+            <div class="bg-[#e8f5e9] p-6 shadow-md rotate-2 relative">
+                 {% if order.status == 'pending' or order.status == 'processing' %}
+                 <form action="{% url 'cancel_order' order.order_number %}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')">
+                     {% csrf_token %}
+                     <button type="submit"
+                         class="w-full bg-red-50 text-red-600 font-bold py-3 uppercase tracking-widest hover:bg-red-100 transition-all text-xs rounded shadow border border-red-100 flex items-center justify-center gap-2">
+                         <i data-lucide="trash-2" class="w-4 h-4"></i> Hủy đơn hàng
+                     </button>
+                 </form>
+                 {% endif %}
+
+                {% if order.status == 'delivered' %}
+                <a href="{% url 'request_return' order.order_number %}"
+                    class="w-full bg-amber-50 text-amber-700 font-bold py-3 uppercase tracking-widest hover:bg-amber-100 transition-all text-sm rounded shadow border border-amber-200 flex items-center justify-center gap-2">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> Đổi / Trả hàng
+                </a>
+                {% endif %}
+
+                <div
+                    class="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-emerald-400 shadow-sm border border-emerald-500">
+                </div>
+                <p class="font-hand text-xl text-stone-700 text-center">
+                    {% if order.status == 'pending' %}
+                    🍵 Đơn hàng đang chờ xã nhận, vui lòng thanh toán!
+                    {% elif order.status == 'processing' %}
+                    📦 Đơn hàng đang được đóng gói cẩn thận!
+                    {% elif order.status == 'shipping' %}
+                    🚚 Đơn hàng đang trên đường đến bạn!
+                    {% elif order.status == 'delivered' %}
+                    ✨ Cảm ơn bạn đã mua hàng tại TeaZen!
+                    {% elif order.status == 'cancelled' %}
+                    💔 Đơn hàng đã bị hủy. Hẹn gặp lại!
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

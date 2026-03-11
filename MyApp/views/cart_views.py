@@ -37,7 +37,8 @@ def get_or_create_cart(request):
 def cart_view(request):
     """Xem giỏ hàng"""
     cart = get_or_create_cart(request)
-    cart_items = cart.items.select_related('product', 'variation').all()
+    # Thêm prefetch_related('product__images') để tránh N+1 khi gọi product.images.first() trong template
+    cart_items = cart.items.select_related('product', 'variation').prefetch_related('product__images').all()
     
     context = {
         'cart': cart,

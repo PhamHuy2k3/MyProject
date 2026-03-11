@@ -58,9 +58,10 @@ def seed_categories_view(request):
 
 def index(request):
     active_filter = Q(category__isnull=True) | Q(category__is_active=True)
-    products = Product.objects.select_related('category').filter(active_filter)[:8]
-    top_viewed_products = Product.objects.select_related('category').filter(active_filter).order_by('-views_count')[:4]
-    newest_products = Product.objects.select_related('category').filter(active_filter).order_by('-created_at')[:4]
+    # Thêm prefetch_related('images') để tránh N+1 query khi hiển thị ảnh phụ
+    products = Product.objects.select_related('category').prefetch_related('images').filter(active_filter)[:8]
+    top_viewed_products = Product.objects.select_related('category').prefetch_related('images').filter(active_filter).order_by('-views_count')[:4]
+    newest_products = Product.objects.select_related('category').prefetch_related('images').filter(active_filter).order_by('-created_at')[:4]
     categories = Category.objects.all()
     storyboard = list(StoryboardItem.objects.all()[:6])
     storyboard_columns = [storyboard[i::3] for i in range(3)]
@@ -194,7 +195,8 @@ def product_reviews_ajax(request, slug):
 def product_list_view(request):
     """Trang danh sách sản phẩm với tìm kiếm, lọc nâng cao và phân trang"""
     active_filter = Q(category__isnull=True) | Q(category__is_active=True)
-    products = Product.objects.select_related('category').filter(active_filter)
+    # Thêm prefetch_related('images')
+    products = Product.objects.select_related('category').prefetch_related('images').filter(active_filter)
     categories = Category.objects.filter(is_active=True)
 
     # Search

@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.template.loader import render_to_string
 from django.db.models import Count, Sum, Avg, F, Q, DecimalField, IntegerField
 from django.db.models.functions import Coalesce
+from django.db.models import Prefetch
 from decimal import Decimal
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from django.http import JsonResponse
@@ -91,9 +92,16 @@ def comment_create(request, slug):
         html = render_to_string('shop/partials/comment_item_single.html', {
             'comment': comment,
             'user': request.user,
+            'product': product,
+            'is_reply': bool(comment.parent_id),
         }, request=request)
         
-        return JsonResponse({'success': True, 'html': html})
+        return JsonResponse({
+            'success': True,
+            'html': html,
+            'parent_id': comment.parent_id,
+            'total_count': product.comments.count(),
+        })
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
@@ -101,11 +109,13 @@ def comments_ajax_view(request, slug):
     product = get_object_or_404(Product, slug=slug)
     sort = request.GET.get('sort', 'newest')
     
+    replies_qs = Comment.objects.select_related('user', 'user__profile').prefetch_related('media', 'interactions').order_by('created_at')
+
     comments_qs = Comment.objects.filter(product=product, parent=None).annotate(
         like_count=Count('interactions', filter=Q(interactions__is_like=True)),
         dislike_count=Count('interactions', filter=Q(interactions__is_like=False)),
         reply_count=Count('replies')
-    ).select_related('user', 'user__profile').prefetch_related('media', 'interactions')
+    ).select_related('user', 'user__profile').prefetch_related('media', 'interactions', Prefetch('replies', queryset=replies_qs))
     
     if sort == 'newest':
         comments_qs = comments_qs.order_by('-created_at')
@@ -118,18 +128,20 @@ def comments_ajax_view(request, slug):
         
     from django.core.paginator import Paginator
     page_number = request.GET.get('page', 1)
-    paginator = Paginator(comments_qs, 10)
+    paginator = Paginator(comments_qs, 4)
     page_obj = paginator.get_page(page_number)
     
     html = render_to_string('shop/partials/comment_list.html', {
         'comments': page_obj,
         'user': request.user if request.user.is_authenticated else None,
+        'product': product,
     }, request=request)
     
     return JsonResponse({
         'html': html,
         'has_next': page_obj.has_next(),
-        'total_count': paginator.count
+        'top_level_count': paginator.count,
+        'total_count': product.comments.count(),
     })
 
 
@@ -174,8 +186,14 @@ def comment_delete_api(request, comment_id):
     if request.method == 'POST':
         comment = get_object_or_404(Comment, id=comment_id)
         if comment.user == request.user or request.user.is_staff:
+            product = comment.product
+            parent_id = comment.parent_id
             comment.delete()
-            return JsonResponse({'success': True})
+            return JsonResponse({
+                'success': True,
+                'parent_id': parent_id,
+                'total_count': product.comments.count(),
+            })
         return JsonResponse({'success': False, 'error': 'Permission denied'})
     return JsonResponse({'success': False})
 

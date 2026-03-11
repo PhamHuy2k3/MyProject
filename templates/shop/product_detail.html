@@ -358,6 +358,7 @@
                 <div>
                     <span class="text-stone-500 font-mono text-xs uppercase tracking-widest">Thảo luận</span>
                     <h2 class="font-art text-3xl font-bold text-emerald-950 mt-1">Hỏi & Đáp</h2>
+                    <p class="text-sm text-stone-500 mt-1" id="comment-count-text">{{ comment_count }} bình luận</p>
                 </div>
                 <!-- Comment Sort -->
                 <div class="relative shrink-0">
@@ -427,7 +428,7 @@
             </div>
             
             <div class="text-center mt-10 hidden" id="comments-load-more-container">
-                <button onclick="fetchComments(currentCommentPage)" class="border border-emerald-200 text-emerald-800 font-bold px-8 py-3 rounded-xl hover:bg-emerald-50 hover:border-emerald-300 transition-colors w-full sm:w-auto flex justify-center items-center gap-2 mx-auto">
+                <button onclick="handleCommentsLoadMore()" class="border border-emerald-200 text-emerald-800 font-bold px-8 py-3 rounded-xl hover:bg-emerald-50 hover:border-emerald-300 transition-colors w-full sm:w-auto flex justify-center items-center gap-2 mx-auto">
                     <i data-lucide="chevron-down" class="w-4 h-4"></i> Tải thêm bình luận
                 </button>
             </div>
@@ -607,12 +608,22 @@ function toggleCommentReply(commentId, username) {
     }
 }
 
-function toggleAllReplies(commentId) {
+function toggleReplies(commentId, expand) {
     const hiddenReplies = document.getElementById('hidden-replies-' + commentId);
-    if(hiddenReplies) {
+    const showBtn = document.getElementById('show-replies-btn-' + commentId);
+    const hideBtn = document.getElementById('hide-replies-btn-' + commentId);
+    if (!hiddenReplies) return;
+
+    if (expand) {
         hiddenReplies.classList.remove('hidden');
-        event.target.style.display = 'none';
+        if (showBtn) showBtn.classList.add('hidden');
+        if (hideBtn) hideBtn.classList.remove('hidden');
+        return;
     }
+
+    hiddenReplies.classList.add('hidden');
+    if (showBtn) showBtn.classList.remove('hidden');
+    if (hideBtn) hideBtn.classList.add('hidden');
 }
 
 // User Profile Popup
@@ -673,6 +684,54 @@ function showUserPopup(event, username, userId) {
 
 // ==== COMMENTS SCRIPT ====
 let currentCommentPage = 1;
+let hasNextCommentPage = false;
+let loadedCommentPages = 1;
+
+function formatCommentCount(value) {
+    if (value >= 1000000) return `${(value / 1000000).toFixed(1).replace('.0', '')}M`;
+    if (value >= 1000) return `${(value / 1000).toFixed(1).replace('.0', '')}k`;
+    return `${value}`;
+}
+
+function updateCommentCount(total) {
+    const countText = document.getElementById('comment-count-text');
+    if (countText) {
+        const formatted = formatCommentCount(total);
+        countText.textContent = `${formatted} bình luận`;
+        countText.title = `${total} bình luận`;
+    }
+}
+
+function updateCommentsLoadControl() {
+    const loadMoreContainer = document.getElementById('comments-load-more-container');
+    const loadMoreButton = loadMoreContainer ? loadMoreContainer.querySelector('button') : null;
+    if (!loadMoreContainer || !loadMoreButton) return;
+
+    if (hasNextCommentPage) {
+        loadMoreContainer.classList.remove('hidden');
+        loadMoreButton.innerHTML = '<i data-lucide="chevron-down" class="w-4 h-4"></i> Xem thêm 4 bình luận';
+    } else if (loadedCommentPages > 1) {
+        loadMoreContainer.classList.remove('hidden');
+        loadMoreButton.innerHTML = '<i data-lucide="chevron-up" class="w-4 h-4"></i> Thu gọn bình luận';
+    } else {
+        loadMoreContainer.classList.add('hidden');
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function handleCommentsLoadMore() {
+    if (hasNextCommentPage) {
+        fetchComments(currentCommentPage, true);
+        return;
+    }
+
+    if (loadedCommentPages > 1) {
+        fetchComments(1, false);
+        const anchor = document.getElementById('comments-section-anchor');
+        if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
 
 function fetchComments(page = 1, append = false) {
     const sort = document.getElementById('comment-sort').value;
@@ -689,17 +748,19 @@ function fetchComments(page = 1, append = false) {
         .then(data => {
             if (!append) {
                 container.innerHTML = data.html || '';
+                loadedCommentPages = 1;
             } else {
                 container.insertAdjacentHTML('beforeend', data.html || '');
+                loadedCommentPages += 1;
             }
             if (window.lucide) window.lucide.createIcons();
-            
-            if (data.has_next) {
-                loadMoreBtn.classList.remove('hidden');
-                currentCommentPage = page + 1;
-            } else {
-                loadMoreBtn.classList.add('hidden');
+            if (typeof data.total_count === 'number') {
+                updateCommentCount(data.total_count);
             }
+
+            hasNextCommentPage = !!data.has_next;
+            currentCommentPage = data.has_next ? page + 1 : page;
+            updateCommentsLoadControl();
             bindCommentEvents();
         })
         .catch(console.error);
@@ -805,10 +866,26 @@ function submitComment(e, productId, parentId = null) {
             if(charCounter) charCounter.textContent = '0/1000';
             
             if(parentId) {
-                const repliesWrapper = document.getElementById('replies-list-' + parentId);
+                const persistedParentId = data.parent_id || parentId;
+                let repliesWrapper = document.getElementById('replies-list-' + persistedParentId);
+                if (!repliesWrapper) {
+                    const parentComment = document.getElementById('comment-' + persistedParentId);
+                    if (parentComment) {
+                        repliesWrapper = document.createElement('div');
+                        repliesWrapper.id = 'replies-list-' + persistedParentId;
+                        repliesWrapper.className = 'ml-4 md:ml-8 border-l-2 border-emerald-100 pl-2 mt-4 space-y-4 replies-wrapper';
+                        parentComment.insertAdjacentElement('afterend', repliesWrapper);
+                    }
+                }
                 if (repliesWrapper) {
                     repliesWrapper.insertAdjacentHTML('beforeend', data.html);
                 }
+
+                const hiddenReplies = document.getElementById('hidden-replies-' + persistedParentId);
+                if (hiddenReplies) {
+                    toggleReplies(persistedParentId, true);
+                }
+
                 const replyContainer = document.getElementById('reply-container-' + parentId);
                 if (replyContainer) {
                     replyContainer.classList.add('hidden');
@@ -821,17 +898,13 @@ function submitComment(e, productId, parentId = null) {
                     container.insertAdjacentHTML('afterbegin', data.html);
                 }
                 
-                // Update Comment Count in Header
-                const countSpan = document.querySelector('h2.font-art span.text-stone-400');
-                if (countSpan) {
-                    const match = countSpan.innerText.match(/\d+/);
-                    if (match) {
-                        countSpan.innerText = `(${parseInt(match[0]) + 1})`;
-                    }
+                if (typeof data.total_count === 'number') {
+                    updateCommentCount(data.total_count);
                 }
             }
             // Render new icons
             if (window.lucide) window.lucide.createIcons();
+            bindCommentEvents();
             
         } else {
             alert(data.error || 'Đã xảy ra lỗi.');
@@ -966,6 +1039,11 @@ function deleteComment(commentId) {
                     el.style.opacity = '0';
                     setTimeout(() => el.remove(), 300);
                 }
+                if (typeof data.total_count === 'number') {
+                    updateCommentCount(data.total_count);
+                }
+                // Re-sync with server to avoid stale client state.
+                fetchComments(1, false);
             }
         });
     }

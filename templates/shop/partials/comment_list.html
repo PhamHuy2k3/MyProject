@@ -6,22 +6,25 @@
         <div id="replies-list-{{ comment.id }}" class="ml-4 md:ml-8 border-l-2 border-emerald-100 pl-2 mt-4 space-y-4 reply-group-{{ comment.id }}">
             
             {% for reply in comment.replies.all %}
-                {% if forloop.counter <= 3 %}
+                {% if forloop.counter <= 4 %}
                     {% include 'shop/partials/comment_item_single.html' with comment=reply is_reply=True %}
                 {% endif %}
             {% endfor %}
             
-            {% if comment.replies.all|length > 3 %}
-                <button onclick="toggleAllReplies({{ comment.id }})" class="text-sm font-bold text-emerald-600 ml-12 hover:underline mt-2">
-                    Xem thêm {{ comment.replies.all|length|add:"-3" }} câu trả lời
+            {% if comment.replies.all|length > 4 %}
+                <button id="show-replies-btn-{{ comment.id }}" onclick="toggleReplies({{ comment.id }}, true)" class="text-sm font-bold text-emerald-600 ml-12 hover:underline mt-2">
+                    Xem thêm {{ comment.replies.all|length|add:"-4" }} câu trả lời
                 </button>
                 <div id="hidden-replies-{{ comment.id }}" class="hidden space-y-4 mt-4">
                     {% for reply in comment.replies.all %}
-                        {% if forloop.counter > 3 %}
+                        {% if forloop.counter > 4 %}
                             {% include 'shop/partials/comment_item_single.html' with comment=reply is_reply=True %}
                         {% endif %}
                     {% endfor %}
                 </div>
+                <button id="hide-replies-btn-{{ comment.id }}" onclick="toggleReplies({{ comment.id }}, false)" class="hidden text-sm font-bold text-stone-500 ml-12 hover:underline mt-2">
+                    Thu gọn câu trả lời
+                </button>
             {% endif %}
             
         </div>

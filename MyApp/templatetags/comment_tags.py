@@ -19,7 +19,7 @@ def get_comment_dislikes(comment):
 @register.simple_tag
 def get_user_interaction(comment, user):
     """Returns 'like', 'dislike', or None for the given user on the comment."""
-    if not user.is_authenticated:
+    if not user or not getattr(user, 'is_authenticated', False):
         return None
     interaction = comment.interactions.filter(user=user).first()
     if interaction:

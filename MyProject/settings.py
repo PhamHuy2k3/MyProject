@@ -34,6 +34,8 @@ INSTALLED_APPS = [
     'MyApp',
 ]
 
+# Triggering reload to pick up new templatetags
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

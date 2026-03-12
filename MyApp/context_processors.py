@@ -1,4 +1,4 @@
-from MyApp.models import Category
+from MyApp.models import Category, SupportTicket
 
 def categories(request):
     """
@@ -6,4 +6,13 @@ def categories(request):
     """
     return {
         'all_categories': Category.objects.filter(is_active=True)
+    }
+
+
+def support_context(request):
+    """
+    Inject support chat categories into all templates.
+    """
+    return {
+        'support_categories': SupportTicket.CATEGORY_CHOICES,
     }

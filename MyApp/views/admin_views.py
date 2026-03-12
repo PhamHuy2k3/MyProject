@@ -162,6 +162,19 @@ def admin_order_detail_manage(request, order_number):
                     message_text=f'Trạng thái đơn hàng của bạn đã chuyển sang: {status_display}',
                     link=f'/order/{order.order_number}/',
                 )
+                # Send status update email
+                if order.user.email:
+                    from django.core.mail import send_mail
+                    send_mail(
+                        f'Cập nhật đơn hàng {order.order_number} - TeaZen',
+                        f'Xin chào {order.user.get_full_name() or order.user.username},\n\n'
+                        f'Đơn hàng {order.order_number} đã được cập nhật.\n'
+                        f'Trạng thái mới: {status_display}\n\n'
+                        f'Trân trọng,\nTeaZen',
+                        None,
+                        [order.user.email],
+                        fail_silently=True,
+                    )
     return render(request, 'admin/order_detail_manage.html', {'order': order, 'status_choices': Order.STATUS_CHOICES})
 
 

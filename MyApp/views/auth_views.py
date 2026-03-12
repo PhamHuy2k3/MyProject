@@ -72,9 +72,19 @@ def password_reset_view(request):
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             
-            # In production, send email here
-            # For now, just show success message
-            messages.success(request, f'Link đặt lại mật khẩu đã được gửi đến {email}. (Demo: /reset/{uid}/{token}/)')
+            reset_link = request.build_absolute_uri(f'/reset/{uid}/{token}/')
+            send_mail(
+                'Đặt lại mật khẩu - TeaZen',
+                f'Xin chào {user.get_full_name() or user.username},\n\n'
+                f'Bạn đã yêu cầu đặt lại mật khẩu. Nhấn vào link sau để tiếp tục:\n\n'
+                f'{reset_link}\n\n'
+                f'Nếu bạn không yêu cầu, hãy bỏ qua email này.\n\n'
+                f'Trân trọng,\nTeaZen',
+                None,
+                [email],
+                fail_silently=False,
+            )
+            messages.success(request, f'Link đặt lại mật khẩu đã được gửi đến {email}.')
         except User.DoesNotExist:
             messages.success(request, 'Nếu email tồn tại, link đặt lại sẽ được gửi.')
         

@@ -80,9 +80,10 @@
                     <label class="input-label">Số điện thoại</label>
                 </div>
 
-                <div class="input-group">
-                    <textarea name="address" class="input-field hover-trigger resize-none" rows="3" placeholder=" ">{{ profile.address }}</textarea>
-                    <label class="input-label">Địa chỉ</label>
+                <!-- Structured Address Picker -->
+                <div class="mb-4">
+                    <p class="text-xs text-stone-500 uppercase tracking-widest mb-3 font-bold">Địa chỉ giao hàng</p>
+                    {% include 'core/address_picker.html' with prefix='profile' profile=profile input_class='input-field hover-trigger' %}
                 </div>
 
                 <button type="submit" class="hover-trigger w-full bg-emerald-900 text-white font-bold py-4 uppercase tracking-[0.2em] text-xs brutal-btn border-2 border-emerald-950 hover:bg-emerald-800 transition-colors">

@@ -1,0 +1,537 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Hỗ trợ Khách hàng · TeaZen Admin{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .ticket-card.active-ticket { background: #f5f5f4; border-color: #44403c; }
+    .msg-agent { background: #fff; border: 1px solid #e7e5e4; }
+    .msg-customer { background: #44403c; color: #fff; }
+    .msg-bot { background: #fafaf9; border: 1px solid #f0efee; color: #78716c; }
+    .msg-system { background: transparent; text-align: center; color: #a8a29e; font-size: 0.7rem; }
+    .msg-internal { background: #fef9c3; border: 1px solid #fde047; }
+    .priority-urgent { border-left: 3px solid #ef4444; }
+    .priority-high { border-left: 3px solid #f97316; }
+    .priority-medium { border-left: 3px solid #eab308; }
+    .priority-low { border-left: 3px solid #86efac; }
+    #chat-scroll { scroll-behavior: smooth; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex h-[calc(100vh-5rem)] overflow-hidden bg-stone-50">
+
+    {# ── SIDEBAR ──────────────────────────────────────────────────── #}
+    <aside class="w-72 flex-shrink-0 bg-white border-r border-stone-200 flex flex-col overflow-hidden">
+
+        {# Header + search #}
+        <div class="px-4 pt-5 pb-4 border-b border-stone-100">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="font-art font-bold text-stone-800 text-lg">Hỗ trợ KH</h2>
+                <a href="{% url 'admin_dashboard' %}"
+                    class="text-xs text-stone-400 hover:text-stone-600 transition-colors flex items-center gap-1">
+                    <i data-lucide="arrow-left" class="w-3 h-3"></i> Dashboard
+                </a>
+            </div>
+
+            {# Status badges #}
+            <div class="grid grid-cols-6 gap-1 mb-3">
+                <a href="?status=active" class="flex flex-col items-center px-2 py-1.5 rounded-lg {% if status_filter == 'active' %}bg-stone-800 text-white{% else %}bg-stone-100 text-stone-600 hover:bg-stone-200{% endif %} transition-colors">
+                    <span class="font-bold text-base leading-none">{{ counts.waiting|add:counts.assigned|add:counts.open }}</span>
+                    <span class="text-[9px] font-medium mt-0.5">Đang mở</span>
+                </a>
+                <a href="?status=waiting" class="flex flex-col items-center px-2 py-1.5 rounded-lg {% if status_filter == 'waiting' %}bg-amber-600 text-white{% else %}bg-amber-50 text-amber-600 hover:bg-amber-100{% endif %} transition-colors">
+                    <span class="font-bold text-base leading-none">{{ counts.waiting }}</span>
+                    <span class="text-[9px] font-medium mt-0.5">Chờ NV</span>
+                </a>
+                <a href="?status=assigned" class="flex flex-col items-center px-2 py-1.5 rounded-lg {% if status_filter == 'assigned' %}bg-blue-600 text-white{% else %}bg-blue-50 text-blue-600 hover:bg-blue-100{% endif %} transition-colors">
+                    <span class="font-bold text-base leading-none">{{ counts.assigned }}</span>
+                    <span class="text-[9px] font-medium mt-0.5">Đang XL</span>
+                </a>
+                <a href="?status=all&category=&q=" class="flex flex-col items-center px-2 py-1.5 rounded-lg {% if status_filter == 'all' %}bg-stone-800 text-white{% else %}bg-stone-100 text-stone-600 hover:bg-stone-200{% endif %} transition-colors">
+                    <span class="font-bold text-base leading-none">—</span>
+                    <span class="text-[9px] font-medium mt-0.5">Tất cả</span>
+                </a>
+                <a href="?status=resolved" class="flex flex-col items-center px-2 py-1.5 rounded-lg {% if status_filter == 'resolved' %}bg-green-600 text-white{% else %}bg-green-50 text-green-600 hover:bg-green-100{% endif %} transition-colors">
+                    <span class="font-bold text-base leading-none">{{ counts.resolved }}</span>
+                    <span class="text-[9px] font-medium mt-0.5">Đã xong</span>
+                </a>
+            </div>
+
+            {# Search #}
+            <form method="GET" class="relative">
+                <input type="hidden" name="status" value="{{ status_filter }}">
+                <input type="text" name="q" value="{{ search_q }}"
+                    placeholder="Tìm tên, email, #ID..."
+                    class="w-full pl-8 pr-3 py-2 bg-stone-100 rounded-lg text-sm border-0
+                           focus:outline-none focus:ring-2 focus:ring-stone-300">
+                <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400"></i>
+            </form>
+        </div>
+
+        {# Category filter #}
+        <div class="px-4 py-2 border-b border-stone-100 flex gap-1.5 flex-wrap">
+            <a href="?status={{ status_filter }}&q={{ search_q }}"
+                class="text-[10px] font-medium px-2 py-1 rounded-full {% if not category_filter %}bg-stone-800 text-white{% else %}bg-stone-100 text-stone-600 hover:bg-stone-200{% endif %} transition-colors">
+                Tất cả
+            </a>
+            {% for val, label in categories %}
+            <a href="?status={{ status_filter }}&category={{ val }}&q={{ search_q }}"
+                class="text-[10px] font-medium px-2 py-1 rounded-full {% if category_filter == val %}bg-stone-800 text-white{% else %}bg-stone-100 text-stone-600 hover:bg-stone-200{% endif %} transition-colors">
+                {{ label }}
+            </a>
+            {% endfor %}
+        </div>
+
+        {# Ticket list #}
+        <div class="flex-1 overflow-y-auto divide-y divide-stone-100">
+            {% for ticket in tickets %}
+            <a href="?status={{ status_filter }}&category={{ category_filter }}&q={{ search_q }}&ticket={{ ticket.id }}"
+                class="block px-4 py-3.5 hover:bg-stone-50 transition-colors cursor-pointer ticket-card priority-{{ ticket.priority }} {% if selected_ticket and selected_ticket.id == ticket.id %}active-ticket{% endif %}">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-stone-400">#{{ ticket.id }}</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium
+                                {% if ticket.status == 'waiting' %}bg-amber-100 text-amber-700
+                                {% elif ticket.status == 'assigned' %}bg-blue-100 text-blue-700
+                                {% elif ticket.status == 'resolved' %}bg-green-100 text-green-700
+                                {% elif ticket.status == 'closed' %}bg-stone-100 text-stone-500
+                                {% else %}bg-orange-100 text-orange-700{% endif %}">
+                                {{ ticket.get_status_display }}
+                            </span>
+                        </div>
+                        <p class="text-sm font-semibold text-stone-800 truncate mt-0.5">{{ ticket.display_name }}</p>
+                        <p class="text-xs text-stone-500 truncate">{{ ticket.get_category_display }}</p>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <p class="text-[10px] text-stone-400">
+                            {{ ticket.updated_at|timesince }} trước
+                        </p>
+                        {% if ticket.assigned_to %}
+                        <p class="text-[10px] text-stone-400 mt-0.5">→ {{ ticket.assigned_to.username }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+            {% empty %}
+            <div class="py-12 text-center">
+                <i data-lucide="inbox" class="w-8 h-8 text-stone-300 mx-auto mb-2"></i>
+                <p class="text-sm text-stone-400">Không có ticket nào</p>
+            </div>
+            {% endfor %}
+        </div>
+    </aside>
+
+    {# ── MAIN: CHAT AREA ─────────────────────────────────────────── #}
+    {% if selected_ticket %}
+    <main class="flex-1 flex overflow-hidden">
+
+        {# Chat panel #}
+        <div class="flex-1 flex flex-col overflow-hidden">
+
+            {# Chat header #}
+            <div class="px-6 py-4 bg-white border-b border-stone-200 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center font-bold text-stone-600 text-sm">
+                        {{ selected_ticket.display_name|slice:":1"|upper }}
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-stone-800">{{ selected_ticket.display_name }}</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-stone-500">{{ selected_ticket.display_email }}</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-stone-100 text-stone-500">
+                                {{ selected_ticket.get_category_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    {# Priority selector #}
+                    <select id="priority-select" onchange="AdminSupport.setPriority({{ selected_ticket.id }}, this.value)"
+                        class="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-stone-300 text-stone-600">
+                        {% for val, label in priority_choices %}
+                        <option value="{{ val }}" {% if selected_ticket.priority == val %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    {# Actions #}
+                    {% if selected_ticket.status not in 'resolved,closed' %}
+                    <button onclick="AdminSupport.resolveTicket({{ selected_ticket.id }})"
+                        class="flex items-center gap-1.5 px-3.5 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        Giải quyết xong
+                    </button>
+                    {% else %}
+                    <span class="text-xs font-medium text-green-600 flex items-center gap-1">
+                        <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                        Đã giải quyết
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# Messages scroll area #}
+            <div id="chat-scroll" class="flex-1 overflow-y-auto p-6 space-y-4 bg-stone-50/50">
+
+                {# System: ticket info #}
+                <div class="flex justify-center">
+                    <div class="px-4 py-2 bg-white border border-stone-200 rounded-full text-[11px] text-stone-500">
+                        Ticket #{{ selected_ticket.id }} · {{ selected_ticket.get_category_display }} · {{ selected_ticket.created_at|date:"d/m/Y H:i" }}
+                    </div>
+                </div>
+
+                {% for msg in ticket_messages %}
+                    {% if msg.sender_type == 'customer' %}
+                    <div class="flex justify-end">
+                        <div class="flex flex-col items-end gap-1 max-w-[75%]">
+                            <div class="msg-customer rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm leading-relaxed">
+                                {{ msg.content|linebreaksbr }}
+                            </div>
+                            {% for att in msg.attachments.all %}
+                            {% if att.file_type == 'image' %}
+                            <img src="{{ att.file.url }}" class="max-w-[200px] rounded-xl mt-1 border border-stone-200">
+                            {% else %}
+                            <a href="{{ att.file.url }}" target="_blank" class="flex items-center gap-2 px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs hover:bg-stone-50">
+                                <i data-lucide="file-text" class="w-4 h-4 text-stone-400"></i>
+                                {{ att.file_name }}
+                            </a>
+                            {% endif %}
+                            {% endfor %}
+                            <span class="text-[10px] text-stone-400">{{ msg.created_at|date:"H:i" }}</span>
+                        </div>
+                    </div>
+
+                    {% elif msg.sender_type == 'agent' %}
+                    <div class="flex gap-2.5 {% if msg.is_internal %}opacity-80{% endif %}">
+                        <div class="w-8 h-8 rounded-full bg-stone-700 flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold text-white">
+                            {{ msg.sender.username|slice:":1"|upper }}
+                        </div>
+                        <div class="flex flex-col gap-1 max-w-[75%]">
+                            <div class="flex items-center gap-2">
+                                <span class="text-[11px] font-semibold text-stone-500">{{ msg.sender.get_full_name|default:msg.sender.username }}</span>
+                                {% if msg.is_internal %}
+                                <span class="text-[9px] px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-medium">Ghi chú nội bộ</span>
+                                {% endif %}
+                            </div>
+                            <div class="{% if msg.is_internal %}msg-internal{% else %}msg-agent{% endif %} rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm leading-relaxed">
+                                {{ msg.content|linebreaksbr }}
+                            </div>
+                            <span class="text-[10px] text-stone-400 ml-1">{{ msg.created_at|date:"H:i" }}</span>
+                        </div>
+                    </div>
+
+                    {% elif msg.sender_type == 'bot' %}
+                    <div class="flex gap-2.5">
+                        <div class="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center shrink-0 mt-0.5">
+                            <i data-lucide="bot" class="w-3.5 h-3.5 text-stone-500"></i>
+                        </div>
+                        <div class="flex flex-col gap-1 max-w-[75%]">
+                            <span class="text-[11px] font-semibold text-stone-400">Bot TeaZen</span>
+                            <div class="msg-bot rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm leading-relaxed">
+                                {{ msg.content|linebreaksbr }}
+                            </div>
+                            <span class="text-[10px] text-stone-400 ml-1">{{ msg.created_at|date:"H:i" }}</span>
+                        </div>
+                    </div>
+
+                    {% else %}
+                    {# system #}
+                    <div class="flex justify-center">
+                        <span class="text-[11px] text-stone-400 px-3 py-1 bg-stone-100 rounded-full">{{ msg.content }}</span>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            {# Quick replies #}
+            {% if quick_replies %}
+            <div class="px-5 py-2.5 bg-white border-t border-stone-100 overflow-x-auto">
+                <div class="flex gap-2 flex-nowrap">
+                    <span class="text-[10px] font-bold text-stone-400 uppercase shrink-0 self-center">Nhanh:</span>
+                    {% for qr in quick_replies %}
+                    <button onclick="AdminSupport.insertQuickReply(`{{ qr.content|escapejs }}`)"
+                        class="shrink-0 text-xs px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-full transition-colors whitespace-nowrap">
+                        {{ qr.label }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {# Reply input area #}
+            {% if selected_ticket.status not in 'resolved,closed' %}
+            <div class="px-5 py-4 bg-white border-t border-stone-200 shrink-0">
+                <div class="flex items-center gap-3 mb-2.5">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="internal-toggle" class="w-4 h-4 rounded accent-amber-500">
+                        <span class="text-xs font-medium text-stone-600">Ghi chú nội bộ</span>
+                    </label>
+                    <span class="text-[10px] text-stone-400">(khách không thấy)</span>
+                    <div class="ml-auto">
+                        {% if not selected_ticket.assigned_to %}
+                        <button onclick="AdminSupport.assignToMe({{ selected_ticket.id }})"
+                            class="text-xs text-stone-500 hover:text-stone-700 underline transition-colors">
+                            Nhận ticket này
+                        </button>
+                        {% else %}
+                        <span class="text-xs text-stone-400">→ {{ selected_ticket.assigned_to.get_full_name|default:selected_ticket.assigned_to.username }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <textarea id="agent-reply-input" rows="2"
+                        placeholder="Nhập trả lời..."
+                        class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3
+                               focus:outline-none focus:ring-2 focus:ring-stone-300/60 text-sm resize-none transition-all"
+                        onkeydown="if(event.ctrlKey && event.key==='Enter'){AdminSupport.sendReply({{ selected_ticket.id }});}"></textarea>
+                    <button onclick="AdminSupport.sendReply({{ selected_ticket.id }})"
+                        class="self-end px-4 py-3 bg-stone-800 hover:bg-stone-700 text-white rounded-xl
+                               text-sm font-semibold transition-colors flex items-center gap-2">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                        Gửi
+                    </button>
+                </div>
+                <p class="text-[10px] text-stone-400 mt-1.5">Ctrl+Enter để gửi nhanh</p>
+            </div>
+            {% else %}
+            <div class="px-5 py-4 bg-stone-50 border-t border-stone-200 text-center">
+                <p class="text-sm text-stone-500">Ticket đã được đóng</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ── RIGHT PANEL: Customer Info ──────────────────────────── #}
+        <aside class="w-64 xl:w-72 flex-shrink-0 bg-white border-l border-stone-200 overflow-y-auto">
+            <div class="p-5 space-y-5">
+
+                {# Customer info #}
+                <div>
+                    <h4 class="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">Thông tin khách</h4>
+                    {% if selected_ticket.user %}
+                    <div class="flex items-center gap-3 mb-3">
+                        {% if selected_ticket.user.profile.avatar %}
+                        <img src="{{ selected_ticket.user.profile.avatar.url }}" class="w-10 h-10 rounded-full object-cover">
+                        {% else %}
+                        <div class="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center font-bold text-stone-500">
+                            {{ selected_ticket.user.username|slice:":1"|upper }}
+                        </div>
+                        {% endif %}
+                        <div>
+                            <p class="font-semibold text-stone-800 text-sm">{{ selected_ticket.user.get_full_name|default:selected_ticket.user.username }}</p>
+                            <p class="text-xs text-stone-500">{{ selected_ticket.user.profile.get_membership_level_display }}</p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center mb-2">
+                        <i data-lucide="user" class="w-5 h-5 text-stone-400"></i>
+                    </div>
+                    {% endif %}
+                    <div class="space-y-1.5">
+                        <div class="flex items-center gap-2 text-xs text-stone-600">
+                            <i data-lucide="mail" class="w-3.5 h-3.5 text-stone-400 shrink-0"></i>
+                            {{ selected_ticket.display_email|default:"—" }}
+                        </div>
+                        {% if selected_ticket.user and selected_ticket.user.profile.phone %}
+                        <div class="flex items-center gap-2 text-xs text-stone-600">
+                            <i data-lucide="phone" class="w-3.5 h-3.5 text-stone-400 shrink-0"></i>
+                            {{ selected_ticket.user.profile.phone }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {# Ticket details #}
+                <div>
+                    <h4 class="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">Chi tiết ticket</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-stone-500">Trạng thái</span>
+                            <span class="font-medium text-stone-700">{{ selected_ticket.get_status_display }}</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-stone-500">Ưu tiên</span>
+                            <span class="font-medium text-stone-700">{{ selected_ticket.get_priority_display }}</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-stone-500">TG phản hồi</span>
+                            <span class="font-medium {% if selected_ticket.response_time_minutes and selected_ticket.response_time_minutes > 10 %}text-red-500{% else %}text-green-600{% endif %}">
+                                {% if selected_ticket.response_time_minutes %}{{ selected_ticket.response_time_minutes }}p{% else %}—{% endif %}
+                            </span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-stone-500">Tạo lúc</span>
+                            <span class="font-medium text-stone-700">{{ selected_ticket.created_at|date:"d/m H:i" }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {# Customer's recent orders #}
+                {% if customer_orders %}
+                <div>
+                    <h4 class="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">Đơn hàng gần đây</h4>
+                    <div class="space-y-2">
+                        {% for order in customer_orders %}
+                        <a href="{% url 'admin_order_detail_manage' order.order_number %}"
+                            target="_blank"
+                            class="flex items-center justify-between p-2.5 rounded-xl bg-stone-50 hover:bg-stone-100 transition-colors">
+                            <div>
+                                <p class="text-xs font-semibold text-stone-800">{{ order.order_number }}</p>
+                                <p class="text-[10px] text-stone-500">{{ order.created_at|date:"d/m/Y" }}</p>
+                            </div>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium
+                                {% if order.status == 'delivered' %}bg-green-100 text-green-700
+                                {% elif order.status == 'cancelled' %}bg-red-100 text-red-700
+                                {% else %}bg-amber-100 text-amber-700{% endif %}">
+                                {{ order.get_status_display }}
+                            </span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {# SLA rating if resolved #}
+                {% if selected_ticket.rating %}
+                <div>
+                    <h4 class="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Đánh giá của khách</h4>
+                    <div class="flex items-center gap-2">
+                        <span class="text-amber-400 text-lg">{"★" * selected_ticket.rating.rating}</span>
+                        <span class="text-xs font-bold text-stone-700">{{ selected_ticket.rating.rating }}/5</span>
+                    </div>
+                    {% if selected_ticket.rating.comment %}
+                    <p class="text-xs text-stone-500 mt-1 italic">"{{ selected_ticket.rating.comment }}"</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+            </div>
+        </aside>
+
+    </main>
+
+    {% else %}
+    {# No ticket selected #}
+    <main class="flex-1 flex items-center justify-center">
+        <div class="text-center space-y-3">
+            <div class="w-16 h-16 bg-stone-100 rounded-2xl flex items-center justify-center mx-auto">
+                <i data-lucide="inbox" class="w-8 h-8 text-stone-300"></i>
+            </div>
+            <p class="text-stone-400 font-medium">Chọn một ticket để bắt đầu hỗ trợ</p>
+            <p class="text-sm text-stone-300">{{ tickets|length }} ticket đang hiển thị</p>
+        </div>
+    </main>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const AdminSupport = {
+    csrfToken: document.querySelector('meta[name="csrf-token"]')?.content || '',
+
+    async sendReply(ticketId) {
+        const input = document.getElementById('agent-reply-input');
+        const content = input.value.trim();
+        const isInternal = document.getElementById('internal-toggle').checked;
+        if (!content) return;
+
+        const btn = document.querySelector('[onclick*="sendReply"]');
+        if (btn) btn.disabled = true;
+
+        console.log('Sending reply to ticket:', ticketId);
+        console.log('CSRF Token:', this.csrfToken);
+        console.log('Content:', content);
+
+        try {
+            const res = await fetch(`/manage/support/${ticketId}/reply/`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'X-CSRFToken': this.csrfToken 
+                },
+                body: JSON.stringify({ content, is_internal: isInternal })
+            });
+            console.log('Response status:', res.status);
+            if (res.ok) {
+                input.value = '';
+                window.location.reload();
+            } else {
+                const data = await res.json();
+                console.error('Error response:', data);
+                alert(data.error || 'Lỗi gửi tin nhắn');
+            }
+        } catch (err) {
+            console.error('Fetch error:', err);
+            alert('Lỗi kết nối');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    },
+
+    insertQuickReply(content) {
+        const input = document.getElementById('agent-reply-input');
+        if (input) {
+            input.value = content;
+            input.focus();
+        }
+    },
+
+    async assignToMe(ticketId) {
+        try {
+            const res = await fetch(`/manage/support/${ticketId}/assign/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken },
+                body: JSON.stringify({})
+            });
+            if (res.ok) window.location.reload();
+        } catch {}
+    },
+
+    async resolveTicket(ticketId) {
+        if (!confirm('Đánh dấu ticket này là đã giải quyết?')) return;
+        try {
+            const res = await fetch(`/manage/support/${ticketId}/resolve/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken },
+                body: JSON.stringify({})
+            });
+            if (res.ok) window.location.reload();
+        } catch {}
+    },
+
+    async setPriority(ticketId, priority) {
+        try {
+            await fetch(`/manage/support/${ticketId}/priority/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken },
+                body: JSON.stringify({ priority })
+            });
+        } catch {}
+    },
+};
+
+// Scroll to bottom on load
+document.addEventListener('DOMContentLoaded', () => {
+    const scroll = document.getElementById('chat-scroll');
+    if (scroll) scroll.scrollTop = scroll.scrollHeight;
+    lucide.createIcons();
+
+    // Auto-refresh every 10s to get new messages
+    {% if selected_ticket %}
+    setInterval(() => {
+        const url = new URL(window.location.href);
+        // Only reload if user not typing
+        const input = document.getElementById('agent-reply-input');
+        if (!input || !input.value.trim()) {
+            window.location.reload();
+        }
+    }, 10000);
+    {% endif %}
+});
+</script>
+{% endblock %}

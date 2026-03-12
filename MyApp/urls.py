@@ -134,6 +134,26 @@ urlpatterns = [
     path('api/chatbot/history/', views.api_chat_history, name='api_chat_history'),
     path('api/chatbot/chat/', views.api_chat_message, name='api_chat_message'),
 
+    # Support Chat — Customer APIs
+    path('api/support/status/', views.api_support_status, name='api_support_status'),
+    path('api/support/tickets/', views.api_support_create_ticket, name='api_support_create_ticket'),
+    path('api/support/tickets/<int:ticket_id>/messages/', views.api_support_messages_get, name='api_support_messages_get'),
+    path('api/support/tickets/<int:ticket_id>/send/', views.api_support_messages_send, name='api_support_messages_send'),
+    path('api/support/tickets/<int:ticket_id>/close/', views.api_support_close, name='api_support_close'),
+    path('api/support/tickets/<int:ticket_id>/rate/', views.api_support_rate, name='api_support_rate'),
+    path('api/support/tickets/<int:ticket_id>/upload/', views.api_support_upload, name='api_support_upload'),
+    
+    # Support Chat page (redirect to home since widget is included in base template)
+    path('support-chat/', views.support_chat_page, name='support_chat_page'),
+
+    # Support Chat — Agent/Admin URLs
+    path('manage/support/', views.admin_support_dashboard, name='admin_support_dashboard'),
+    path('manage/support/<int:ticket_id>/', views.admin_support_ticket_detail, name='admin_support_ticket_detail'),
+    path('manage/support/<int:ticket_id>/reply/', views.api_agent_reply, name='api_agent_reply'),
+    path('manage/support/<int:ticket_id>/assign/', views.api_agent_assign, name='api_agent_assign'),
+    path('manage/support/<int:ticket_id>/resolve/', views.api_agent_resolve, name='api_agent_resolve'),
+    path('manage/support/<int:ticket_id>/priority/', views.api_agent_set_priority, name='api_agent_set_priority'),
+
     # Payment Webhooks (auto-confirm)
     path('api/webhook/casso/', views.casso_webhook, name='casso_webhook'),
 

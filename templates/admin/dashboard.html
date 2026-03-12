@@ -98,7 +98,7 @@
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="font-medium text-stone-800 truncate">{{ product.title }}</p>
-                    <p class="text-sm text-stone-500">{% if product.price %}{{ product.price }}₫{% else %}Chưa có giá{% endif %}</p>
+                    <p class="text-sm text-stone-500">{% if product.price %}{{ product.price|floatformat:0 }}₫{% else %}Chưa có giá{% endif %}</p>
                 </div>
                 <a href="{% url 'product_edit' product.pk %}" class="text-stone-400 hover:text-emerald-600">
                     <i data-lucide="edit-2" class="w-4 h-4"></i>

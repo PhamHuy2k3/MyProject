@@ -132,6 +132,14 @@ class UserProfile(models.Model):
 	bio = models.CharField(max_length=200, blank=True, default='Tea Lover')
 	phone = models.CharField(max_length=20, blank=True)
 	address = models.TextField(blank=True)
+	# Structured address fields
+	street_address = models.CharField(max_length=255, blank=True)
+	province = models.CharField(max_length=100, blank=True)
+	province_code = models.CharField(max_length=10, blank=True)
+	district = models.CharField(max_length=100, blank=True)
+	district_code = models.CharField(max_length=10, blank=True)
+	ward = models.CharField(max_length=100, blank=True)
+	ward_code = models.CharField(max_length=10, blank=True)
 	member_since = models.DateField(auto_now_add=True)
 	membership_level = models.CharField(max_length=20, choices=MEMBERSHIP_LEVELS, default='bronze')
 	membership_number = models.CharField(max_length=20, blank=True)
@@ -144,6 +152,10 @@ class UserProfile(models.Model):
 		if self.user.first_name or self.user.last_name:
 			return f'{self.user.first_name} {self.user.last_name}'.strip()
 		return self.user.username
+	
+	def get_full_address(self):
+		parts = [self.street_address, self.ward, self.district, self.province]
+		return ', '.join(p for p in parts if p)
 	
 	def save(self, *args, **kwargs):
 		if not self.membership_number:
@@ -863,3 +875,283 @@ class Notification(models.Model):
 
 	def __str__(self):
 		return f"[{self.notification_type}] {self.title}"
+
+
+# ==================== SUPPORT CHAT ====================
+
+class SupportBusinessHours(models.Model):
+	"""Giờ làm việc hỗ trợ theo từng ngày trong tuần."""
+
+	DAY_CHOICES = [
+		(0, 'Thứ Hai'),
+		(1, 'Thứ Ba'),
+		(2, 'Thứ Tư'),
+		(3, 'Thứ Năm'),
+		(4, 'Thứ Sáu'),
+		(5, 'Thứ Bảy'),
+		(6, 'Chủ Nhật'),
+	]
+
+	day_of_week = models.IntegerField(choices=DAY_CHOICES, unique=True)
+	open_time = models.TimeField(default='08:00')
+	close_time = models.TimeField(default='22:00')
+	is_open = models.BooleanField(default=True)
+
+	class Meta:
+		ordering = ['day_of_week']
+		verbose_name = "Giờ hỗ trợ"
+		verbose_name_plural = "Giờ hỗ trợ theo ngày"
+
+	def __str__(self):
+		return f"{self.get_day_of_week_display()} · {'Mở' if self.is_open else 'Đóng'} {self.open_time}-{self.close_time}"
+
+
+class SupportQuickReply(models.Model):
+	"""Template tin nhắn nhanh cho agent."""
+
+	CATEGORY_CHOICES = [
+		('greeting', 'Chào hỏi'),
+		('inquiry', 'Hỏi thông tin'),
+		('resolution', 'Giải quyết vấn đề'),
+		('closing', 'Kết thúc'),
+		('other', 'Khác'),
+	]
+
+	label = models.CharField(max_length=50, verbose_name="Nhãn nút")
+	content = models.TextField(verbose_name="Nội dung template")
+	category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other')
+	order = models.PositiveIntegerField(default=0, verbose_name="Thứ tự")
+	is_active = models.BooleanField(default=True)
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		ordering = ['category', 'order']
+		verbose_name = "Quick Reply"
+		verbose_name_plural = "Quick Replies"
+
+	def __str__(self):
+		return f"[{self.get_category_display()}] {self.label}"
+
+
+class SupportTicket(models.Model):
+	"""
+	Một ticket = một phiên hội thoại hỗ trợ trực tiếp.
+	Hỗ trợ cả khách đã login (user) và khách vãng lai (session_key + guest_info).
+	"""
+
+	CATEGORY_CHOICES = [
+		('order', 'Đơn hàng'),
+		('payment', 'Thanh toán'),
+		('return', 'Đổi trả / Hoàn hàng'),
+		('product', 'Thông tin sản phẩm'),
+		('shipping', 'Vận chuyển'),
+		('account', 'Tài khoản'),
+		('other', 'Khác'),
+	]
+
+	STATUS_CHOICES = [
+		('open', 'Khởi tạo'),
+		('waiting', 'Đang chờ nhân viên'),
+		('assigned', 'Đang hỗ trợ'),
+		('resolved', 'Đã giải quyết'),
+		('closed', 'Đã đóng'),
+	]
+
+	PRIORITY_CHOICES = [
+		('low', 'Thấp'),
+		('medium', 'Trung bình'),
+		('high', 'Cao'),
+		('urgent', 'Khẩn cấp'),
+	]
+
+	# Ownership
+	user = models.ForeignKey(
+		User, on_delete=models.CASCADE,
+		related_name='support_tickets', null=True, blank=True,
+		verbose_name="Khách hàng (đã login)"
+	)
+	session_key = models.CharField(
+		max_length=40, null=True, blank=True, db_index=True,
+		verbose_name="Session key (khách vãng lai)"
+	)
+	guest_name = models.CharField(max_length=100, blank=True, verbose_name="Tên khách vãng lai")
+	guest_email = models.EmailField(blank=True, verbose_name="Email khách vãng lai")
+
+	# Assignment
+	assigned_to = models.ForeignKey(
+		User, on_delete=models.SET_NULL, null=True, blank=True,
+		related_name='assigned_support_tickets', verbose_name="Nhân viên phụ trách"
+	)
+
+	# Classification
+	subject = models.CharField(max_length=200, default='Hỗ trợ chung', verbose_name="Tiêu đề")
+	category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other', verbose_name="Chủ đề")
+	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open', verbose_name="Trạng thái")
+	priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium', verbose_name="Ưu tiên")
+	source = models.CharField(max_length=20, default='widget', verbose_name="Kênh liên hệ")
+
+	# SLA & Timing
+	first_response_at = models.DateTimeField(null=True, blank=True, verbose_name="Thời điểm phản hồi đầu tiên")
+	resolved_at = models.DateTimeField(null=True, blank=True, verbose_name="Thời điểm giải quyết")
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		ordering = ['-updated_at']
+		verbose_name = "Ticket hỗ trợ"
+		verbose_name_plural = "Ticket hỗ trợ"
+		indexes = [
+			models.Index(fields=['status', '-updated_at'], name='support_ticket_status_updated'),
+			models.Index(fields=['user', 'status'], name='support_ticket_user_status'),
+			models.Index(fields=['session_key', 'status'], name='support_ticket_session_status'),
+			models.Index(fields=['assigned_to', 'status'], name='support_ticket_agent_status'),
+		]
+
+	def __str__(self):
+		identity = self.user.username if self.user else self.guest_name or 'Anonymous'
+		return f"Ticket #{self.id} · {identity} · {self.get_status_display()}"
+
+	@property
+	def display_name(self):
+		"""Tên hiển thị của khách hàng."""
+		if self.user:
+			return self.user.get_full_name() or self.user.username
+		return self.guest_name or 'Khách vãng lai'
+
+	@property
+	def display_email(self):
+		"""Email hiển thị."""
+		if self.user:
+			return self.user.email
+		return self.guest_email
+
+	@property
+	def response_time_minutes(self):
+		"""Thời gian phản hồi đầu tiên tính bằng phút."""
+		if self.first_response_at and self.created_at:
+			delta = self.first_response_at - self.created_at
+			return int(delta.total_seconds() / 60)
+		return None
+
+	@property
+	def category_icon_map(self):
+		icons = {
+			'order': 'package', 'payment': 'credit-card',
+			'return': 'rotate-ccw', 'product': 'leaf',
+			'shipping': 'truck', 'account': 'user', 'other': 'help-circle',
+		}
+		return icons.get(self.category, 'help-circle')
+
+
+class SupportMessage(models.Model):
+	"""
+	Một tin nhắn trong ticket hỗ trợ.
+	sender_type: customer | agent | bot | system
+	is_internal: True = ghi chú nội bộ, khách không thấy
+	"""
+
+	SENDER_TYPE_CHOICES = [
+		('customer', 'Khách hàng'),
+		('agent', 'Nhân viên'),
+		('bot', 'Bot tự động'),
+		('system', 'Hệ thống'),
+	]
+
+	ticket = models.ForeignKey(SupportTicket, on_delete=models.CASCADE, related_name='messages')
+	sender_type = models.CharField(max_length=10, choices=SENDER_TYPE_CHOICES)
+	sender = models.ForeignKey(
+		User, on_delete=models.SET_NULL, null=True, blank=True,
+		related_name='sent_support_messages'
+	)
+	content = models.TextField(verbose_name="Nội dung")
+	is_read = models.BooleanField(default=False)
+	is_internal = models.BooleanField(default=False, verbose_name="Ghi chú nội bộ (agent only)")
+	# Client-side ID for deduplication khi mạng yếu
+	client_msg_id = models.CharField(max_length=64, blank=True, db_index=True)
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		ordering = ['created_at']
+		verbose_name = "Tin nhắn hỗ trợ"
+		verbose_name_plural = "Tin nhắn hỗ trợ"
+
+	def __str__(self):
+		return f"[{self.sender_type}] Ticket #{self.ticket_id}: {self.content[:60]}"
+
+	def to_dict(self):
+		"""Serialize cho JSON API."""
+		return {
+			'id': self.id,
+			'sender_type': self.sender_type,
+			'sender_name': (
+				self.sender.get_full_name() or self.sender.username
+				if self.sender else
+				('Bot TeaZen' if self.sender_type == 'bot' else 'Hệ thống')
+			),
+			'sender_avatar': (
+				self.sender.profile.avatar.url
+				if self.sender and hasattr(self.sender, 'profile') and self.sender.profile.avatar
+				else None
+			),
+			'content': self.content,
+			'is_read': self.is_read,
+			'is_internal': self.is_internal,
+			'created_at': self.created_at.isoformat(),
+			'attachments': [
+				{
+					'id': a.id,
+					'file_url': a.file.url,
+					'file_name': a.file_name,
+					'file_type': a.file_type,
+					'file_size': a.file_size,
+				}
+				for a in self.attachments.all()
+			],
+		}
+
+
+class SupportAttachment(models.Model):
+	"""File đính kèm trong tin nhắn hỗ trợ."""
+
+	FILE_TYPE_CHOICES = [
+		('image', 'Hình ảnh'),
+		('document', 'Tài liệu'),
+	]
+
+	message = models.ForeignKey(
+		SupportMessage, on_delete=models.CASCADE, related_name='attachments'
+	)
+	file = models.FileField(upload_to='support_attachments/%Y/%m/', verbose_name="File")
+	file_name = models.CharField(max_length=255, verbose_name="Tên file gốc")
+	file_type = models.CharField(max_length=10, choices=FILE_TYPE_CHOICES, default='image')
+	file_size = models.PositiveIntegerField(default=0, verbose_name="Kích thước (bytes)")
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		ordering = ['created_at']
+		verbose_name = "File đính kèm"
+		verbose_name_plural = "File đính kèm"
+
+	def __str__(self):
+		return f"{self.file_name} ({self.file_type})"
+
+
+class SupportRating(models.Model):
+	"""Đánh giá của khách sau khi ticket được giải quyết (1-5 sao)."""
+
+	ticket = models.OneToOneField(
+		SupportTicket, on_delete=models.CASCADE, related_name='rating'
+	)
+	rating = models.PositiveSmallIntegerField(
+		validators=[MinValueValidator(1), MaxValueValidator(5)],
+		verbose_name="Đánh giá (1-5 sao)"
+	)
+	comment = models.TextField(blank=True, verbose_name="Nhận xét (tùy chọn)")
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		verbose_name = "Đánh giá hỗ trợ"
+		verbose_name_plural = "Đánh giá hỗ trợ"
+
+	def __str__(self):
+		return f"Ticket #{self.ticket_id} · {self.rating}★"

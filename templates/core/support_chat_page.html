@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-stone-50 py-12">
+    <div class="text-center">
+        <h1 class="font-art text-2xl font-bold text-stone-800 mb-4">Hỗ trợ khách hàng</h1>
+        <p class="text-stone-600 mb-6">Vui lòng nhấn vào nút hỗ trợ góc dưới trái màn hình để bắt đầu trò chuyện</p>
+        <button onclick="document.getElementById('sc-bubble')?.click()"
+            class="px-6 py-3 bg-stone-800 text-white rounded-xl font-semibold hover:bg-stone-700 transition-colors">
+            Mở hộp thoại hỗ trợ
+        </button>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto open chat bubble after page load
+    setTimeout(function() {
+        var bubble = document.getElementById('sc-bubble');
+        if (bubble) bubble.click();
+        
+        // If there's a saved ticket, try to resume it
+        const savedTicketId = localStorage.getItem('sc_ticket_id');
+        if (savedTicketId && typeof SupportChat !== 'undefined') {
+            SupportChat.resumeTicket();
+        }
+    }, 800);
+});
+</script>
+{% endblock %}

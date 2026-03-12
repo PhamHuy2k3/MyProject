@@ -3,7 +3,9 @@ from django.utils import timezone
 from .models import (Product, StoryboardItem, RawItem, CabinetItem, Category, 
 	Order, OrderItem, UserProfile, Payment, PaymentQRCode, Invoice, InvoiceItem,
 	Review, Comment, Conversation, Message, Notification, ProductVariation, OrderStatusHistory, Coupon,
-	ReturnRequest, ReturnItem)
+	ReturnRequest, ReturnItem,
+	SupportTicket, SupportMessage, SupportAttachment, SupportRating,
+	SupportQuickReply, SupportBusinessHours)
 
 
 @admin.register(Category)
@@ -275,3 +277,81 @@ class NotificationAdmin(admin.ModelAdmin):
 	list_display = ('user', 'notification_type', 'title', 'is_read', 'created_at')
 	list_filter = ('notification_type', 'is_read', 'created_at')
 	search_fields = ('title', 'message')
+
+
+# ==================== SUPPORT CHAT ADMIN ====================
+
+class SupportMessageInline(admin.TabularInline):
+	model = SupportMessage
+	extra = 0
+	readonly_fields = ('sender_type', 'sender', 'content', 'is_read', 'is_internal', 'created_at')
+	fields = ('sender_type', 'sender', 'content', 'is_internal', 'is_read', 'created_at')
+	ordering = ('created_at',)
+	can_delete = False
+
+
+class SupportRatingInline(admin.StackedInline):
+	model = SupportRating
+	extra = 0
+	readonly_fields = ('rating', 'comment', 'created_at')
+	can_delete = False
+
+
+@admin.register(SupportTicket)
+class SupportTicketAdmin(admin.ModelAdmin):
+	list_display = (
+		'id', 'display_name', 'display_email', 'category', 'status',
+		'priority', 'assigned_to', 'response_time_display', 'created_at'
+	)
+	list_filter = ('status', 'category', 'priority', 'assigned_to', 'created_at')
+	search_fields = ('user__username', 'user__email', 'guest_name', 'guest_email', 'subject')
+	readonly_fields = ('created_at', 'updated_at', 'first_response_at', 'resolved_at')
+	inlines = [SupportMessageInline, SupportRatingInline]
+	list_per_page = 20
+
+	fieldsets = (
+		('Thông tin ticket', {
+			'fields': ('subject', 'category', 'status', 'priority', 'source')
+		}),
+		('Khách hàng', {
+			'fields': ('user', 'session_key', 'guest_name', 'guest_email')
+		}),
+		('Nhân viên', {
+			'fields': ('assigned_to',)
+		}),
+		('Thời gian', {
+			'fields': ('created_at', 'updated_at', 'first_response_at', 'resolved_at'),
+			'classes': ('collapse',)
+		}),
+	)
+
+	def response_time_display(self, obj):
+		mins = obj.response_time_minutes
+		if mins is None:
+			return '—'
+		if mins < 60:
+			return f'{mins} phút'
+		return f'{mins // 60}h {mins % 60}p'
+	response_time_display.short_description = 'TG phản hồi'
+
+	def display_name(self, obj):
+		return obj.display_name
+	display_name.short_description = 'Tên khách'
+
+	def display_email(self, obj):
+		return obj.display_email
+	display_email.short_description = 'Email'
+
+
+@admin.register(SupportQuickReply)
+class SupportQuickReplyAdmin(admin.ModelAdmin):
+	list_display = ('label', 'category', 'order', 'is_active')
+	list_filter = ('category', 'is_active')
+	ordering = ('category', 'order')
+	list_editable = ('order', 'is_active')
+
+
+@admin.register(SupportBusinessHours)
+class SupportBusinessHoursAdmin(admin.ModelAdmin):
+	list_display = ('day_of_week', 'open_time', 'close_time', 'is_open')
+	list_editable = ('open_time', 'close_time', 'is_open')

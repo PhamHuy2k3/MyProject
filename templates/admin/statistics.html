@@ -191,7 +191,7 @@
                 <div class="space-y-2">
                     <div class="flex justify-between text-sm">
                         <span class="font-bold text-stone-700">{{ cat.name }}</span>
-                        <span class="text-emerald-700 font-mono font-bold">{{ cat.total_revenue }}₫</span>
+                        <span class="text-emerald-700 font-mono font-bold">{{ cat.total_revenue|floatformat:0 }}₫</span>
                     </div>
                     <div class="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
                         {% widthratio cat.total_revenue kpis.revenue 100 as percentage %}

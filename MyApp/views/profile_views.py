@@ -64,7 +64,9 @@ def profile_edit(request):
             user.first_name = first_name
             user.last_name = last_name
             user.save()
-            form.save()
+            saved_profile = form.save(commit=False)
+            saved_profile.address = saved_profile.get_full_address()
+            saved_profile.save()
             messages.success(request, 'Cập nhật thông tin thành công!')
             return redirect('profile')
     else:
@@ -118,16 +120,30 @@ def profile_quick_update(request):
 
     phone = data.get('phone', '').strip()
     address = data.get('address', '').strip()
+    street_address = data.get('street_address', '').strip()
+    province = data.get('province', '').strip()
+    province_code = data.get('province_code', '').strip()
+    district = data.get('district', '').strip()
+    district_code = data.get('district_code', '').strip()
+    ward = data.get('ward', '').strip()
+    ward_code = data.get('ward_code', '').strip()
 
     if not phone:
         return JsonResponse({'success': False, 'message': 'Số điện thoại không được để trống.'})
-    if not address:
-        return JsonResponse({'success': False, 'message': 'Địa chỉ không được để trống.'})
+    if not province or not district or not ward or not street_address:
+        return JsonResponse({'success': False, 'message': 'Vui lòng nhập đầy đủ địa chỉ.'})
 
     # Get or create profile
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
     profile.phone = phone
-    profile.address = address
+    profile.street_address = street_address
+    profile.province = province
+    profile.province_code = province_code
+    profile.district = district
+    profile.district_code = district_code
+    profile.ward = ward
+    profile.ward_code = ward_code
+    profile.address = profile.get_full_address()
     profile.save()
 
-    return JsonResponse({'success': True, 'message': 'Cập nhật thành công!'})
+    return JsonResponse({'success': True, 'message': 'Cập nhật thành công!', 'full_address': profile.address})

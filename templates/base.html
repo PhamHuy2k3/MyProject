@@ -278,6 +278,8 @@
 
     {% block json_data %}{% endblock %}
     {% include 'core/chatbot.html' %}
+    {% include 'core/support_chat.html' %}
+    {% block extra_scripts %}{% endblock %}
     <script src="{% static 'js/main.js' %}"></script>
 
 

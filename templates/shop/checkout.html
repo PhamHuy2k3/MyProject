@@ -103,12 +103,9 @@
                             <div class="md:col-span-2">
                                 <label class="block text-xs text-stone-400 uppercase tracking-widest mb-1">Địa chỉ giao
                                     hàng <span class="text-red-400">*</span></label>
-                                <input type="text" id="edit-address" value="{{ address }}"
-                                    placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"
-                                    class="w-full border border-stone-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm transition-all"
-                                    oninput="clearErr('address')">
-                                <p class="text-red-500 text-xs mt-1 hidden" id="err-address">Vui lòng nhập địa chỉ giao
-                                    hàng</p>
+                                {% include 'core/address_picker.html' with prefix='chk' profile=profile input_class='w-full border border-stone-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm transition-all' %}
+                                <p class="text-red-500 text-xs mt-1 hidden" id="err-address">Vui lòng nhập đầy đủ địa
+                                    chỉ giao hàng</p>
                             </div>
                         </div>
                         <div class="flex gap-3">
@@ -172,11 +169,9 @@
                     </div>
 
                     <div class="border-t-2 border-dashed border-stone-300 pt-4 mb-4 space-y-2 font-mono text-sm">
-                        <div class="flex justify-between"><span>Tạm tính</span><span>{{ cart.get_subtotal|floatformat:0
-                                }}₫</span></div>
+                        <div class="flex justify-between"><span>Tạm tính</span><span>{{ cart.get_subtotal|floatformat:0 }}₫</span></div>
                         {% if cart.get_discount_amount > 0 %}
-                        <div class="flex justify-between text-emerald-600"><span>Giảm giá ({{ cart.coupon.code
-                                }})</span><span>-{{ cart.get_discount_amount|floatformat:0 }}₫</span></div>
+                        <div class="flex justify-between text-emerald-600"><span>Giảm giá ({{ cart.coupon.code }})</span><span>-{{ cart.get_discount_amount|floatformat:0 }}₫</span></div>
                         {% endif %}
                         <div class="flex justify-between text-stone-500"><span>Phí vận chuyển</span><span>Miễn
                                 phí</span></div>
@@ -241,10 +236,14 @@
 
     function saveProfile() {
         const phone = document.getElementById('edit-phone').value.trim();
-        const address = document.getElementById('edit-address').value.trim();
+        const addrPicker = window.addressPicker_chk;
+        const addrValues = addrPicker.getValues();
         let valid = true;
         if (!phone) { showErr('phone'); valid = false; }
-        if (!address) { showErr('address'); valid = false; }
+        if (!addrPicker.isComplete()) {
+            document.getElementById('err-address').classList.remove('hidden');
+            valid = false;
+        }
         if (!valid) return;
 
         const btn = document.getElementById('save-btn');
@@ -257,14 +256,14 @@
                 'Content-Type': 'application/json',
                 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
             },
-            body: JSON.stringify({ phone, address }),
+            body: JSON.stringify({ phone, ...addrValues }),
         })
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
                     document.getElementById('view-phone').textContent = phone;
                     document.getElementById('view-phone').className = 'font-bold text-lg text-emerald-950';
-                    document.getElementById('view-address').textContent = address;
+                    document.getElementById('view-address').textContent = data.full_address;
                     document.getElementById('view-address').className = 'font-bold text-lg text-emerald-950';
                     const warn = document.getElementById('profile-warning');
                     if (warn) warn.classList.add('hidden');

@@ -1,0 +1,1375 @@
+{% load static %}
+{% comment %}
+   ================================================================
+   TeaZen Support Chat Bubble
+   Widget bong bóng chăm sóc khách hàng — góc trái dưới (desktop)
+   Hỗ trợ: Home View / Pre-chat Form / Chat / Rating / Offline
+   ================================================================
+{% endcomment %}
+
+<div id="support-chat" class="font-sans" style="z-index: 999;">
+
+    {# ── CHAT WINDOW ──────────────────────────────────────────── #}
+    <div id="sc-window"
+        class="hidden fixed bottom-24 left-6 sm:bottom-24 sm:left-6
+               w-[calc(100vw-3rem)] sm:w-[380px] lg:w-[400px]
+               max-h-[80vh] flex flex-col
+               bg-white
+               border border-stone-200
+               shadow-[0_20px_60px_-10px_rgba(28,25,23,0.25)]
+               rounded-2xl overflow-hidden
+               transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]
+               transform scale-95 opacity-0 origin-bottom-left"
+        style="height: 580px;">
+
+        {# ── HEADER ─────────────────────────────────────────────── #}
+        <div id="sc-header"
+            class="flex items-center justify-between px-5 py-4
+                   bg-gradient-to-r from-stone-800 to-stone-700
+                   border-b border-stone-600/30 text-white shrink-0
+                   transition-all duration-300">
+            {# Left: back button + identity #}
+            <div class="flex items-center gap-3">
+                <button id="sc-back-btn"
+                    class="hidden p-1.5 hover:bg-white/10 rounded-lg transition-colors -ml-1"
+                    aria-label="Quay lại">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                </button>
+                <div class="relative">
+                    <div id="sc-header-avatar"
+                        class="w-9 h-9 rounded-full bg-stone-600 flex items-center justify-center border border-stone-500/50">
+                        <i data-lucide="headphones" class="w-4 h-4 text-stone-200"></i>
+                    </div>
+                    <div id="sc-status-dot"
+                        class="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border-2 border-stone-800 rounded-full">
+                    </div>
+                </div>
+                <div>
+                    <h3 id="sc-header-title" class="font-art font-bold text-base leading-tight">Hỗ trợ khách hàng</h3>
+                    <p id="sc-header-subtitle" class="text-[11px] text-stone-300 font-medium">Sẵn sàng hỗ trợ bạn</p>
+                </div>
+            </div>
+            {# Right: minimize button #}
+            <button id="sc-close-btn"
+                class="p-2 hover:bg-white/10 rounded-lg transition-colors text-stone-300 hover:text-white"
+                aria-label="Thu nhỏ">
+                <i data-lucide="minus" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        {# ── CONTENT VIEWS (dynamic) ─────────────────────────────── #}
+        <div id="sc-content" class="flex-1 overflow-hidden relative">
+
+            {# --- View: HOME ---------------------------------------- #}
+            <div id="sc-view-home" class="sc-view absolute inset-0 overflow-y-auto p-5 space-y-5">
+                {# Greeting #}
+                <div class="text-center pt-2">
+                    <div class="w-14 h-14 bg-stone-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                        <i data-lucide="headphones" class="w-7 h-7 text-stone-600"></i>
+                    </div>
+                    <h2 class="font-art font-bold text-stone-800 text-xl leading-tight">
+                        {% if user.is_authenticated %}
+                            Xin chào, {{ user.first_name|default:user.username }}!
+                        {% else %}
+                            Xin chào! 👋
+                        {% endif %}
+                    </h2>
+                    <p class="text-sm text-stone-500 mt-1.5 leading-relaxed">
+                        Chúng tôi luôn sẵn sàng hỗ trợ bạn.
+                    </p>
+                </div>
+
+                {# Agent status bar #}
+                <div id="sc-agent-status-bar"
+                    class="flex items-center gap-3 px-4 py-3 bg-stone-50 rounded-xl text-sm">
+                    <div id="sc-agent-status-dot" class="w-2.5 h-2.5 rounded-full bg-green-400 shrink-0"></div>
+                    <span id="sc-agent-status-text" class="text-stone-600 font-medium">Đang tải...</span>
+                    <span id="sc-wait-badge" class="hidden ml-auto text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium"></span>
+                </div>
+
+                {# Open ticket banner (shown if has open ticket) #}
+                <div id="sc-open-ticket-banner" class="hidden">
+                    <button onclick="SupportChat.resumeTicket()"
+                        class="w-full flex items-center gap-3 px-4 py-3.5
+                               bg-stone-700 hover:bg-stone-600
+                               text-white rounded-xl transition-colors group">
+                        <div class="w-9 h-9 bg-white/10 rounded-lg flex items-center justify-center shrink-0">
+                            <i data-lucide="message-square" class="w-4.5 h-4.5"></i>
+                        </div>
+                        <div class="text-left flex-1">
+                            <p class="text-sm font-semibold">Tiếp tục cuộc trò chuyện</p>
+                            <p id="sc-open-ticket-info" class="text-xs text-stone-300 mt-0.5">Đang có yêu cầu đang mở</p>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-stone-300 group-hover:translate-x-0.5 transition-transform shrink-0"></i>
+                    </button>
+                </div>
+
+                {# Quick topic buttons #}
+                <div>
+                    <p class="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">Tôi muốn hỏi về</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        {% with categories="order,payment,return,product,shipping,other" %}
+                        {% for cat_val, cat_label in support_categories %}
+                        <button onclick="SupportChat.selectCategory('{{ cat_val }}', '{{ cat_label }}')"
+                            class="flex items-center gap-2.5 px-3.5 py-3 bg-stone-50 hover:bg-stone-100
+                                   rounded-xl border border-stone-200 hover:border-stone-300
+                                   text-left transition-all hover:scale-[1.02] group"
+                            data-category="{{ cat_val }}">
+                            <span class="text-lg" data-cat-emoji="{{ cat_val }}"></span>
+                            <span class="text-sm font-medium text-stone-700">{{ cat_label }}</span>
+                        </button>
+                        {% endfor %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+
+            {# --- View: PRE-CHAT FORM -------------------------------- #}
+            <div id="sc-view-form" class="sc-view hidden absolute inset-0 overflow-y-auto p-5">
+                <div class="mb-5">
+                    <h3 class="font-art font-bold text-stone-800 text-lg">Bắt đầu hỗ trợ</h3>
+                    <p class="text-sm text-stone-500 mt-1">Điền thông tin để chúng tôi hỗ trợ bạn tốt nhất</p>
+                </div>
+
+                <form id="sc-prechat-form" class="space-y-4" onsubmit="SupportChat.submitPreChat(event)">
+                    {# Selected category display #}
+                    <div class="flex items-center gap-2 px-3 py-2.5 bg-stone-50 rounded-xl border border-stone-200">
+                        <span id="sc-form-cat-emoji" class="text-base"></span>
+                        <span id="sc-form-cat-label" class="text-sm font-medium text-stone-700"></span>
+                        <button type="button" onclick="SupportChat.showView('home')"
+                            class="ml-auto text-xs text-stone-400 hover:text-stone-600 underline transition-colors">
+                            Đổi chủ đề
+                        </button>
+                    </div>
+
+                    {# Name (hidden if logged in) #}
+                    {% if not user.is_authenticated %}
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700 mb-1.5">Tên của bạn <span class="text-red-500">*</span></label>
+                        <input type="text" id="sc-field-name" maxlength="100" required
+                            class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3
+                                   focus:outline-none focus:ring-2 focus:ring-stone-400/40 focus:bg-white focus:border-stone-400
+                                   text-sm text-stone-800 placeholder:text-stone-400 transition-all"
+                            placeholder="Nguyễn Văn A">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700 mb-1.5">Email <span class="text-red-500">*</span></label>
+                        <input type="email" id="sc-field-email" maxlength="254" required
+                            class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3
+                                   focus:outline-none focus:ring-2 focus:ring-stone-400/40 focus:bg-white focus:border-stone-400
+                                   text-sm text-stone-800 placeholder:text-stone-400 transition-all"
+                            placeholder="email@example.com">
+                        <p id="sc-email-error" class="hidden text-xs text-red-500 mt-1">Email không hợp lệ</p>
+                    </div>
+                    {% endif %}
+
+                    {# First message #}
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700 mb-1.5">Mô tả vấn đề <span class="text-red-500">*</span></label>
+                        <textarea id="sc-field-message" rows="4" maxlength="2000" required
+                            class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3
+                                   focus:outline-none focus:ring-2 focus:ring-stone-400/40 focus:bg-white focus:border-stone-400
+                                   text-sm text-stone-800 placeholder:text-stone-400 transition-all resize-none"
+                            placeholder="Ví dụ: Đơn hàng ORD-2026... của tôi chưa được giao sau 5 ngày..."
+                            oninput="SupportChat.updateMsgCounter(this)"></textarea>
+                        <div class="flex items-center justify-between mt-1.5">
+                            <span id="sc-msg-error" class="hidden text-xs text-red-500">Vui lòng mô tả chi tiết hơn (tối thiểu 10 ký tự)</span>
+                            <span id="sc-msg-counter" class="text-xs text-stone-400 ml-auto">0/2000</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="sc-form-submit"
+                        class="w-full flex items-center justify-center gap-2
+                               py-3.5 px-6 bg-stone-800 hover:bg-stone-700 text-white
+                               rounded-xl font-semibold text-sm transition-all
+                               disabled:opacity-50 disabled:cursor-not-allowed
+                               active:scale-[0.98]">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                        Gửi yêu cầu hỗ trợ
+                    </button>
+                </form>
+            </div>
+
+            {# --- View: WAITING -------------------------------------- #}
+            <div id="sc-view-waiting" class="sc-view hidden absolute inset-0 overflow-y-auto">
+                {# Messages area (will have messages + typing indicator) #}
+                <div id="sc-messages-waiting" class="p-5 space-y-4 min-h-[300px]">
+                    {# Messages injected by JS #}
+                </div>
+                <div class="px-5 pb-3">
+                    <div class="flex gap-3">
+                        <div class="w-7 h-7 rounded-full bg-stone-100 flex-shrink-0 flex items-center justify-center mt-0.5">
+                            <i data-lucide="headphones" class="w-3.5 h-3.5 text-stone-500"></i>
+                        </div>
+                        <div class="bg-white border border-stone-100 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm flex items-center gap-1.5">
+                            <div class="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                            <div class="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                            <div class="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce"></div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-stone-400 mt-2 ml-10">Đang tìm nhân viên hỗ trợ...</p>
+                </div>
+            </div>
+
+            {# --- View: ACTIVE CHAT ---------------------------------- #}
+            <div id="sc-view-chat" class="sc-view hidden absolute inset-0 flex flex-col overflow-hidden">
+                {# Messages area #}
+                <div id="sc-messages" class="flex-1 p-5 overflow-y-auto space-y-4 bg-stone-50/30 scroll-smooth">
+                    {# Messages injected by JS #}
+                </div>
+
+                {# Agent typing indicator #}
+                <div id="sc-typing-indicator" class="hidden px-5 pb-2">
+                    <div class="flex gap-2.5 items-center">
+                        <div class="w-7 h-7 rounded-full bg-stone-100 flex-shrink-0 flex items-center justify-center">
+                            <i id="sc-typing-icon" data-lucide="headphones" class="w-3.5 h-3.5 text-stone-500"></i>
+                        </div>
+                        <div class="bg-white border border-stone-100 rounded-2xl rounded-tl-sm px-4 py-2.5 shadow-sm flex items-center gap-1.5">
+                            <div class="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                            <div class="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                            <div class="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce"></div>
+                        </div>
+                        <span id="sc-typing-name" class="text-[10px] text-stone-400">đang nhập...</span>
+                    </div>
+                </div>
+
+                {# Resolved bar (when ticket = resolved) #}
+                <div id="sc-resolved-bar" class="hidden px-5 py-3 bg-green-50 border-t border-green-100">
+                    <p class="text-xs text-green-700 text-center font-medium">
+                        ✓ Cuộc trò chuyện đã kết thúc
+                    </p>
+                </div>
+
+                {# Input area #}
+                <div id="sc-input-area" class="px-4 py-3.5 bg-white border-t border-stone-100 shrink-0">
+                    <form id="sc-chat-form" class="relative flex items-end gap-2">
+                        {# File attach preview #}
+                        <div id="sc-file-preview" class="hidden absolute bottom-full left-0 right-0 mb-2 p-2 bg-white rounded-xl border border-stone-200 shadow-sm flex items-center gap-2">
+                            <div id="sc-file-thumb" class="w-10 h-10 rounded-lg bg-stone-100 overflow-hidden flex items-center justify-center shrink-0">
+                                <i data-lucide="file" class="w-5 h-5 text-stone-400"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p id="sc-file-name" class="text-xs font-medium text-stone-700 truncate"></p>
+                                <p id="sc-file-size" class="text-[10px] text-stone-400"></p>
+                            </div>
+                            <button type="button" onclick="SupportChat.clearFile()"
+                                class="shrink-0 text-stone-400 hover:text-red-500 transition-colors">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+
+                        {# Attach button #}
+                        <label for="sc-file-input" title="Đính kèm ảnh/tài liệu"
+                            class="shrink-0 p-2.5 rounded-xl text-stone-400 hover:text-stone-600 hover:bg-stone-100 cursor-pointer transition-all">
+                            <i data-lucide="paperclip" class="w-4 h-4"></i>
+                        </label>
+                        <input type="file" id="sc-file-input" class="hidden"
+                            accept=".jpg,.jpeg,.png,.webp,.pdf"
+                            onchange="SupportChat.onFileSelect(this)">
+
+                        {# Textarea #}
+                        <textarea id="sc-input" rows="1"
+                            placeholder="Nhập tin nhắn..."
+                            class="flex-1 bg-stone-100 border border-transparent rounded-xl py-2.5 px-4
+                                   focus:outline-none focus:ring-2 focus:ring-stone-400/40 focus:bg-white focus:border-stone-300
+                                   text-sm text-stone-800 resize-none transition-all"
+                            style="max-height: 100px; overflow-y: auto;"
+                            oninput="SupportChat.autoResizeInput(this)"></textarea>
+
+                        {# Send button #}
+                        <button type="submit" id="sc-send-btn" disabled
+                            class="shrink-0 p-2.5 bg-stone-700 hover:bg-stone-600 text-white rounded-xl
+                                   transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+                            <i data-lucide="send" class="w-4 h-4 translate-x-px -translate-y-px"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {# --- View: RATING -------------------------------------- #}
+            <div id="sc-view-rating" class="sc-view hidden absolute inset-0 overflow-y-auto p-6">
+                <div class="flex flex-col items-center text-center space-y-6">
+                    <div class="w-16 h-16 bg-stone-100 rounded-2xl flex items-center justify-center">
+                        <i data-lucide="star" class="w-8 h-8 text-amber-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-art font-bold text-stone-800 text-xl">Cảm ơn bạn! 🍵</h3>
+                        <p class="text-sm text-stone-500 mt-2 leading-relaxed">
+                            Bạn hài lòng với sự hỗ trợ của chúng tôi không?
+                        </p>
+                    </div>
+
+                    {# Star rating #}
+                    <div id="sc-stars" class="flex gap-2.5">
+                        {% for i in "12345" %}
+                        <button type="button"
+                            class="sc-star text-3xl text-stone-300 hover:text-amber-400 transition-all hover:scale-110"
+                            data-star="{{ forloop.counter }}"
+                            onclick="SupportChat.selectStar({{ forloop.counter }})">
+                            ★
+                        </button>
+                        {% endfor %}
+                    </div>
+                    <p id="sc-star-hint" class="text-xs text-stone-400">Chạm vào ngôi sao để đánh giá</p>
+
+                    {# Comment textarea #}
+                    <div class="w-full">
+                        <textarea id="sc-rating-comment" rows="3" maxlength="1000"
+                            class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3
+                                   focus:outline-none focus:ring-2 focus:ring-stone-300/40 focus:bg-white
+                                   text-sm text-stone-700 placeholder:text-stone-400 resize-none transition-all text-center"
+                            placeholder="Nhận xét của bạn (tùy chọn)..."></textarea>
+                    </div>
+
+                    <div class="w-full space-y-2">
+                        <button id="sc-rating-submit" onclick="SupportChat.submitRating()" disabled
+                            class="w-full py-3 px-6 bg-stone-800 hover:bg-stone-700 text-white
+                                   rounded-xl font-semibold text-sm transition-all
+                                   disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]">
+                            Gửi đánh giá
+                        </button>
+                        <button onclick="SupportChat.skipRating()"
+                            class="w-full py-2 text-sm text-stone-400 hover:text-stone-600 transition-colors">
+                            Bỏ qua
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {# --- View: THANK YOU ------------------------------------ #}
+            <div id="sc-view-thankyou" class="sc-view hidden absolute inset-0 overflow-y-auto p-6">
+                <div class="flex flex-col items-center justify-center h-full text-center space-y-4">
+                    <div class="w-20 h-20 bg-green-50 rounded-3xl flex items-center justify-center">
+                        <i data-lucide="check-circle" class="w-10 h-10 text-green-500"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-art font-bold text-stone-800 text-xl">Cảm ơn bạn rất nhiều!</h3>
+                        <p class="text-sm text-stone-500 mt-2 leading-relaxed">
+                            Đánh giá của bạn giúp chúng tôi phục vụ tốt hơn mỗi ngày.
+                        </p>
+                    </div>
+                    <div class="text-3xl animate-bounce">🍃</div>
+                    <p class="text-xs text-stone-400">Tự động quay về menu sau 3 giây...</p>
+                </div>
+            </div>
+
+            {# --- View: OFFLINE ------------------------------------- #}
+            <div id="sc-view-offline" class="sc-view hidden absolute inset-0 overflow-y-auto p-5">
+                <div class="text-center py-4">
+                    <div class="w-14 h-14 bg-stone-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                        <i data-lucide="moon" class="w-7 h-7 text-stone-400"></i>
+                    </div>
+                    <h3 class="font-art font-bold text-stone-700 text-lg">Ngoài giờ hỗ trợ</h3>
+                    <p class="text-sm text-stone-500 mt-1.5 leading-relaxed">
+                        Đội ngũ hỗ trợ làm việc từ 8:00–22:00 hàng ngày.
+                    </p>
+                </div>
+
+                <div class="mt-5 space-y-4">
+                    <p class="text-sm font-medium text-stone-700">Để lại tin nhắn, chúng tôi sẽ phản hồi sớm nhất:</p>
+
+                    <form onsubmit="SupportChat.submitOfflineMsg(event)" class="space-y-3">
+                        {% if not user.is_authenticated %}
+                        <input type="email" id="sc-offline-email" required
+                            class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3
+                                   focus:outline-none focus:ring-2 focus:ring-stone-300/40 text-sm transition-all"
+                            placeholder="Email của bạn">
+                        {% endif %}
+                        <textarea id="sc-offline-msg" rows="4" required maxlength="2000"
+                            class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3
+                                   focus:outline-none focus:ring-2 focus:ring-stone-300/40 text-sm resize-none transition-all"
+                            placeholder="Mô tả vấn đề bạn cần hỗ trợ..."></textarea>
+                        <button type="submit"
+                            class="w-full py-3 bg-stone-800 hover:bg-stone-700 text-white rounded-xl font-semibold text-sm transition-all active:scale-[0.98]">
+                            Gửi tin nhắn
+                        </button>
+                    </form>
+
+                    <div class="relative">
+                        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-stone-200"></div></div>
+                        <div class="relative flex justify-center text-xs"><span class="bg-white px-3 text-stone-400">hoặc</span></div>
+                    </div>
+
+                    <button onclick="SupportChat.close(); document.getElementById('chat-bubble').click();"
+                        class="w-full flex items-center justify-center gap-2 py-3 bg-emerald-50 hover:bg-emerald-100
+                               text-emerald-700 rounded-xl font-medium text-sm transition-all border border-emerald-200">
+                        <i data-lucide="leaf" class="w-4 h-4"></i>
+                        Hỏi AI Advisor ngay
+                    </button>
+                </div>
+            </div>
+
+        </div>{# /sc-content #}
+
+        {# Footer branding #}
+        <div class="px-5 py-2.5 bg-stone-50 border-t border-stone-100 flex items-center justify-between shrink-0">
+            <span class="text-[10px] text-stone-400 font-medium">TeaZen Support</span>
+            <span id="sc-ticket-id-display" class="hidden text-[10px] text-stone-400">Ticket #<span id="sc-ticket-num"></span></span>
+        </div>
+    </div>
+
+    {# ── BUBBLE BUTTON ────────────────────────────────────────── #}
+    <button id="sc-bubble"
+        class="fixed bottom-6 left-6
+               lg:bottom-6 lg:left-6
+               w-14 h-14 sm:w-16 sm:h-16
+               bg-stone-800 hover:bg-stone-700
+               shadow-[0_4px_20px_rgba(28,25,23,0.35)]
+               hover:shadow-[0_4px_28px_rgba(28,25,23,0.5)]
+               rounded-full
+               flex items-center justify-center
+               transition-all duration-300 hover:scale-105
+               group
+               z-[999]"
+        aria-label="Hỗ trợ khách hàng"
+        title="Hỗ trợ khách hàng">
+        {# Glow #}
+        <div class="absolute inset-0 rounded-full bg-stone-600 blur-md opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
+        {# Icons: default = headphones, when open = x #}
+        <i id="sc-bubble-icon-default" data-lucide="headphones"
+            class="w-7 h-7 text-white relative z-10 transition-all duration-300 group-hover:scale-90"></i>
+        <i id="sc-bubble-icon-open" data-lucide="x"
+            class="w-7 h-7 text-white relative z-10 transition-all duration-300 hidden"></i>
+        {# Unread notification dot #}
+        <div id="sc-unread-dot"
+            class="hidden absolute top-0.5 right-0.5 w-4 h-4 bg-amber-500 border-2 border-white rounded-full">
+        </div>
+    </button>
+</div>
+
+{# ── SUPPORT CHAT JAVASCRIPT ───────────────────────────────────────────── #}
+
+{# Pass Django context to JS #}
+<script>
+window.SC_CONFIG = {
+    isAuthenticated: {{ user.is_authenticated|yesno:"true,false" }},
+    userName: "{{ user.get_full_name|default:user.username|default:'' }}",
+    userEmail: "{{ user.email|default:'' }}",
+    csrfToken: document.querySelector('meta[name="csrf-token"]')?.content || '',
+    categories: [
+        {% for val, label in support_categories %}
+        { value: "{{ val }}", label: "{{ label }}" },
+        {% endfor %}
+    ],
+    categoryEmojis: {
+        'order': '📦', 'payment': '💳', 'return': '🔄',
+        'product': '🫖', 'shipping': '🚚', 'account': '👤', 'other': '💬'
+    },
+    categoryStarHints: {
+        1: '😞 Rất không hài lòng', 2: '😐 Không hài lòng',
+        3: '🙂 Tạm ổn', 4: '😊 Hài lòng', 5: '🤩 Rất hài lòng!'
+    },
+};
+</script>
+
+<script>
+(function () {
+'use strict';
+
+const SupportChat = window.SupportChat = {
+    // State
+    isOpen: false,
+    currentView: null,
+    ticketId: null,
+    ticketStatus: null,
+    selectedCategory: null,
+    selectedCategoryLabel: null,
+    selectedRating: 0,
+    selectedFile: null,
+    pollInterval: null,
+    bgPollInterval: null,
+    lastMessageTimestamp: null,
+    waitingAnimTimeout: null,
+    isSending: false,
+    hasUnread: false,
+
+    // ── INIT ──────────────────────────────────────────────────────
+    init() {
+        // Render category emojis
+        document.querySelectorAll('[data-cat-emoji]').forEach(el => {
+            el.textContent = SC_CONFIG.categoryEmojis[el.dataset.catEmoji] || '💬';
+        });
+
+        // Load from localStorage
+        const savedTicketId = localStorage.getItem('sc_ticket_id');
+        const savedTicketStatus = localStorage.getItem('sc_ticket_status');
+        if (savedTicketId) {
+            this.ticketId = parseInt(savedTicketId);
+            this.ticketStatus = savedTicketStatus;
+            // Show banner to resume chat
+            document.getElementById('sc-open-ticket-banner').classList.remove('hidden');
+            const ticketInfo = document.getElementById('sc-open-ticket-info');
+            if (ticketInfo) ticketInfo.textContent = `Ticket #${savedTicketId} - ${savedTicketStatus || 'Đang xử lý'}`;
+        }
+
+        // Bind events
+        document.getElementById('sc-bubble').addEventListener('click', () => this.toggle());
+        document.getElementById('sc-close-btn').addEventListener('click', () => this.close());
+        document.getElementById('sc-back-btn').addEventListener('click', () => this.showView('home'));
+        document.getElementById('sc-chat-form').addEventListener('submit', (e) => this.sendMessage(e));
+        document.getElementById('sc-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.getElementById('sc-chat-form').dispatchEvent(new Event('submit')); }
+        });
+        document.getElementById('sc-input').addEventListener('input', (e) => {
+            document.getElementById('sc-send-btn').disabled = e.target.value.trim().length === 0 && !this.selectedFile;
+        });
+
+        // Fetch initial status (for background unread check)
+        this._fetchStatus();
+
+        // Background polling (every 15s) to detect new messages while widget is closed
+        this.bgPollInterval = setInterval(() => this._bgCheckUnread(), 15000);
+
+        // Set up mobile: on mobile, 2 bubbles stack on right side
+        this._applyMobileLayout();
+        window.addEventListener('resize', () => this._applyMobileLayout());
+
+        lucide.createIcons();
+    },
+
+    // ── MOBILE LAYOUT ─────────────────────────────────────────────
+    _applyMobileLayout() {
+        const bubble = document.getElementById('sc-bubble');
+        const win = document.getElementById('sc-window');
+        if (window.innerWidth < 640) {
+            // On mobile: position above AI bubble
+            bubble.style.bottom = '6rem'; // above AI bubble (which is bottom-6 = 1.5rem + 4rem height)
+            bubble.style.left = 'auto';
+            bubble.style.right = '1.5rem';
+            bubble.style.width = '3.25rem';
+            bubble.style.height = '3.25rem';
+            win.style.bottom = '11rem';
+            win.style.left = '0.75rem';
+            win.style.right = '0.75rem';
+            win.style.width = 'calc(100vw - 1.5rem)';
+        } else {
+            bubble.style.bottom = '';
+            bubble.style.left = '';
+            bubble.style.right = '';
+            bubble.style.width = '';
+            bubble.style.height = '';
+            win.style.bottom = '';
+            win.style.left = '';
+            win.style.right = '';
+            win.style.width = '';
+        }
+    },
+
+    // ── OPEN / CLOSE ──────────────────────────────────────────────
+    toggle() {
+        this.isOpen ? this.close() : this.open();
+    },
+
+    open() {
+        if (this.isOpen) return;
+        this.isOpen = true;
+        const win = document.getElementById('sc-window');
+        const iconDefault = document.getElementById('sc-bubble-icon-default');
+        const iconOpen = document.getElementById('sc-bubble-icon-open');
+
+        win.classList.remove('hidden');
+        iconDefault.classList.add('hidden');
+        iconOpen.classList.remove('hidden');
+        document.getElementById('sc-unread-dot').classList.add('hidden');
+        this.hasUnread = false;
+
+        // On mobile: close AI chatbot if open
+        if (window.innerWidth < 640) {
+            const aiWin = document.getElementById('chat-window');
+            if (aiWin && !aiWin.classList.contains('hidden')) {
+                document.getElementById('close-chat')?.click();
+            }
+        }
+
+        requestAnimationFrame(() => {
+            win.classList.remove('scale-95', 'opacity-0');
+            win.classList.add('scale-100', 'opacity-100');
+        });
+
+        // Load status then decide view
+        this._fetchStatus(true);
+        clearInterval(this.bgPollInterval);
+    },
+
+    close() {
+        if (!this.isOpen) return;
+        this.isOpen = false;
+        const win = document.getElementById('sc-window');
+        const iconDefault = document.getElementById('sc-bubble-icon-default');
+        const iconOpen = document.getElementById('sc-bubble-icon-open');
+
+        win.classList.remove('scale-100', 'opacity-100');
+        win.classList.add('scale-95', 'opacity-0');
+        iconDefault.classList.remove('hidden');
+        iconOpen.classList.add('hidden');
+
+        setTimeout(() => win.classList.add('hidden'), 300);
+        this._stopPolling();
+
+        // Restart background polling
+        this.bgPollInterval = setInterval(() => this._bgCheckUnread(), 15000);
+    },
+
+    // ── VIEWS ─────────────────────────────────────────────────────
+    showView(viewName) {
+        document.querySelectorAll('.sc-view').forEach(v => v.classList.add('hidden'));
+        const el = document.getElementById(`sc-view-${viewName}`);
+        if (el) el.classList.remove('hidden');
+        this.currentView = viewName;
+
+        // Update header context
+        const backBtn = document.getElementById('sc-back-btn');
+        const titleEl = document.getElementById('sc-header-title');
+        const subtitleEl = document.getElementById('sc-header-subtitle');
+        const ticketDisplay = document.getElementById('sc-ticket-id-display');
+
+        if (viewName === 'home') {
+            backBtn.classList.add('hidden');
+            titleEl.textContent = 'Hỗ trợ khách hàng';
+            subtitleEl.textContent = 'Sẵn sàng hỗ trợ bạn';
+            ticketDisplay.classList.add('hidden');
+            document.getElementById('sc-resolved-bar').classList.add('hidden');
+        } else if (viewName === 'form') {
+            backBtn.classList.remove('hidden');
+            titleEl.textContent = 'Bắt đầu hỗ trợ';
+            subtitleEl.textContent = this.selectedCategoryLabel || 'Hỗ trợ chung';
+        } else if (viewName === 'waiting') {
+            backBtn.classList.add('hidden');
+            titleEl.textContent = 'Đang kết nối...';
+            subtitleEl.textContent = 'Chờ nhân viên tham gia';
+            if (this.ticketId) {
+                ticketDisplay.classList.remove('hidden');
+                document.getElementById('sc-ticket-num').textContent = this.ticketId;
+            }
+        } else if (viewName === 'chat') {
+            backBtn.classList.add('hidden');
+            titleEl.textContent = 'Hỗ trợ khách hàng';
+            subtitleEl.textContent = 'Đang hỗ trợ';
+            if (this.ticketId) {
+                ticketDisplay.classList.remove('hidden');
+                document.getElementById('sc-ticket-num').textContent = this.ticketId;
+            }
+        } else if (viewName === 'rating' || viewName === 'thankyou') {
+            backBtn.classList.add('hidden');
+            titleEl.textContent = viewName === 'rating' ? 'Đánh giá' : 'Cảm ơn';
+            subtitleEl.textContent = 'Phản hồi của bạn';
+            ticketDisplay.classList.add('hidden');
+        } else if (viewName === 'offline') {
+            backBtn.classList.remove('hidden');
+            titleEl.textContent = 'Ngoài giờ hỗ trợ';
+            subtitleEl.textContent = '8:00 – 22:00 hàng ngày';
+        }
+
+        lucide.createIcons();
+    },
+
+    // ── HOME LOGIC ────────────────────────────────────────────────
+    _fetchStatus(afterOpen = false) {
+        fetch('/api/support/status/')
+            .then(r => r.json())
+            .then(data => {
+                this._updateAgentStatus(data);
+                if (afterOpen) {
+                    if (data.has_open_ticket && data.ticket_id) {
+                        this.ticketId = data.ticket_id;
+                        this.ticketStatus = data.ticket_status;
+                        this._saveTicket();
+                        this._showOpenTicketBanner();
+                        if (data.ticket_status === 'assigned') {
+                            this.resumeTicket();
+                        } else {
+                            this.showView('home');
+                        }
+                    } else {
+                        this.ticketId = null;
+                        this.ticketStatus = null;
+                        this._clearTicket();
+                        this.showView('home');
+                    }
+                }
+            })
+            .catch(() => {
+                if (afterOpen) this.showView('home');
+            });
+    },
+
+    _updateAgentStatus(data) {
+        const dot = document.getElementById('sc-agent-status-dot');
+        const text = document.getElementById('sc-agent-status-text');
+        const waitBadge = document.getElementById('sc-wait-badge');
+
+        if (!data.is_business_hours) {
+            dot.className = 'w-2.5 h-2.5 rounded-full bg-stone-400 shrink-0';
+            text.textContent = 'Ngoài giờ hỗ trợ (8:00–22:00)';
+            document.getElementById('sc-status-dot').className = 'absolute bottom-0 right-0 w-3 h-3 bg-stone-400 border-2 border-stone-800 rounded-full';
+            waitBadge.classList.add('hidden');
+        } else if (data.agents_online === 0) {
+            dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0';
+            text.textContent = 'Tất cả nhân viên đang bận';
+            document.getElementById('sc-status-dot').className = 'absolute bottom-0 right-0 w-3 h-3 bg-amber-400 border-2 border-stone-800 rounded-full';
+            waitBadge.textContent = 'Sẽ trả lời sớm';
+            waitBadge.classList.remove('hidden');
+        } else {
+            const count = data.agents_online;
+            dot.className = 'w-2.5 h-2.5 rounded-full bg-green-400 shrink-0 animate-pulse';
+            text.textContent = `${count} nhân viên đang trực`;
+            document.getElementById('sc-status-dot').className = 'absolute bottom-0 right-0 w-3 h-3 bg-green-400 border-2 border-stone-800 rounded-full';
+            if (data.estimated_wait_minutes) {
+                waitBadge.textContent = `~${data.estimated_wait_minutes} phút`;
+                waitBadge.classList.remove('hidden');
+            } else {
+                waitBadge.classList.add('hidden');
+            }
+        }
+    },
+
+    _showOpenTicketBanner() {
+        const banner = document.getElementById('sc-open-ticket-banner');
+        const info = document.getElementById('sc-open-ticket-info');
+        banner.classList.remove('hidden');
+        const statusLabel = { open: 'Đang chờ', waiting: 'Chờ nhân viên', assigned: 'Đang hỗ trợ' };
+        info.textContent = `Ticket #${this.ticketId} · ${statusLabel[this.ticketStatus] || 'Đang mở'}`;
+    },
+
+    // ── CATEGORY SELECT → SHOW FORM ───────────────────────────────
+    selectCategory(value, label) {
+        this.selectedCategory = value;
+        this.selectedCategoryLabel = label;
+
+        // Update form category display
+        document.getElementById('sc-form-cat-emoji').textContent = SC_CONFIG.categoryEmojis[value] || '💬';
+        document.getElementById('sc-form-cat-label').textContent = label;
+
+        // If logged in and has good enough info → go straight to "quick start"
+        // No pre-chat form for logged-in users; just show form with message textarea
+        this.showView('form');
+        setTimeout(() => document.getElementById('sc-field-message')?.focus(), 50);
+    },
+
+    // ── PRE-CHAT FORM ─────────────────────────────────────────────
+    updateMsgCounter(ta) {
+        document.getElementById('sc-msg-counter').textContent = `${ta.value.length}/2000`;
+        const err = document.getElementById('sc-msg-error');
+        if (ta.value.trim().length < 10 && ta.value.length > 0) {
+            err.classList.remove('hidden');
+        } else {
+            err.classList.add('hidden');
+        }
+    },
+
+    async submitPreChat(e) {
+        e.preventDefault();
+        const submitBtn = document.getElementById('sc-form-submit');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="inline-block animate-spin mr-2">⟳</span>Đang gửi...';
+
+        const message = document.getElementById('sc-field-message')?.value.trim();
+        if (!message || message.length < 10) {
+            document.getElementById('sc-msg-error').classList.remove('hidden');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i data-lucide="send" class="w-4 h-4"></i> Gửi yêu cầu hỗ trợ';
+            lucide.createIcons();
+            return;
+        }
+
+        const payload = {
+            category: this.selectedCategory || 'other',
+            message: message,
+        };
+
+        if (!SC_CONFIG.isAuthenticated) {
+            const name = document.getElementById('sc-field-name')?.value.trim();
+            const email = document.getElementById('sc-field-email')?.value.trim();
+            if (!name || !email) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i data-lucide="send" class="w-4 h-4"></i> Gửi yêu cầu hỗ trợ';
+                lucide.createIcons();
+                return;
+            }
+            // Validate email
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                document.getElementById('sc-email-error').classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i data-lucide="send" class="w-4 h-4"></i> Gửi yêu cầu hỗ trợ';
+                lucide.createIcons();
+                return;
+            }
+            payload.name = name;
+            payload.email = email;
+        }
+
+        try {
+            const res = await fetch('/api/support/tickets/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': SC_CONFIG.csrfToken },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                this.ticketId = data.ticket_id;
+                this.ticketStatus = data.status;
+                this._saveTicket();
+                document.getElementById('sc-ticket-id-display').classList.remove('hidden');
+                document.getElementById('sc-ticket-num').textContent = this.ticketId;
+
+                // Show waiting view with initial messages
+                this.showView('waiting');
+                const msgContainer = document.getElementById('sc-messages-waiting');
+                msgContainer.innerHTML = '';
+                data.messages.forEach(m => {
+                    msgContainer.appendChild(this._buildMessageEl(m));
+                });
+                if (data.messages.length > 0) {
+                    this.lastMessageTimestamp = data.messages[data.messages.length - 1].created_at;
+                }
+
+                // Start polling to detect agent join
+                this._startPolling('waiting');
+            } else {
+                // Handle conflict (already has open ticket)
+                if (res.status === 409 && data.ticket_id) {
+                    this.ticketId = data.ticket_id;
+                    this._saveTicket();
+                    this.resumeTicket();
+                } else {
+                    this._showInlineError(data.error || 'Có lỗi xảy ra. Vui lòng thử lại.');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i data-lucide="send" class="w-4 h-4"></i> Gửi yêu cầu hỗ trợ';
+                    lucide.createIcons();
+                }
+            }
+        } catch (err) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i data-lucide="send" class="w-4 h-4"></i> Gửi yêu cầu hỗ trợ';
+            lucide.createIcons();
+            this._showInlineError('Không thể kết nối. Vui lòng kiểm tra mạng và thử lại.');
+        }
+    },
+
+    // ── RESUME EXISTING CHAT ──────────────────────────────────────
+    async resumeTicket() {
+        if (!this.ticketId) return;
+        try {
+            const res = await fetch(`/api/support/tickets/${this.ticketId}/messages/`);
+            if (!res.ok) {
+                // Ticket not accessible → clear and go home
+                this._clearTicket();
+                this.showView('home');
+                return;
+            }
+            const data = await res.json();
+            this.ticketStatus = data.ticket_status;
+
+            const isActiveChat = ['open', 'waiting', 'assigned'].includes(data.ticket_status);
+            const isResolved = data.ticket_status === 'resolved';
+
+            if (data.ticket_status === 'waiting' || data.ticket_status === 'open') {
+                this.showView('waiting');
+                const msgContainer = document.getElementById('sc-messages-waiting');
+                msgContainer.innerHTML = '';
+                data.messages.forEach(m => msgContainer.appendChild(this._buildMessageEl(m)));
+                this._startPolling('waiting');
+            } else if (data.ticket_status === 'assigned') {
+                this.showView('chat');
+                this._loadMessagesIntoChat(data);
+                this._updateAgentInfoBar(data.agent_info);
+                this._startPolling('active');
+            } else if (data.ticket_status === 'resolved') {
+                this.showView('chat');
+                this._loadMessagesIntoChat(data);
+                document.getElementById('sc-resolved-bar').classList.remove('hidden');
+                document.getElementById('sc-input-area').classList.add('hidden');
+                // Check if already rated
+                try {
+                    const ratingRes = await fetch(`/api/support/tickets/${this.ticketId}/messages/`);
+                } catch {}
+                setTimeout(() => this.showView('rating'), 1500);
+            } else {
+                // closed → go home
+                this._clearTicket();
+                this.showView('home');
+            }
+
+            if (data.messages.length > 0) {
+                this.lastMessageTimestamp = data.messages[data.messages.length - 1].created_at;
+            }
+        } catch (e) {
+            this.showView('home');
+        }
+    },
+
+    _loadMessagesIntoChat(data) {
+        const container = document.getElementById('sc-messages');
+        container.innerHTML = '';
+        (data.messages || []).forEach(m => container.appendChild(this._buildMessageEl(m)));
+        container.scrollTop = container.scrollHeight;
+        if (data.messages?.length > 0) {
+            this.lastMessageTimestamp = data.messages[data.messages.length - 1].created_at;
+        }
+        lucide.createIcons();
+    },
+
+    _updateAgentInfoBar(agentInfo) {
+        if (!agentInfo) return;
+        const titleEl = document.getElementById('sc-header-title');
+        const subtitleEl = document.getElementById('sc-header-subtitle');
+        titleEl.textContent = `${agentInfo.name}`;
+        subtitleEl.textContent = '● Đang hỗ trợ bạn';
+        const avatarEl = document.getElementById('sc-header-avatar');
+        if (agentInfo.avatar) {
+            avatarEl.innerHTML = `<img src="${agentInfo.avatar}" class="w-full h-full object-cover rounded-full">`;
+        } else {
+            const initials = agentInfo.name.charAt(0).toUpperCase();
+            avatarEl.innerHTML = `<span class="text-sm font-bold text-white">${initials}</span>`;
+        }
+    },
+
+    // ── SEND MESSAGE ──────────────────────────────────────────────
+    async sendMessage(e) {
+        e.preventDefault();
+        if (this.isSending) return;
+
+        const input = document.getElementById('sc-input');
+        const content = input.value.trim();
+        if (!content && !this.selectedFile) return;
+
+        this.isSending = true;
+        const sendBtn = document.getElementById('sc-send-btn');
+        sendBtn.disabled = true;
+
+        // Optimistic: show message immediately
+        const tempId = 'temp_' + Date.now();
+        const now = new Date().toISOString();
+        const tempMsg = {
+            id: tempId, sender_type: 'customer',
+            content: content, created_at: now, is_read: false, attachments: []
+        };
+        const msgEl = this._buildMessageEl(tempMsg, true);
+        msgEl.id = `msg-${tempId}`;
+        document.getElementById('sc-messages').appendChild(msgEl);
+        document.getElementById('sc-messages').scrollTop = 99999;
+
+        input.value = '';
+        input.style.height = 'auto';
+        sendBtn.disabled = true;
+
+        const clientMsgId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        try {
+            // Upload file first if any
+            let pendingFile = this.selectedFile;
+            this.clearFile();
+
+            const res = await fetch(`/api/support/tickets/${this.ticketId}/send/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': SC_CONFIG.csrfToken },
+                body: JSON.stringify({ content, client_msg_id: clientMsgId })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                // Replace temp message with real one
+                const realMsgEl = this._buildMessageEl(data.message);
+                const tempEl = document.getElementById(`msg-${tempId}`);
+                if (tempEl) tempEl.replaceWith(realMsgEl);
+                this.lastMessageTimestamp = data.message.created_at;
+
+                // Upload file if any
+                if (pendingFile) {
+                    this._uploadFile(pendingFile, data.message.id);
+                }
+            } else {
+                // Mark as failed
+                const tempEl = document.getElementById(`msg-${tempId}`);
+                if (tempEl) {
+                    tempEl.querySelector('.sc-msg-bubble')?.classList.add('opacity-50');
+                    tempEl.insertAdjacentHTML('beforeend', `
+                        <div class="text-[10px] text-red-400 text-right mt-1">
+                            Gửi thất bại ·
+                            <button class="underline" onclick="SupportChat._retryMsg('${content}', '${tempId}')">Thử lại</button>
+                        </div>`);
+                }
+            }
+        } catch {
+            const tempEl = document.getElementById(`msg-${tempId}`);
+            if (tempEl) tempEl.querySelector('.sc-msg-bubble')?.classList.add('opacity-50');
+        } finally {
+            this.isSending = false;
+            lucide.createIcons();
+        }
+    },
+
+    // ── FILE HANDLING ─────────────────────────────────────────────
+    onFileSelect(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const maxSize = file.type === 'application/pdf' ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+        if (file.size > maxSize) {
+            alert(`File quá lớn. Tối đa ${maxSize / (1024 * 1024)}MB.`);
+            input.value = '';
+            return;
+        }
+
+        this.selectedFile = file;
+        document.getElementById('sc-file-preview').classList.remove('hidden');
+        document.getElementById('sc-file-name').textContent = file.name;
+        document.getElementById('sc-file-size').textContent = (file.size / 1024).toFixed(0) + ' KB';
+        document.getElementById('sc-send-btn').disabled = false;
+
+        // Thumb preview for images
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('sc-file-thumb').innerHTML =
+                    `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+            };
+            reader.readAsDataURL(file);
+        }
+        lucide.createIcons();
+    },
+
+    clearFile() {
+        this.selectedFile = null;
+        document.getElementById('sc-file-preview').classList.add('hidden');
+        document.getElementById('sc-file-input').value = '';
+        const input = document.getElementById('sc-input');
+        document.getElementById('sc-send-btn').disabled = input.value.trim().length === 0;
+        document.getElementById('sc-file-thumb').innerHTML = `<i data-lucide="file" class="w-5 h-5 text-stone-400"></i>`;
+        lucide.createIcons();
+    },
+
+    async _uploadFile(file, messageId) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('message_id', messageId);
+        try {
+            const res = await fetch(`/api/support/tickets/${this.ticketId}/upload/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': SC_CONFIG.csrfToken },
+                body: formData
+            });
+            if (res.ok) {
+                const data = await res.json();
+                // File uploaded — refresh messages to show attachment
+                this._pollMessages();
+            }
+        } catch {}
+    },
+
+    // ── POLLING ───────────────────────────────────────────────────
+    _startPolling(mode) {
+        this._stopPolling();
+        const interval = mode === 'active' ? 3000 : 5000;
+        this.pollInterval = setInterval(() => this._pollMessages(), interval);
+
+        // Adaptive: slow down if user idle > 2 minutes
+        let lastActivity = Date.now();
+        const activityReset = () => { lastActivity = Date.now(); };
+        document.addEventListener('mousemove', activityReset, { passive: true });
+        document.addEventListener('keydown', activityReset, { passive: true });
+
+        this._adaptivePollTimeout = setInterval(() => {
+            if (Date.now() - lastActivity > 120000 && this.pollInterval) {
+                clearInterval(this.pollInterval);
+                this.pollInterval = setInterval(() => this._pollMessages(), 8000);
+            }
+        }, 30000);
+    },
+
+    _stopPolling() {
+        if (this.pollInterval) { clearInterval(this.pollInterval); this.pollInterval = null; }
+        if (this._adaptivePollTimeout) { clearInterval(this._adaptivePollTimeout); this._adaptivePollTimeout = null; }
+    },
+
+    async _pollMessages() {
+        if (!this.ticketId) return;
+        try {
+            let url = `/api/support/tickets/${this.ticketId}/messages/`;
+            if (this.lastMessageTimestamp) url += `?after=${encodeURIComponent(this.lastMessageTimestamp)}`;
+
+            const res = await fetch(url);
+            if (!res.ok) return;
+            const data = await res.json();
+
+            // Update ticket status
+            const prevStatus = this.ticketStatus;
+            this.ticketStatus = data.ticket_status;
+            this._saveTicket();
+
+            // If agent joined (waiting → assigned)
+            if (prevStatus === 'waiting' && data.ticket_status === 'assigned') {
+                this.showView('chat');
+                this._updateAgentInfoBar(data.agent_info);
+                if (data.messages.length > 0) {
+                    data.messages.forEach(m => {
+                        document.getElementById('sc-messages').appendChild(this._buildMessageEl(m));
+                    });
+                    document.getElementById('sc-messages').scrollTop = 99999;
+                    this.lastMessageTimestamp = data.messages[data.messages.length - 1].created_at;
+                }
+                this._stopPolling();
+                this._startPolling('active');
+                lucide.createIcons();
+                return;
+            }
+
+            // Normal: append new messages
+            if (data.messages.length > 0) {
+                const container = this.currentView === 'waiting'
+                    ? document.getElementById('sc-messages-waiting')
+                    : document.getElementById('sc-messages');
+
+                if (container) {
+                    data.messages.forEach(m => container.appendChild(this._buildMessageEl(m)));
+                    container.scrollTop = container.scrollHeight;
+                    this.lastMessageTimestamp = data.messages[data.messages.length - 1].created_at;
+                }
+                lucide.createIcons();
+            }
+
+            // Typing indicator
+            const typingEl = document.getElementById('sc-typing-indicator');
+            if (data.agent_typing) {
+                typingEl.classList.remove('hidden');
+                if (data.agent_info) {
+                    document.getElementById('sc-typing-name').textContent = `${data.agent_info.name} đang nhập...`;
+                }
+            } else {
+                typingEl.classList.add('hidden');
+            }
+
+            // Ticket resolved
+            if (data.ticket_status === 'resolved' && prevStatus !== 'resolved') {
+                this._stopPolling();
+                document.getElementById('sc-resolved-bar').classList.remove('hidden');
+                document.getElementById('sc-input-area').classList.add('hidden');
+                setTimeout(() => this.showView('rating'), 2000);
+            }
+
+        } catch {}
+    },
+
+    async _bgCheckUnread() {
+        if (!this.ticketId || this.isOpen) return;
+        try {
+            const url = `/api/support/tickets/${this.ticketId}/messages/${this.lastMessageTimestamp ? '?after=' + encodeURIComponent(this.lastMessageTimestamp) : ''}`;
+            const res = await fetch(url);
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.messages.some(m => m.sender_type !== 'customer')) {
+                this._showUnreadDot();
+            }
+        } catch {}
+    },
+
+    _showUnreadDot() {
+        this.hasUnread = true;
+        document.getElementById('sc-unread-dot').classList.remove('hidden');
+    },
+
+    // ── RATING ────────────────────────────────────────────────────
+    selectStar(n) {
+        this.selectedRating = n;
+        const stars = document.querySelectorAll('.sc-star');
+        stars.forEach((s, i) => {
+            if (i < n) {
+                s.classList.add('text-amber-400');
+                s.classList.remove('text-stone-300');
+            } else {
+                s.classList.remove('text-amber-400');
+                s.classList.add('text-stone-300');
+            }
+        });
+        document.getElementById('sc-star-hint').textContent = SC_CONFIG.categoryStarHints[n] || '';
+        document.getElementById('sc-rating-submit').disabled = false;
+    },
+
+    async submitRating() {
+        if (!this.selectedRating || !this.ticketId) return;
+        const comment = document.getElementById('sc-rating-comment')?.value.trim();
+        try {
+            await fetch(`/api/support/tickets/${this.ticketId}/rate/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': SC_CONFIG.csrfToken },
+                body: JSON.stringify({ rating: this.selectedRating, comment })
+            });
+        } catch {}
+        this._clearTicket();
+        this.showView('thankyou');
+        setTimeout(() => this.showView('home'), 3000);
+    },
+
+    skipRating() {
+        this._clearTicket();
+        this.showView('home');
+    },
+
+    // ── OFFLINE FORM ──────────────────────────────────────────────
+    async submitOfflineMsg(e) {
+        e.preventDefault();
+        const msg = document.getElementById('sc-offline-msg')?.value.trim();
+        const email = document.getElementById('sc-offline-email')?.value.trim();
+
+        const payload = {
+            category: this.selectedCategory || 'other',
+            message: msg,
+        };
+        if (!SC_CONFIG.isAuthenticated && email) {
+            payload.email = email;
+            payload.name = 'Khách hàng';
+        }
+
+        try {
+            const res = await fetch('/api/support/tickets/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': SC_CONFIG.csrfToken },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                const data = await res.json();
+                this.ticketId = data.ticket_id;
+                this._saveTicket();
+                // Show confirmation
+                document.getElementById('sc-view-offline').innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-center p-6 space-y-4">
+                        <div class="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center">
+                            <i data-lucide="check-circle" class="w-8 h-8 text-green-500"></i>
+                        </div>
+                        <h3 class="font-art font-bold text-stone-800 text-lg">Tin nhắn đã gửi!</h3>
+                        <p class="text-sm text-stone-500 leading-relaxed">
+                            Chúng tôi sẽ phản hồi email của bạn vào giờ làm việc tiếp theo.
+                        </p>
+                    </div>`;
+                lucide.createIcons();
+            }
+        } catch {}
+    },
+
+    // ── BUILD MESSAGE ELEMENT ─────────────────────────────────────
+    _buildMessageEl(msg, isOptimistic = false) {
+        const div = document.createElement('div');
+        const time = new Date(msg.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const escapedContent = this._escapeHtml(msg.content);
+        const formattedContent = escapedContent.replace(/\n/g, '<br>');
+
+        if (msg.sender_type === 'customer') {
+            div.className = 'flex justify-end';
+            div.innerHTML = `
+                <div class="flex flex-col items-end gap-1 max-w-[82%]">
+                    <div class="sc-msg-bubble bg-stone-700 text-white rounded-2xl rounded-tr-sm px-4 py-2.5 shadow-sm text-sm leading-relaxed ${isOptimistic ? 'opacity-80' : ''}">
+                        ${formattedContent}
+                    </div>
+                    ${msg.attachments?.length > 0 ? this._buildAttachments(msg.attachments) : ''}
+                    <div class="flex items-center gap-1">
+                        <span class="text-[10px] text-stone-400">${time}</span>
+                        ${!isOptimistic ? `<span class="text-[10px] text-stone-400">${msg.is_read ? '✓✓' : '✓'}</span>` : ''}
+                    </div>
+                </div>`;
+        } else if (msg.sender_type === 'agent') {
+            const avatarHtml = msg.sender_avatar
+                ? `<img src="${msg.sender_avatar}" class="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-0.5">`
+                : `<div class="w-7 h-7 rounded-full bg-stone-600 flex-shrink-0 flex items-center justify-center mt-0.5">
+                       <span class="text-xs font-bold text-white">${(msg.sender_name || 'A').charAt(0)}</span>
+                   </div>`;
+            div.className = 'flex gap-2.5';
+            div.innerHTML = `
+                ${avatarHtml}
+                <div class="flex flex-col gap-1 max-w-[82%]">
+                    <span class="text-[10px] font-semibold text-stone-500 ml-1">${this._escapeHtml(msg.sender_name || 'Nhân viên')}</span>
+                    <div class="bg-white border border-stone-100 rounded-2xl rounded-tl-sm px-4 py-2.5 shadow-sm text-sm text-stone-700 leading-relaxed">
+                        ${formattedContent}
+                    </div>
+                    ${msg.attachments?.length > 0 ? this._buildAttachments(msg.attachments) : ''}
+                    <span class="text-[10px] text-stone-400 ml-1">${time}</span>
+                </div>`;
+        } else if (msg.sender_type === 'bot') {
+            div.className = 'flex gap-2.5';
+            div.innerHTML = `
+                <div class="w-7 h-7 rounded-full bg-stone-100 flex-shrink-0 flex items-center justify-center mt-0.5">
+                    <i data-lucide="bot" class="w-3.5 h-3.5 text-stone-500"></i>
+                </div>
+                <div class="flex flex-col gap-1 max-w-[82%]">
+                    <div class="bg-white border border-stone-100 rounded-2xl rounded-tl-sm px-4 py-2.5 shadow-sm text-sm text-stone-600 leading-relaxed">
+                        ${formattedContent}
+                    </div>
+                    <span class="text-[10px] text-stone-400 ml-1">${time}</span>
+                </div>`;
+        } else {
+            // system message
+            div.className = 'flex justify-center';
+            div.innerHTML = `
+                <div class="flex items-center gap-2 px-4 py-2 bg-stone-100/80 rounded-full">
+                    <span class="text-[11px] text-stone-500">${formattedContent}</span>
+                </div>`;
+        }
+        return div;
+    },
+
+    _buildAttachments(attachments) {
+        return attachments.map(a => {
+            if (a.file_type === 'image') {
+                return `<a href="${a.file_url}" target="_blank" class="block mt-1">
+                    <img src="${a.file_url}" alt="${this._escapeHtml(a.file_name)}"
+                         class="max-w-[200px] rounded-xl border border-stone-200 hover:opacity-90 transition-opacity cursor-pointer">
+                </a>`;
+            } else {
+                const sizeKb = Math.round(a.file_size / 1024);
+                return `<a href="${a.file_url}" target="_blank" download
+                    class="flex items-center gap-2 mt-1 px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl hover:bg-stone-100 transition-colors">
+                    <i data-lucide="file-text" class="w-4 h-4 text-stone-500 shrink-0"></i>
+                    <div class="min-w-0">
+                        <p class="text-xs font-medium text-stone-700 truncate">${this._escapeHtml(a.file_name)}</p>
+                        <p class="text-[10px] text-stone-400">${sizeKb} KB</p>
+                    </div>
+                    <i data-lucide="download" class="w-3.5 h-3.5 text-stone-400 ml-auto shrink-0"></i>
+                </a>`;
+            }
+        }).join('');
+    },
+
+    // ── UTILITIES ─────────────────────────────────────────────────
+    autoResizeInput(ta) {
+        ta.style.height = 'auto';
+        ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
+        document.getElementById('sc-send-btn').disabled = ta.value.trim().length === 0 && !this.selectedFile;
+    },
+
+    _escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"').replace(/'/g,'&#039;');
+    },
+
+    _showInlineError(msg) {
+        const el = document.getElementById('sc-msg-error');
+        if (el) { el.textContent = msg; el.classList.remove('hidden'); }
+    },
+
+    _saveTicket() {
+        if (this.ticketId) {
+            localStorage.setItem('sc_ticket_id', this.ticketId);
+            localStorage.setItem('sc_ticket_status', this.ticketStatus || '');
+        }
+    },
+
+    _clearTicket() {
+        this.ticketId = null;
+        this.ticketStatus = null;
+        this.lastMessageTimestamp = null;
+        localStorage.removeItem('sc_ticket_id');
+        localStorage.removeItem('sc_ticket_status');
+        document.getElementById('sc-open-ticket-banner').classList.add('hidden');
+        document.getElementById('sc-ticket-id-display').classList.add('hidden');
+        document.getElementById('sc-input-area').classList.remove('hidden');
+        document.getElementById('sc-resolved-bar').classList.add('hidden');
+    },
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    SupportChat.init();
+});
+
+})();
+</script>

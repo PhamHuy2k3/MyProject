@@ -241,11 +241,12 @@ def checkout(request):
         profile = request.user.profile
         full_name = profile.get_full_name()
         phone = profile.phone or ''
-        address = profile.address or ''
+        address = profile.get_full_address() or profile.address or ''
     except Exception:
         full_name = request.user.username
         phone = ''
         address = ''
+        profile = None
     
     if request.method == 'POST':
         note = request.POST.get('note', '')
@@ -287,6 +288,26 @@ def checkout(request):
         cart.coupon = None
         cart.save()
         
+        # Send order confirmation email
+        if request.user.email:
+            items_text = '\n'.join(
+                f'  - {item.product.title} x{item.quantity}'
+                for item in order.items.all()
+            )
+            send_mail(
+                f'Xác nhận đơn hàng {order.order_number} - TeaZen',
+                f'Xin chào {request.user.get_full_name() or request.user.username},\n\n'
+                f'Đơn hàng của bạn đã được tạo thành công!\n\n'
+                f'Mã đơn: {order.order_number}\n'
+                f'Sản phẩm:\n{items_text}\n\n'
+                f'Tổng tiền: {total_amount:,.0f}đ\n\n'
+                f'Vui lòng thanh toán để chúng tôi xử lý đơn hàng.\n\n'
+                f'Trân trọng,\nTeaZen',
+                None,
+                [request.user.email],
+                fail_silently=True,
+            )
+
         messages.success(request, 'Đơn hàng đã được tạo!')
         return redirect('payment', order_number=order.order_number)
     
@@ -297,6 +318,7 @@ def checkout(request):
         'full_name': full_name,
         'phone': phone,
         'address': address,
+        'profile': profile,
     })
 
 
@@ -436,6 +458,19 @@ def casso_webhook(request):
             message_text=f'Hệ thống đã xác nhận giao dịch {received:,}đ từ tài khoản của bạn.',
             link=f'/order/{order.order_number}/',
         )
+
+        # Send payment confirmation email
+        if order.user.email:
+            send_mail(
+                f'Thanh toán đơn {order.order_number} thành công! - TeaZen',
+                f'Xin chào {order.user.get_full_name() or order.user.username},\n\n'
+                f'Chúng tôi đã xác nhận thanh toán {received:,}đ cho đơn hàng {order.order_number}.\n\n'
+                f'Đơn hàng của bạn đang được xử lý.\n\n'
+                f'Trân trọng,\nTeaZen',
+                None,
+                [order.user.email],
+                fail_silently=True,
+            )
 
         logger.info(f"✅ Casso auto-confirmed payment for order {order.order_number}")
         matched_count += 1

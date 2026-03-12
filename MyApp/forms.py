@@ -57,11 +57,17 @@ class RegisterForm(UserCreationForm):
 class UserProfileForm(forms.ModelForm):
     class Meta:
         model = UserProfile
-        fields = ['avatar', 'bio', 'phone', 'address']
+        fields = ['avatar', 'bio', 'phone', 'street_address', 'province', 'province_code', 'district', 'district_code', 'ward', 'ward_code']
         widgets = {
             'bio': forms.TextInput(attrs={'class': 'input-field', 'placeholder': ' '}),
             'phone': forms.TextInput(attrs={'class': 'input-field', 'placeholder': ' '}),
-            'address': forms.Textarea(attrs={'class': 'input-field', 'rows': 3, 'placeholder': ' '}),
+            'street_address': forms.TextInput(attrs={'class': 'input-field', 'placeholder': ' '}),
+            'province': forms.HiddenInput(),
+            'province_code': forms.HiddenInput(),
+            'district': forms.HiddenInput(),
+            'district_code': forms.HiddenInput(),
+            'ward': forms.HiddenInput(),
+            'ward_code': forms.HiddenInput(),
             'avatar': forms.FileInput(attrs={'class': 'form-file'}),
         }
 

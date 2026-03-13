@@ -21,7 +21,6 @@ import requests
 import json
 from .utils import *
 
-# ==================== CART VIEWS ====================
 
 def get_or_create_cart(request):
     """Lấy hoặc tạo giỏ hàng cho user hoặc guest"""
@@ -30,6 +29,8 @@ def get_or_create_cart(request):
     else:
         if not request.session.session_key:
             request.session.create()
+        # Đảm bảo session được đánh dấu là modified để lưu cookie cho guest (cần thiết cho messages)
+        request.session.modified = True
         session_key = request.session.session_key
         cart, created = Cart.objects.get_or_create(session_key=session_key)
     return cart
@@ -143,3 +144,52 @@ def apply_coupon(request):
     return redirect('cart')
 
 
+def merge_cart_items(user, session_key):
+    """
+    Chuyển các sản phẩm từ giỏ hàng vãng lai (guest) sang giỏ hàng của user sau khi đăng nhập.
+    """
+    if not session_key:
+        return
+
+    try:
+        # Lấy giỏ hàng vãng lai
+        guest_cart = Cart.objects.get(session_key=session_key, user__isnull=True)
+        # Lấy hoặc tạo giỏ hàng của user
+        user_cart, created = Cart.objects.get_or_create(user=user)
+
+        guest_items = guest_cart.items.all()
+        for g_item in guest_items:
+            # Kiểm tra xem sản phẩm (+ biến thể) đã có trong giỏ hàng user chưa
+            user_item = user_cart.items.filter(
+                product=g_item.product,
+                variation=g_item.variation
+            ).first()
+
+            if user_item:
+                # Nếu có rồi thì cộng dồn số lượng
+                user_item.quantity += g_item.quantity
+                user_item.save()
+                g_item.delete() # Xóa item ở giỏ guest
+            else:
+                # Nếu chưa có thì chuyển item sang giỏ user
+                g_item.cart = user_cart
+                g_item.save()
+
+        # Áp dụng coupon từ giỏ guest sang giỏ user nếu user chưa có coupon
+        if guest_cart.coupon and not user_cart.coupon:
+            if guest_cart.coupon.is_valid:
+                user_cart.coupon = guest_cart.coupon
+                user_cart.save()
+
+        # Xóa giỏ hàng vãng lai sau khi đã merge
+        guest_cart.delete()
+        
+        # Xóa cache badges nếu có
+        cache.delete(f'user_badges_{user.id}')
+        
+    except Cart.DoesNotExist:
+        # Không có giỏ hàng vãng lai thì thôi
+        pass
+    except Exception as e:
+        # Tránh làm crash flow login nếu có lỗi merge
+        print(f"Error merging cart: {e}")

@@ -19,6 +19,7 @@ from MyApp.forms import *
 import requests
 import json
 from .utils import *
+from .cart_views import merge_cart_items
 
 # ==================== AUTH VIEWS ====================
 
@@ -29,8 +30,13 @@ def login_view(request):
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
         if form.is_valid():
+            guest_session_key = request.session.session_key
             user = form.get_user()
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            
+            # Merge guest cart to user cart
+            merge_cart_items(user, guest_session_key)
+            
             messages.success(request, f'Chào mừng {user.username}!')
             next_url = request.GET.get('next', 'index')
             return redirect(next_url)
@@ -47,8 +53,13 @@ def register_view(request):
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
+            guest_session_key = request.session.session_key
             user = form.save()
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            
+            # Merge guest cart to user cart
+            merge_cart_items(user, guest_session_key)
+            
             messages.success(request, 'Đăng ký thành công! Chào mừng bạn đến với TeaZen.')
             return redirect('index')
     else:

@@ -75,7 +75,7 @@ def api_chat_message(request):
     
     # Xây dựng Context lấy từ database (Sản phẩm)
     active_filter = Q(category__isnull=True) | Q(category__is_active=True)
-    products = Product.objects.filter(active_filter, stock_quantity__gt=0)[:20] # Lấy 20 SP còn hàng
+    products = Product.objects.with_available_stock().filter(active_filter, available_stock_value__gt=0)[:20] # Lấy 20 SP còn hàng
     product_context = "Sản phẩm hiện có tại TeaZen:\n"
     for p in products:
         price = f"{p.price:,.0f} VNĐ" if p.price else "Liên hệ"

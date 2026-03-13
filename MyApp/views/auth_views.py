@@ -30,7 +30,7 @@ def login_view(request):
         form = LoginForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
-            login(request, user)
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             messages.success(request, f'Chào mừng {user.username}!')
             next_url = request.GET.get('next', 'index')
             return redirect(next_url)
@@ -48,7 +48,7 @@ def register_view(request):
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             messages.success(request, 'Đăng ký thành công! Chào mừng bạn đến với TeaZen.')
             return redirect('index')
     else:

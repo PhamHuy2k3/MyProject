@@ -1,0 +1,89 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}Phiếu Nhập Kho{% endblock %}
+{% block page_subtitle %}Ghi nhận số lượng hàng thực tế nhập vào hệ thống{% endblock %}
+
+{% block admin_content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-stone-200/50 border border-stone-100 overflow-hidden">
+        <div class="bg-stone-900 p-10 text-white relative">
+            <div class="absolute top-0 right-0 p-10 opacity-10">
+                <i data-lucide="package-plus" class="w-24 h-24"></i>
+            </div>
+            <h3 class="font-art text-3xl font-bold mb-2">Tạo Phiếu Nhập</h3>
+            <p class="text-stone-400 text-sm">Hợp thức hóa việc tăng tồn kho vật lý thông qua chứng từ.</p>
+        </div>
+        
+        <form method="POST" class="p-10 space-y-8">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Product Selection -->
+                <div class="space-y-4">
+                    <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest px-1">Sản Phẩm Cần Nhập</label>
+                    <div class="relative group">
+                        <select name="product" id="id_product" required
+                                class="w-full pl-6 pr-10 py-4 rounded-3xl bg-stone-50 border-2 border-stone-50 focus:border-emerald-500 focus:bg-white transition-all appearance-none text-stone-800 font-bold">
+                            <option value="" disabled selected>Chọn sản phẩm...</option>
+                            {% for product in products %}
+                            <option value="{{ product.id }}" data-variations="{{ product.variations.exists|yesno:'true,false' }}">
+                                {{ product.title }} (Hiện tại: {{ product.physical_stock }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <i data-lucide="chevron-down" class="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400 pointer-events-none group-hover:text-emerald-500 transition-colors"></i>
+                    </div>
+                </div>
+
+                <!-- Quantity -->
+                <div class="space-y-4">
+                    <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest px-1">Số Lượng Nhập</label>
+                    <div class="relative group">
+                        <input type="number" name="quantity" min="1" required placeholder="0"
+                               class="w-full px-6 py-4 rounded-3xl bg-stone-50 border-2 border-stone-50 focus:border-emerald-500 focus:bg-white transition-all text-stone-800 font-bold text-lg">
+                        <span class="absolute right-6 top-1/2 -translate-y-1/2 text-stone-400 font-bold uppercase text-[10px] tracking-widest">Đơn vị</span>
+                    </div>
+                </div>
+
+                <!-- Supplier info (Optional but good for audit) -->
+                <div class="space-y-4">
+                    <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest px-1">Nhà Cung Cấp</label>
+                    <input type="text" name="supplier" placeholder="Tên đơn vị gửi hàng..."
+                           class="w-full px-6 py-4 rounded-3xl bg-stone-50 border-2 border-stone-50 focus:border-emerald-500 focus:bg-white transition-all text-stone-800 font-medium">
+                </div>
+
+                <!-- Note -->
+                <div class="space-y-4">
+                    <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest px-1">Ghi Chú</label>
+                    <input type="text" name="note" placeholder="Lý do nhập, số hóa đơn ngoài..."
+                           class="w-full px-6 py-4 rounded-3xl bg-stone-50 border-2 border-stone-50 focus:border-emerald-500 focus:bg-white transition-all text-stone-800 font-medium">
+                </div>
+            </div>
+
+            <!-- Warning Box -->
+            <div class="p-6 rounded-3xl bg-indigo-50 border border-indigo-100 flex gap-4 items-start">
+                <div class="w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-indigo-500 shadow-sm flex-shrink-0">
+                    <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-indigo-900 text-sm">Hành động này sẽ được ghi vào Sổ Cái</h4>
+                    <p class="text-xs text-indigo-700/70 leading-relaxed mt-1">Việc nhập kho sẽ tăng ngay lập tức số lượng <b>Tồn Vật Lý</b> và <b>Khả Dụng</b> của sản phẩm. Giao dịch này không thể xóa sau khi đã xác nhận.</p>
+                </div>
+            </div>
+
+            <div class="pt-6 border-t border-stone-100 flex items-center justify-between">
+                <a href="{% url 'admin_inventory' %}" class="text-stone-400 hover:text-stone-800 font-bold text-sm flex items-center gap-2 transition-colors">
+                    <i data-lucide="x" class="w-4 h-4"></i> Hủy Bỏ
+                </a>
+                <button type="submit" class="btn-primary py-4 px-10 rounded-full shadow-xl shadow-emerald-200 transition-all hover:scale-105 active:scale-95 text-lg">
+                    Xác Nhận Nhập Kho
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Logic for variations can be added here if needed, simple version for now
+</script>
+{% endblock %}

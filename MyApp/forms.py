@@ -41,6 +41,16 @@ class RegisterForm(UserCreationForm):
         super().__init__(*args, **kwargs)
         self.fields['password1'].widget.attrs.update({'class': 'input-field', 'placeholder': ' '})
         self.fields['password2'].widget.attrs.update({'class': 'input-field', 'placeholder': ' '})
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email:
+            username = email.split('@')[0]
+            if User.objects.filter(username=username).exists():
+                raise forms.ValidationError("Tên người dùng được tạo từ email này (phần trước @) đã tồn tại. Vui lòng sử dụng email khác.")
+            if User.objects.filter(email=email).exists():
+                raise forms.ValidationError("Email này đã được đăng ký.")
+        return email
     
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -51,6 +61,43 @@ class RegisterForm(UserCreationForm):
         user.username = self.cleaned_data['email'].split('@')[0]
         if commit:
             user.save()
+        return user
+
+
+class AdminUserForm(forms.ModelForm):
+    role = forms.ChoiceField(choices=UserProfile.ROLE_CHOICES, widget=forms.Select(attrs={'class': 'form-input'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-input'}), required=False, help_text="Để trống nếu không muốn đổi mật khẩu.")
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'first_name', 'last_name', 'is_active']
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-input'}),
+            'email': forms.EmailInput(attrs={'class': 'form-input'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-input'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-input'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-checkbox h-5 w-5 text-emerald-600 rounded border-stone-300 focus:ring-emerald-500'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields['role'].initial = self.instance.profile.role
+            self.fields['password'].required = False
+        else:
+            self.fields['password'].required = True
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        password = self.cleaned_data.get('password')
+        if password:
+            user.set_password(password)
+        if commit:
+            user.save()
+            # Cập nhật role trong profile
+            role = self.cleaned_data.get('role')
+            user.profile.role = role
+            user.profile.save()
         return user
 
 
@@ -90,7 +137,7 @@ class CategoryForm(forms.ModelForm):
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ['category', 'title', 'slug', 'excerpt', 'image', 'description', 'ingredients', 'brewing_guide', 'price', 'stock_quantity']
+        fields = ['category', 'title', 'slug', 'excerpt', 'image', 'description', 'ingredients', 'brewing_guide', 'price', 'physical_stock']
         widgets = {
             'category': forms.Select(attrs={'class': 'form-input'}),
             'title': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Tên sản phẩm'}),
@@ -100,7 +147,7 @@ class ProductForm(forms.ModelForm):
             'ingredients': forms.Textarea(attrs={'class': 'form-input', 'rows': 3, 'placeholder': 'Thành phần, nguyên liệu...'}),
             'brewing_guide': forms.Textarea(attrs={'class': 'form-input', 'rows': 3, 'placeholder': 'Hướng dẫn pha chế, sử dụng...'}),
             'price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '0'}),
-            'stock_quantity': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '0'}),
+            'physical_stock': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '0'}),
             'image': forms.FileInput(attrs={'class': 'form-file', 'accept': 'image/*'}),
         }
 

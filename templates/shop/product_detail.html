@@ -117,13 +117,13 @@
                 
                 <!-- Inventory Status -->
                 <div>
-                    {% if product.stock_quantity > 10 %}
+                    {% if available_stock > 10 %}
                     <span class="inline-flex items-center gap-1.5 text-sm font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Còn hàng
                     </span>
-                    {% elif product.stock_quantity > 0 %}
+                    {% elif available_stock > 0 %}
                     <span class="inline-flex items-center gap-1.5 text-sm font-bold text-amber-700 bg-amber-50 px-3 py-1.5 rounded-full">
-                        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> Chỉ còn {{ product.stock_quantity }} sản phẩm
+                        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> Chỉ còn {{ available_stock }} sản phẩm
                     </span>
                     {% else %}
                     <span class="inline-flex items-center gap-1.5 text-sm font-bold text-red-700 bg-red-50 px-3 py-1.5 rounded-full">
@@ -141,10 +141,11 @@
                         <label class="cursor-pointer relative">
                             <input type="radio" name="variation_radio" value="{{ var.id }}" class="peer sr-only" 
                                    data-price="{% if var.price %}{{ var.price|floatformat:0 }}{% else %}{{ product.price|floatformat:0 }}{% endif %}"
+                                   data-stock="{{ var.available_stock }}"
                                    {% if forloop.first %}checked{% endif %}>
                             <div class="px-5 py-2 border border-stone-300 rounded-lg text-stone-600 font-bold transition-all peer-checked:border-emerald-600 peer-checked:bg-emerald-50 peer-checked:text-emerald-900 hover:border-emerald-400">
                                 {{ var.title }}
-                                {% if var.stock_quantity <= 0 %}
+                                {% if var.available_stock <= 0 %}
                                 <span class="text-xs text-red-500 ml-1 font-normal block">(Hết hàng)</span>
                                 {% endif %}
                             </div>
@@ -251,7 +252,7 @@
                 </div>
                 
                 <!-- Quantity Selector + Action Buttons -->
-                <form method="POST" action="{% url 'cart_add' product.id %}" id="add-to-cart-form" class="space-y-4 pt-4">
+                <form method="POST" action="{% url 'cart_add' product.id %}" id="add-to-cart-form" class="space-y-4 pt-4" data-product-stock="{{ available_stock }}">
                     {% csrf_token %}
                     <input type="hidden" name="variation_id" id="variation-input" value="{% if product.variations.first %}{{ product.variations.first.id }}{% endif %}">
                     
@@ -260,7 +261,7 @@
                         <p class="font-bold text-sm text-emerald-900 uppercase">Số lượng:</p>
                         <div class="flex items-center border border-stone-300 rounded-lg overflow-hidden">
                             <button type="button" onclick="changeQty(-1)" class="hover-trigger w-11 h-11 flex items-center justify-center text-stone-600 hover:bg-stone-100 transition-colors text-xl font-bold">−</button>
-                            <input type="number" name="quantity" id="qty-input" value="1" min="1" max="{{ product.stock_quantity|default:999 }}"
+                            <input type="number" name="quantity" id="qty-input" value="1" min="1" max="{{ available_stock|default:999 }}"
                                    class="w-14 h-11 text-center border-x border-stone-300 font-bold text-emerald-900 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
                             <button type="button" onclick="changeQty(1)" class="hover-trigger w-11 h-11 flex items-center justify-center text-stone-600 hover:bg-stone-100 transition-colors text-xl font-bold">+</button>
                         </div>
@@ -268,10 +269,10 @@
                     
                     <!-- Buttons -->
                     <div class="flex flex-wrap items-center gap-4">
-                        <button type="submit" {% if product.stock_quantity <= 0 %}disabled{% endif %}
+                        <button type="submit" {% if available_stock <= 0 %}disabled{% endif %}
                            class="hover-trigger flex-1 min-w-[200px] bg-emerald-900 text-white font-bold py-4 px-8 uppercase tracking-widest text-center hover:bg-emerald-800 transition-colors flex items-center justify-center gap-3 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed">
                             <i data-lucide="shopping-bag" class="w-5 h-5"></i>
-                            {% if product.stock_quantity > 0 %}Thêm vào giỏ{% else %}Hết hàng{% endif %}
+                            {% if available_stock > 0 %}Thêm vào giỏ{% else %}Hết hàng{% endif %}
                         </button>
                         
                         {% if user.is_authenticated %}
@@ -306,7 +307,7 @@
             {% endwith %}
         </div>
         <button onclick="document.getElementById('add-to-cart-form').requestSubmit();"
-                {% if product.stock_quantity <= 0 %}disabled{% endif %}
+                {% if available_stock <= 0 %}disabled{% endif %}
                 class="hover-trigger flex-1 bg-emerald-900 text-white font-bold py-3 px-6 uppercase tracking-widest text-center hover:bg-emerald-800 transition-colors flex items-center justify-center gap-2 rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
             <i data-lucide="shopping-bag" class="w-5 h-5"></i>
             Thêm vào giỏ
@@ -750,6 +751,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const radios = document.querySelectorAll('input[name="variation_radio"]');
     const priceDisplay = document.getElementById('product-price-display');
     const variationInput = document.getElementById('variation-input');
+    const qtyInput = document.getElementById('qty-input');
+    const addToCartBtn = document.querySelector('#add-to-cart-form button[type="submit"]');
+    const stickyAddBtn = document.querySelector('#sticky-cta button');
+    const addToCartForm = document.getElementById('add-to-cart-form');
+
+    function applyStockState(stockValue) {
+        if (!qtyInput) return;
+        const stock = parseInt(stockValue, 10);
+        if (!Number.isFinite(stock)) return;
+        qtyInput.max = stock > 0 ? stock : 0;
+        if (qtyInput.value && parseInt(qtyInput.value, 10) > stock) {
+            qtyInput.value = stock > 0 ? stock : 1;
+        }
+        const disabled = stock <= 0;
+        if (addToCartBtn) addToCartBtn.disabled = disabled;
+        if (stickyAddBtn) stickyAddBtn.disabled = disabled;
+    }
     
     radios.forEach(radio => {
         radio.addEventListener('change', function() {
@@ -760,9 +778,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (variationInput) {
                     variationInput.value = this.value;
                 }
+                if (this.dataset.stock) {
+                    applyStockState(this.dataset.stock);
+                }
             }
         });
     });
+
+    const checkedRadio = document.querySelector('input[name="variation_radio"]:checked');
+    if (checkedRadio && checkedRadio.dataset.stock) {
+        applyStockState(checkedRadio.dataset.stock);
+    } else if (addToCartForm && addToCartForm.dataset.productStock) {
+        applyStockState(addToCartForm.dataset.productStock);
+    }
 
     // --- Review AJAX setup ---
     fetchReviews(1);

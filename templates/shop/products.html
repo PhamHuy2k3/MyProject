@@ -244,7 +244,7 @@
                                 </button>
                                 {% endif %}
                             </div>
-                            {% if product.stock_quantity == 0 %}
+                            {% if product.display_stock <= 0 %}
                             <div class="absolute inset-0 bg-black/30 flex items-center justify-center">
                                 <span class="bg-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider">Hết hàng</span>
                             </div>
@@ -260,8 +260,8 @@
                                 {% if product.price %}
                                 <span class="font-bold text-emerald-800 text-lg">{{ product.price|floatformat:0 }}₫</span>
                                 {% endif %}
-                                {% if product.stock_quantity > 0 %}
-                                <span class="text-xs text-stone-400 font-mono">Còn {{ product.stock_quantity }}</span>
+                                {% if product.display_stock > 0 %}
+                                <span class="text-xs text-stone-400 font-mono">Còn {{ product.display_stock }}</span>
                                 {% else %}
                                 <span class="text-xs text-red-500 font-bold">Hết hàng</span>
                                 {% endif %}

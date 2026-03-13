@@ -132,6 +132,11 @@
                                         {% elif order.status == 'shipping' %}status-shipping
                                         {% elif order.status == 'delivered' %}status-delivered
                                         {% elif order.status == 'cancelled' %}status-cancelled
+                                        {% elif order.status == 'return_requested' %}status-pending
+                                        {% elif order.status == 'return_approved' %}status-processing
+                                        {% elif order.status == 'returned' %}status-completed
+                                        {% elif order.status == 'refunded' %}status-cancelled
+                                        {% elif order.status == 'exchanged' %}status-completed
                                         {% else %}status-completed{% endif %}">
                                         {{ order.get_status_display }}
                                     </span>

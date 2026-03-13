@@ -23,6 +23,12 @@ class Category(models.Model):
 		return self.name
 
 
+class InventoryManager(models.Manager):
+	def with_available_stock(self):
+		return self.get_queryset().annotate(
+			available_stock_value=F('physical_stock') - F('reserved_stock')
+		)
+
 class Product(models.Model):
 	category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='products')
 	title = models.CharField(max_length=200)
@@ -33,9 +39,18 @@ class Product(models.Model):
 	ingredients = models.TextField(blank=True, verbose_name="Thành phần / Thông số")
 	brewing_guide = models.TextField(blank=True, verbose_name="Hướng dẫn pha chế")
 	price = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-	stock_quantity = models.PositiveIntegerField(default=0, verbose_name="Số lượng tồn kho")
+	
+	physical_stock = models.PositiveIntegerField(default=0, verbose_name="Số lượng tồn vật lý")
+	reserved_stock = models.PositiveIntegerField(default=0, verbose_name="Số lượng tạm giữ")
+	
 	views_count = models.PositiveIntegerField(default=0, verbose_name="Lượt xem")
 	created_at = models.DateTimeField(auto_now_add=True)
+
+	objects = InventoryManager()
+
+	@property
+	def available_stock(self):
+		return self.physical_stock - self.reserved_stock
 
 	class Meta:
 		ordering = ['-created_at']
@@ -66,7 +81,15 @@ class ProductVariation(models.Model):
 	product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variations')
 	title = models.CharField(max_length=100)  # e.g., '50g', '100g'
 	price = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-	stock_quantity = models.PositiveIntegerField(default=0, verbose_name="Số lượng tồn kho biến thể")
+	
+	physical_stock = models.PositiveIntegerField(default=0, verbose_name="Số lượng tồn vật lý biến thể")
+	reserved_stock = models.PositiveIntegerField(default=0, verbose_name="Số lượng tạm giữ biến thể")
+
+	objects = InventoryManager()
+
+	@property
+	def available_stock(self):
+		return self.physical_stock - self.reserved_stock
 
 	class Meta:
 		ordering = ['price']
@@ -126,8 +149,16 @@ class UserProfile(models.Model):
 		('gold', 'Gold Leaf'),
 		('platinum', 'Platinum Leaf'),
 	]
+
+	ROLE_CHOICES = [
+		('customer', 'Khách hàng'),
+		('admin', 'Administrator'),
+		('accountant', 'Kế toán'),
+		('warehouse', 'Nhân viên kho'),
+	]
 	
 	user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+	role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='customer', verbose_name="Vai trò")
 	avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
 	bio = models.CharField(max_length=200, blank=True, default='Tea Lover')
 	phone = models.CharField(max_length=20, blank=True)
@@ -156,6 +187,13 @@ class UserProfile(models.Model):
 	def get_full_address(self):
 		parts = [self.street_address, self.ward, self.district, self.province]
 		return ', '.join(p for p in parts if p)
+
+	@property
+	def role_name(self):
+		"""Returns the display name of the role, prioritizing admin status for superusers."""
+		if self.user.is_superuser:
+			return "Administrator"
+		return self.get_role_display()
 	
 	def save(self, *args, **kwargs):
 		if not self.membership_number:
@@ -168,7 +206,8 @@ class UserProfile(models.Model):
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
 	if created:
-		UserProfile.objects.create(user=instance)
+		role = 'admin' if instance.is_superuser else 'customer'
+		UserProfile.objects.create(user=instance, role=role)
 
 
 @receiver(post_save, sender=User)
@@ -214,15 +253,17 @@ class Coupon(models.Model):
 class Order(models.Model):
 	STATUS_CHOICES = [
 		('pending', 'Chờ xác nhận'),
+		('confirmed', 'Đã xác nhận (Đã giữ hàng)'),
 		('processing', 'Đang đóng gói'),
 		('shipping', 'Đang giao'),
-		('delivered', 'Thành công'),
+		('delivered', 'Thành công (Đã trừ kho)'),
+		('completed', 'Hoàn tất'),
+		('cancelled', 'Đã hủy'),
 		('return_requested', 'Yêu cầu trả hàng'),
 		('return_approved', 'Đã duyệt trả hàng'),
 		('returned', 'Đã nhận hàng trả'),
 		('refunded', 'Đã hoàn tiền'),
 		('exchanged', 'Đã đổi hàng'),
-		('cancelled', 'Đã hủy'),
 	]
 	
 	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
@@ -250,10 +291,174 @@ class Order(models.Model):
 			self.order_number = f'ORD-{now.strftime("%Y%m%d")}-{short_uuid}'
 		super().save(*args, **kwargs)
 
+	def log_transaction(self, item, transaction_type, quantity, is_physical=True, user=None):
+		"""Giao thức ghi sổ cái nội bộ."""
+		InventoryTransaction.objects.create(
+			product=item.product,
+			variation=item.variation,
+			transaction_type=transaction_type,
+			quantity=quantity,
+			is_physical=is_physical,
+			reference_id=self.order_number,
+			user=user
+		)
+
+	def can_confirm(self):
+		"""Kiểm tra xem có đủ hàng để xác nhận đơn không."""
+		for item in self.items.all():
+			target = item.variation if item.variation else item.product
+			if target.available_stock < item.quantity:
+				return False, f"Sản phẩm {target} không đủ tồn kho khả dụng."
+		return True, ""
+
+	def action_confirm(self, user=None):
+		"""Xác nhận đơn hàng: Tạm giữ hàng (Reserved)."""
+		if self.status in ['confirmed', 'processing', 'shipping', 'delivered', 'completed']:
+			return True, "Đơn hàng đã được xác nhận trước đó."
+		if self.status in ['cancelled', 'refunded', 'exchanged', 'return_requested', 'return_approved', 'returned']:
+			return False, "Đơn hàng đã hủy/hoàn tất, không thể xác nhận lại."
+
+		with transaction.atomic():
+			# Lock items in sorted order to prevent deadlock
+			items = self.items.select_related('product', 'variation').order_by('product__id', 'variation__id').select_for_update(of=('product', 'variation'))
+			
+			can_proceed, msg = self.can_confirm()
+			if not can_proceed:
+				return False, msg
+
+			for item in items:
+				target = item.variation if item.variation else item.product
+				# Update reserved stock
+				target.reserved_stock = F('reserved_stock') + item.quantity
+				target.save()
+				# Log reservation (Logical)
+				self.log_transaction(item, 'RESERVE', item.quantity, is_physical=False, user=user)
+			
+			self.set_status('confirmed', user=user, note="Xác nhận đơn hàng và giữ kho.")
+			self.ensure_invoice()
+			return True, "Đơn hàng đã được xác nhận và giữ kho."
+
+	def action_cancel(self, user=None):
+		"""Hủy đơn hàng: Giải phóng hàng đã giữ (nếu có)."""
+		if self.status == 'cancelled':
+			return True, "Đơn hàng đã ở trạng thái hủy."
+		if self.status in ['delivered', 'completed', 'return_requested', 'return_approved', 'returned', 'refunded', 'exchanged']:
+			return False, "Đơn hàng đã hoàn tất hoặc đang xử lý đổi trả, không thể hủy."
+		with transaction.atomic():
+			items = self.items.select_related('product', 'variation').order_by('product__id', 'variation__id').select_for_update(of=('product', 'variation'))
+			
+			if self.status in ['confirmed', 'processing', 'shipping']:
+				for item in items:
+					target = item.variation if item.variation else item.product
+					target.reserved_stock = F('reserved_stock') - item.quantity
+					target.save()
+					self.log_transaction(item, 'RELEASE', -item.quantity, is_physical=False, user=user)
+			
+			self.set_status('cancelled', user=user, note="Hủy đơn hàng.")
+			try:
+				invoice = self.invoice
+			except Invoice.DoesNotExist:
+				invoice = None
+			if invoice and invoice.status != 'cancelled':
+				invoice.status = 'cancelled'
+				invoice.save(update_fields=['status'])
+			return True, "Đơn hàng đã được hủy."
+
+	def action_complete(self, user=None):
+		"""Hoàn tất đơn hàng: Trừ kho vật lý và giải phóng kho tạm giữ."""
+		if self.status in ['delivered', 'completed']:
+			return True, "Đơn hàng đã hoàn tất."
+		if self.status in ['cancelled', 'return_requested', 'return_approved', 'returned', 'refunded', 'exchanged']:
+			return False, "Trạng thái đơn hàng không hợp lệ để hoàn tất."
+		if self.status != 'shipping' and self.status != 'processing' and self.status != 'confirmed':
+			return False, "Trạng thái đơn hàng không hợp lệ để hoàn tất."
+
+		with transaction.atomic():
+			items = self.items.select_related('product', 'variation').order_by('product__id', 'variation__id').select_for_update(of=('product', 'variation'))
+			
+			for item in items:
+				target = item.variation if item.variation else item.product
+				# Physical deduction
+				target.physical_stock = F('physical_stock') - item.quantity
+				# Release logical reservation
+				target.reserved_stock = F('reserved_stock') - item.quantity
+				target.save()
+				# Log physical move (OUT)
+				self.log_transaction(item, 'OUT', -item.quantity, is_physical=True, user=user)
+			
+			self.set_status('delivered', user=user, note="Giao hàng thành công.")
+			return True, "Đơn hàng đã hoàn tất, kho vật lý đã cập nhật."
+
+	def set_status(self, new_status, user=None, note=''):
+		if new_status not in dict(Order.STATUS_CHOICES):
+			return False, "Trạng thái không hợp lệ."
+		self.status = new_status
+		self.save(update_fields=['status', 'updated_at'])
+		OrderStatusHistory.objects.create(order=self, status=new_status, user=user, note=note)
+		return True, "Cập nhật trạng thái thành công."
+
+	def ensure_invoice(self):
+		"""Đảm bảo có hóa đơn cho đơn hàng, tạo nếu chưa có."""
+		try:
+			invoice = self.invoice
+		except Invoice.DoesNotExist:
+			profile = getattr(self.user, 'profile', None)
+			full_name = ''
+			if profile and hasattr(profile, 'get_full_name'):
+				full_name = profile.get_full_name()
+			if not full_name:
+				full_name = self.user.get_full_name() or self.user.username
+
+			if profile and hasattr(profile, 'get_full_address'):
+				address = profile.get_full_address()
+			else:
+				address = getattr(profile, 'address', '') if profile else ''
+
+			status = 'issued' if self.status in ['confirmed', 'processing', 'shipping', 'delivered', 'completed'] else 'draft'
+			invoice = Invoice.objects.create(
+				order=self,
+				issue_date=timezone.now().date(),
+				status=status,
+				total_amount=self.total_amount,
+				customer_name=full_name,
+				customer_address=address,
+			)
+		else:
+			status = 'issued' if self.status in ['confirmed', 'processing', 'shipping', 'delivered', 'completed'] else 'draft'
+			updates = {}
+			if invoice.status != status:
+				updates['status'] = status
+			if invoice.total_amount != self.total_amount:
+				updates['total_amount'] = self.total_amount
+			if status == 'issued' and not invoice.issue_date:
+				updates['issue_date'] = timezone.now().date()
+			if updates:
+				for field, value in updates.items():
+					setattr(invoice, field, value)
+				invoice.save(update_fields=list(updates.keys()))
+
+		if not invoice.items.exists():
+			total_amount = 0
+			for item in self.items.all():
+				amount = item.get_subtotal()
+				InvoiceItem.objects.create(
+					invoice=invoice,
+					product_title=item.product_title,
+					quantity=item.quantity,
+					unit_price=item.price,
+					amount=amount,
+				)
+				total_amount += amount
+			# Keep invoice total aligned with order (includes discount).
+			invoice.total_amount = self.total_amount or total_amount
+			invoice.save(update_fields=['total_amount'])
+		return invoice
+
 
 class OrderStatusHistory(models.Model):
 	order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='status_history')
 	status = models.CharField(max_length=20, choices=Order.STATUS_CHOICES)
+	user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 	note = models.TextField(blank=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 
@@ -406,6 +611,74 @@ def save_user_cart(sender, instance, **kwargs):
 	if hasattr(instance, 'cart'):
 		instance.cart.save()
 
+# ==================== INVENTORY LEDGER MODELS ====================
+
+class InventoryTransaction(models.Model):
+	TYPE_CHOICES = [
+		('IN', 'Nhập kho'),
+		('OUT', 'Xuất kho'),
+		('ADJUST', 'Điều chỉnh (Kiểm kê)'),
+		('RESERVE', 'Tạm giữ (Đặt hàng)'),
+		('RELEASE', 'Giải phóng (Hủy đơn)'),
+	]
+	
+	product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='inventory_transactions', null=True, blank=True)
+	variation = models.ForeignKey(ProductVariation, on_delete=models.CASCADE, related_name='inventory_transactions', null=True, blank=True)
+	transaction_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+	quantity = models.IntegerField(verbose_name="Số lượng thay đổi")
+	is_physical = models.BooleanField(default=True, verbose_name="Biến động vật lý")
+	reference_id = models.CharField(max_length=100, blank=True, verbose_name="Mã tham chiếu (Đơn hàng/Phiếu nhập)")
+	timestamp = models.DateTimeField(auto_now_add=True)
+	user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+
+	class Meta:
+		ordering = ['-timestamp']
+
+	def __str__(self):
+		target = f"{self.product.title}" if self.product else "N/A"
+		if self.variation:
+			target += f" ({self.variation.title})"
+		return f"{self.get_transaction_type_display()} - {target} - {self.quantity}"
+
+class InventoryReceipt(models.Model):
+	STATUS_CHOICES = [('draft', 'Nháp'), ('completed', 'Hoàn tất')]
+	
+	receipt_number = models.CharField(max_length=50, unique=True)
+	supplier = models.CharField(max_length=200, blank=True, verbose_name="Nhà cung cấp")
+	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+	note = models.TextField(blank=True)
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
+	user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+	class Meta:
+		ordering = ['-created_at']
+
+	def __str__(self):
+		return self.receipt_number
+
+	def save(self, *args, **kwargs):
+		if not self.receipt_number:
+			now = timezone.now()
+			import random
+			self.receipt_number = f'RCPT-{now.strftime("%Y%m%d")}-{random.randint(1000, 9999)}'
+		super().save(*args, **kwargs)
+
+class InventoryReceiptItem(models.Model):
+	receipt = models.ForeignKey(InventoryReceipt, on_delete=models.CASCADE, related_name='items')
+	product = models.ForeignKey(Product, on_delete=models.CASCADE)
+	variation = models.ForeignKey(ProductVariation, on_delete=models.CASCADE, null=True, blank=True)
+	quantity = models.PositiveIntegerField()
+	unit_price = models.DecimalField(max_digits=12, decimal_places=0, default=0)
+
+	def __str__(self):
+		return f"{self.product.title} - {self.quantity}"
+
+@receiver(post_save, sender=User)
+def save_user_cart(sender, instance, **kwargs):
+	if hasattr(instance, 'cart'):
+		instance.cart.save()
+
 # ==================== PAYMENT MODELS ====================
 
 class Payment(models.Model):
@@ -419,6 +692,7 @@ class Payment(models.Model):
 	
 	PAYMENT_STATUS_CHOICES = [
 		('pending', 'Chờ thanh toán'),
+		('pending_verification', 'Chờ xác nhận'),
 		('processing', 'Đang xử lý'),
 		('completed', 'Hoàn thành'),
 		('failed', 'Thất bại'),
@@ -449,141 +723,6 @@ class Payment(models.Model):
 			import string
 			self.reference_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
 		super().save(*args, **kwargs)
-
-
-def get_insufficient_stock(order):
-	insufficient_items = []
-	for order_item in order.items.select_related('product', 'variation').all():
-		if order_item.product is None:
-			continue
-		
-		# Check variation stock if variation exists, else product stock
-		stock = order_item.variation.stock_quantity if order_item.variation else order_item.product.stock_quantity
-		title = f"{order_item.product.title} ({order_item.variation.title})" if order_item.variation else order_item.product.title
-		
-		if stock < order_item.quantity:
-			insufficient_items.append({
-				'product': title,
-				'required': order_item.quantity,
-				'available': stock
-			})
-	return insufficient_items
-
-
-def check_and_deduct_stock(order):
-	with transaction.atomic():
-		items = order.items.select_related('product', 'variation').select_for_update()
-		insufficient_items = []
-		for order_item in items:
-			if order_item.product is None:
-				continue
-			
-			stock = order_item.variation.stock_quantity if order_item.variation else order_item.product.stock_quantity
-			title = f"{order_item.product.title} ({order_item.variation.title})" if order_item.variation else order_item.product.title
-			
-			if stock < order_item.quantity:
-				insufficient_items.append({
-					'product': title,
-					'required': order_item.quantity,
-					'available': stock
-				})
-				
-		if insufficient_items:
-			return False, insufficient_items
-
-		for order_item in items:
-			if order_item.product is None:
-				continue
-				
-			if order_item.variation:
-				ProductVariation.objects.filter(pk=order_item.variation.pk).update(
-					stock_quantity=F('stock_quantity') - order_item.quantity
-				)
-			else:
-				Product.objects.filter(pk=order_item.product.pk).update(
-					stock_quantity=F('stock_quantity') - order_item.quantity
-				)
-
-	return True, []
-
-
-@receiver(pre_save, sender=Payment)
-def payment_pre_save(sender, instance, **kwargs):
-	if instance.pk:
-		try:
-			previous = Payment.objects.get(pk=instance.pk)
-			instance._previous_payment_status = previous.payment_status
-			instance._previous_stock_deducted = previous.stock_deducted
-		except Payment.DoesNotExist:
-			instance._previous_payment_status = None
-			instance._previous_stock_deducted = False
-	else:
-		instance._previous_payment_status = None
-		instance._previous_stock_deducted = False
-
-
-@receiver(post_save, sender=Payment)
-def payment_post_save(sender, instance, created, **kwargs):
-	previous_status = getattr(instance, '_previous_payment_status', None)
-	previous_stock_deducted = getattr(instance, '_previous_stock_deducted', False)
-
-	if instance.payment_status != 'completed':
-		return
-	if instance.stock_deducted:
-		return
-	if (not created) and previous_status == 'completed' and previous_stock_deducted:
-		return
-
-	ok, _ = check_and_deduct_stock(instance.order)
-	if ok:
-		Payment.objects.filter(pk=instance.pk).update(stock_deducted=True)
-	else:
-		Payment.objects.filter(pk=instance.pk).update(payment_status='failed')
-
-
-@receiver(pre_save, sender=Order)
-def order_pre_save(sender, instance, **kwargs):
-	if instance.pk:
-		try:
-			previous = Order.objects.get(pk=instance.pk)
-			instance._previous_status = previous.status
-		except Order.DoesNotExist:
-			instance._previous_status = None
-	else:
-		instance._previous_status = None
-
-
-@receiver(post_save, sender=Order)
-def order_post_save(sender, instance, created, **kwargs):
-	previous_status = getattr(instance, '_previous_status', None)
-	
-	# Create status history
-	if created or instance.status != previous_status:
-		OrderStatusHistory.objects.create(
-			order=instance,
-			status=instance.status
-		)
-		
-	# Check and deduct stock if status is processing
-	if instance.status != 'processing':
-		return
-	if previous_status == 'processing':
-		return
-
-	try:
-		payment = instance.payment
-	except Payment.DoesNotExist:
-		payment = None
-
-	if payment and payment.stock_deducted:
-		return
-
-	ok, _ = check_and_deduct_stock(instance)
-	if ok and payment:
-		Payment.objects.filter(pk=payment.pk).update(
-			stock_deducted=True,
-			payment_date=payment.payment_date or timezone.now(),
-		)
 
 
 class PaymentQRCode(models.Model):

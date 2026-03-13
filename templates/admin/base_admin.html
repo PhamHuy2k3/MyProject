@@ -16,16 +16,24 @@
                     <h3 class="font-art text-lg font-bold text-emerald-900 mb-4 px-2">Quản Trị</h3>
                     <nav class="space-y-1">
 
-                        <!-- Tổng quan (always visible) -->
+                        <!-- Tổng quan -->
                         <a href="{% url 'admin_dashboard' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if request.resolver_match.url_name == 'admin_dashboard' %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
                             <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
                         </a>
+                        {% if user.is_superuser or user.profile.role == 'admin' or user.profile.role == 'accountant' %}
                         <a href="{% url 'admin_statistics' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if request.resolver_match.url_name == 'admin_statistics' %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
                             <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Thống Kê
                         </a>
+                        {% endif %}
+                        {% if user.is_superuser or user.profile.role == 'admin' %}
+                        <a href="{% url 'admin_user_list' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'user' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                            <i data-lucide="users" class="w-4 h-4"></i> Người Dùng
+                        </a>
+                        {% endif %}
 
-                        <!-- Kinh doanh -->
-                        <div class="sidebar-group {% if 'inventory' in request.resolver_match.url_name or 'order' in request.resolver_match.url_name or 'return' in request.resolver_match.url_name %}open{% endif %} pt-1">
+                        <!-- Kinh doanh (Admin, Accountant, Warehouse) -->
+                        {% if user.is_superuser or user.profile.role in 'admin,accountant,warehouse' %}
+                        <div class="sidebar-group {% if 'inventory' in request.resolver_match.url_name or 'order' in request.resolver_match.url_name or 'return' in request.resolver_match.url_name or 'invoice' in request.resolver_match.url_name %}open{% endif %} pt-1">
                             <button type="button" onclick="this.closest('.sidebar-group').classList.toggle('open')"
                                 class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold text-stone-500 hover:bg-stone-50 uppercase tracking-wider transition-colors">
                                 <span class="flex items-center gap-2"><i data-lucide="briefcase" class="w-4 h-4"></i> Kinh doanh</span>
@@ -33,20 +41,32 @@
                             </button>
                             <div class="sidebar-body">
                                 <div class="pl-3 space-y-0.5 pt-1 pb-1">
-                                    <a href="{% url 'admin_inventory' %}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'inventory' in request.resolver_match.url_name or 'admin_order' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
-                                        <i data-lucide="package" class="w-4 h-4"></i> Kho & Đơn Hàng
+                                    {% if user.is_superuser or user.profile.role in 'admin,warehouse' %}
+                                    <a href="{% url 'admin_inventory' %}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'inventory' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                                        <i data-lucide="package" class="w-4 h-4"></i> Kho
+                                    </a>
+                                    <a href="{% url 'admin_order_list' %}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'admin_order' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                                        <i data-lucide="clipboard-list" class="w-4 h-4"></i> Đơn Hàng
                                     </a>
                                     <a href="{% url 'admin_return_list' %}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'return' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
                                         <i data-lucide="refresh-cw" class="w-4 h-4"></i> Đổi Trả Hàng
                                     </a>
+                                    {% endif %}
+                                    {% if user.is_superuser or user.profile.role in 'admin,accountant' %}
+                                    <a href="{% url 'admin_invoice_list' %}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'invoice' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                                        <i data-lucide="file-text" class="w-4 h-4"></i> Hóa Đơn
+                                    </a>
                                     <a href="{% url 'coupon_list' %}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'coupon' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
                                         <i data-lucide="ticket" class="w-4 h-4"></i> Mã Giảm Giá
                                     </a>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
 
-                        <!-- Hỗ trợ khách hàng -->
+                        <!-- Hỗ trợ khách hàng (Admin, Accountant) -->
+                        {% if user.is_superuser or user.profile.role in 'admin,accountant' %}
                         <div class="sidebar-group {% if 'support' in request.resolver_match.url_name %}open{% endif %} pt-1">
                             <button type="button" onclick="this.closest('.sidebar-group').classList.toggle('open')"
                                 class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold text-stone-500 hover:bg-stone-50 uppercase tracking-wider transition-colors">
@@ -61,8 +81,10 @@
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
 
-                        <!-- Sản phẩm & Nội dung -->
+                        <!-- Sản phẩm & Nội dung (Admin, Warehouse) -->
+                        {% if user.is_superuser or user.profile.role in 'admin,warehouse' %}
                         <div class="sidebar-group {% if 'product' in request.resolver_match.url_name or 'category' in request.resolver_match.url_name or 'storyboard' in request.resolver_match.url_name or 'raw' in request.resolver_match.url_name or 'cabinet' in request.resolver_match.url_name %}open{% endif %}">
                             <button type="button" onclick="this.closest('.sidebar-group').classList.toggle('open')"
                                 class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold text-stone-500 hover:bg-stone-50 uppercase tracking-wider transition-colors">
@@ -89,8 +111,10 @@
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
 
-                        <!-- Cộng đồng -->
+                        <!-- Cộng đồng (Admin ONLY) -->
+                        {% if user.is_superuser or user.profile.role == 'admin' %}
                         <div class="sidebar-group {% if 'review' in request.resolver_match.url_name or 'comment' in request.resolver_match.url_name %}open{% endif %}">
                             <button type="button" onclick="this.closest('.sidebar-group').classList.toggle('open')"
                                 class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold text-stone-500 hover:bg-stone-50 uppercase tracking-wider transition-colors">
@@ -108,6 +132,7 @@
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
 
                     </nav>
                 </div>

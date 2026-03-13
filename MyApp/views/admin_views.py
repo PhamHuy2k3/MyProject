@@ -23,7 +23,7 @@ from .utils import *
 
 # ==================== ADMIN DASHBOARD ====================
 
-@admin_required
+@management_required
 def admin_dashboard(request):
     context = {
         'products_count': Product.objects.count(),
@@ -34,7 +34,7 @@ def admin_dashboard(request):
     return render(request, 'admin/dashboard.html', context)
 
 
-@admin_required
+@accountant_required
 def admin_statistics(request):
     days = int(request.GET.get('days', 30))
     sort_by = request.GET.get('sort', 'revenue')
@@ -57,7 +57,7 @@ def admin_statistics(request):
     
     total_views = Product.objects.aggregate(total=Sum('views_count'))['total'] or 0
     total_p_count = Product.objects.count()
-    low_stock_p = Product.objects.filter(stock_quantity__lte=5).count()
+    low_stock_p = Product.objects.filter(physical_stock__lte=5).count()
     
     total_revenue = total_stats['revenue']
     total_orders = total_stats['order_count']
@@ -69,12 +69,12 @@ def admin_statistics(request):
     if category_id:
         product_qs = product_qs.filter(category_id=category_id)
     if stock_filter == 'low':
-        product_qs = product_qs.filter(stock_quantity__lte=5, stock_quantity__gt=0)
+        product_qs = product_qs.filter(physical_stock__lte=5, physical_stock__gt=0)
     elif stock_filter == 'out':
-        product_qs = product_qs.filter(stock_quantity=0)
+        product_qs = product_qs.filter(physical_stock=0)
     elif stock_filter == 'slow':
         # Slow movers: Stock > 10 and no sales in threshold
-        product_qs = product_qs.filter(stock_quantity__gt=10).annotate(
+        product_qs = product_qs.filter(physical_stock__gt=10).annotate(
             recent_sales=Coalesce(Sum('order_items__quantity', filter=product_stats_filter), 0)
         ).filter(recent_sales=0)
 
@@ -90,20 +90,20 @@ def admin_statistics(request):
     for p in products:
         p.sales_velocity = Decimal(p.total_sold) / Decimal(days)
         # Restock Score: critical if selling fast but low stock
-        if p.stock_quantity > 0:
-            p.restock_score = Decimal(p.total_sold) / Decimal(p.stock_quantity)
+        if p.physical_stock > 0:
+            p.restock_score = Decimal(p.total_sold) / Decimal(p.physical_stock)
         else:
             p.restock_score = Decimal(p.total_sold) * 2 # Out of stock but has sales = high priority
             
         # Opportunity products: High views, low sales
         p.is_opportunity = p.total_views_num > 50 and (p.total_sold < 2)
         p.is_best_seller = p.total_sold > 10
-        p.is_slow_mover = p.stock_quantity > 20 and p.total_sold == 0
+        p.is_slow_mover = p.physical_stock > 20 and p.total_sold == 0
 
     # Critical Alerts
     alerts = {
-        'critical_stock': products.filter(stock_quantity=0)[:5],
-        'low_stock': products.filter(stock_quantity__lte=5, stock_quantity__gt=0)[:5],
+        'critical_stock': products.filter(physical_stock=0)[:5],
+        'low_stock': products.filter(physical_stock__lte=5, physical_stock__gt=0)[:5],
         'slow_movers': [p for p in products if p.is_slow_mover][:5],
         'opportunities': [p for p in products if p.is_opportunity][:5]
     }
@@ -135,52 +135,278 @@ def admin_statistics(request):
     return render(request, 'admin/statistics.html', context)
 
 
-@admin_required
+@warehouse_required
 def admin_inventory(request):
-    products = Product.objects.all().order_by('stock_quantity')
-    orders = Order.objects.all().select_related('user').order_by('-created_at')
-    return render(request, 'admin/inventory.html', {'products': products, 'orders': orders})
+    product_list = Product.objects.all().order_by('physical_stock')
+    
+    # Pagination
+    paginator = Paginator(product_list, 10)
+    page_number = request.GET.get('page')
+    products = paginator.get_page(page_number)
+    
+    # Immutable Ledger snapshot (last 10 transactions)
+    recent_transactions = InventoryTransaction.objects.select_related('product', 'variation', 'user').order_by('-timestamp')[:10]
+    
+    # Stats
+    total_physical = Product.objects.aggregate(total=Sum('physical_stock'))['total'] or 0
+    total_reserved = Product.objects.aggregate(total=Sum('reserved_stock'))['total'] or 0
+    low_stock_count = Product.objects.filter(physical_stock__lte=10).count()
+    
+    context = {
+        'products': products,
+        'recent_transactions': recent_transactions,
+        'stats': {
+            'total_physical': total_physical,
+            'total_reserved': total_reserved,
+            'low_stock_count': low_stock_count,
+            'total_available': total_physical - total_reserved,
+            'health_score': int(((Product.objects.count() - low_stock_count) / Product.objects.count() * 100)) if Product.objects.exists() else 100
+        }
+    }
+    return render(request, 'admin/inventory.html', context)
 
 
-@admin_required
+@warehouse_required
+def admin_order_list(request):
+    orders = Order.objects.select_related('user', 'user__profile').order_by('-created_at')
+    q = request.GET.get('q', '').strip()
+    status = request.GET.get('status', '').strip()
+
+    if q:
+        orders = orders.filter(
+            Q(order_number__icontains=q) |
+            Q(user__username__icontains=q) |
+            Q(user__email__icontains=q) |
+            Q(user__first_name__icontains=q) |
+            Q(user__last_name__icontains=q) |
+            Q(user__profile__phone__icontains=q)
+        )
+
+    if status and status != 'all':
+        orders = orders.filter(status=status)
+
+    paginator = Paginator(orders, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'admin/order_list.html', {
+        'orders': page_obj,
+        'page_obj': page_obj,
+        'current_query': q,
+        'current_status': status or 'all',
+        'status_choices': Order.STATUS_CHOICES,
+        'total_count': orders.count(),
+    })
+
+
+@accountant_required
+def admin_invoice_list(request):
+    if request.method == 'POST' and request.POST.get('action') == 'backfill':
+        eligible_statuses = ['confirmed', 'processing', 'shipping', 'delivered']
+        missing_orders = Order.objects.filter(status__in=eligible_statuses).exclude(invoice__isnull=False)
+        created_count = 0
+        for order in missing_orders:
+            order.ensure_invoice()
+            created_count += 1
+        if created_count > 0:
+            messages.success(request, f"Đã tạo {created_count} hóa đơn.")
+        else:
+            messages.info(request, "Không có đơn hàng nào cần tạo hóa đơn.")
+        return redirect('admin_invoice_list')
+
+    invoices = Invoice.objects.select_related('order', 'order__user', 'order__user__profile').order_by('-generated_at')
+    q = request.GET.get('q', '').strip()
+    status = request.GET.get('status', '').strip()
+
+    if q:
+        invoices = invoices.filter(
+            Q(invoice_number__icontains=q) |
+            Q(order__order_number__icontains=q) |
+            Q(customer_name__icontains=q) |
+            Q(customer_tax_code__icontains=q) |
+            Q(order__user__username__icontains=q) |
+            Q(order__user__email__icontains=q) |
+            Q(order__user__first_name__icontains=q) |
+            Q(order__user__last_name__icontains=q)
+        )
+
+    if status:
+        invoices = invoices.filter(status=status)
+
+    paginator = Paginator(invoices, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'admin/invoice_list.html', {
+        'invoices': page_obj,
+        'page_obj': page_obj,
+        'current_query': q,
+        'current_status': status,
+        'status_choices': Invoice._meta.get_field('status').choices,
+        'total_count': invoices.count(),
+    })
+
+@warehouse_required
+def admin_inventory_ledger(request):
+    transactions = InventoryTransaction.objects.select_related('product', 'variation', 'user').order_by('-timestamp')
+    
+    # Filter
+    q = request.GET.get('q')
+    t_type = request.GET.get('type')
+    if q:
+        transactions = transactions.filter(Q(product__title__icontains=q) | Q(reference_id__icontains=q))
+    if t_type:
+        transactions = transactions.filter(transaction_type=t_type)
+        
+    paginator = Paginator(transactions, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
+    return render(request, 'admin/inventory_ledger.html', {
+        'transactions': page_obj,
+        'page_obj': page_obj,
+        'current_query': q,
+        'current_type': t_type,
+        'type_choices': InventoryTransaction.TYPE_CHOICES
+    })
+
+@warehouse_required
+def admin_inventory_receipt_create(request):
+    if request.method == 'POST':
+        # Simple implementation for single item receipt for now, can be expanded to formset
+        product_id = request.POST.get('product')
+        variation_id = request.POST.get('variation')
+        quantity = int(request.POST.get('quantity', 0))
+        supplier = request.POST.get('supplier', '')
+        note = request.POST.get('note', '')
+        
+        if quantity > 0:
+            with transaction.atomic():
+                product = get_object_or_404(Product, id=product_id)
+                variation = get_object_or_404(ProductVariation, id=variation_id) if variation_id else None
+                
+                # Create receipt
+                receipt = InventoryReceipt.objects.create(
+                    supplier=supplier,
+                    status='completed',
+                    note=note,
+                    user=request.user
+                )
+                InventoryReceiptItem.objects.create(
+                    receipt=receipt,
+                    product=product,
+                    variation=variation,
+                    quantity=quantity
+                )
+                
+                # Update stock
+                if variation:
+                    variation.physical_stock = F('physical_stock') + quantity
+                    variation.save()
+                else:
+                    product.physical_stock = F('physical_stock') + quantity
+                    product.save()
+                
+                # Log transaction
+                InventoryTransaction.objects.create(
+                    product=product,
+                    variation=variation,
+                    transaction_type='IN',
+                    quantity=quantity,
+                    is_physical=True,
+                    reference_id=receipt.receipt_number,
+                    user=request.user
+                )
+                
+                messages.success(request, f"Đã nhập {quantity} sản phẩm vào kho.")
+                return redirect('admin_inventory')
+    
+    products = Product.objects.all().prefetch_related('variations')
+    return render(request, 'admin/inventory_receipt_form.html', {'products': products})
+
+
+@warehouse_required
 def admin_order_detail_manage(request, order_number):
     order = get_object_or_404(Order, order_number=order_number)
     if request.method == 'POST':
-        new_status = request.POST.get('status')
-        if new_status in dict(Order.STATUS_CHOICES):
-            old_status = order.status
-            order.status = new_status
-            order.save()
-            messages.success(request, 'Cập nhật trạng thái thành công.')
-            # Gửi thông báo cho khách hàng khi trạng thái đơn hàng thay đổi
-            if new_status != old_status:
-                status_display = dict(Order.STATUS_CHOICES).get(new_status, new_status)
-                create_notification(
-                    user=order.user,
-                    notification_type='order',
-                    title=f'Đơn hàng {order.order_number} đã cập nhật',
-                    message_text=f'Trạng thái đơn hàng của bạn đã chuyển sang: {status_display}',
-                    link=f'/order/{order.order_number}/',
-                )
-                # Send status update email
-                if order.user.email:
-                    from django.core.mail import send_mail
-                    send_mail(
-                        f'Cập nhật đơn hàng {order.order_number} - TeaZen',
-                        f'Xin chào {order.user.get_full_name() or order.user.username},\n\n'
-                        f'Đơn hàng {order.order_number} đã được cập nhật.\n'
-                        f'Trạng thái mới: {status_display}\n\n'
-                        f'Trân trọng,\nTeaZen',
-                        None,
-                        [order.user.email],
-                        fail_silently=True,
-                    )
-    return render(request, 'admin/order_detail_manage.html', {'order': order, 'status_choices': Order.STATUS_CHOICES})
+        action = request.POST.get('action')
+        success = False
+        msg = "Hành động không hợp lệ."
+        
+        if action == 'confirm':
+            success, msg = order.action_confirm(user=request.user)
+        elif action == 'cancel':
+            success, msg = order.action_cancel(user=request.user)
+        elif action == 'complete':
+            success, msg = order.action_complete(user=request.user)
+        elif action == 'confirm_payment':
+            try:
+                payment = order.payment
+            except Exception:
+                success, msg = False, "Không tìm thấy thông tin thanh toán."
+            else:
+                if payment.payment_status == 'completed':
+                    success, msg = True, "Thanh toán đã được xác nhận trước đó."
+                else:
+                    if order.status == 'pending':
+                        confirm_success, confirm_msg = order.action_confirm(user=request.user)
+                        if not confirm_success:
+                            payment.payment_status = 'completed'
+                            payment.payment_date = timezone.now()
+                            payment.notes = f"Payment confirmed but stock reservation failed: {confirm_msg}"
+                            payment.save()
+                            order.set_status('pending', user=request.user, note="Đã xác nhận thanh toán nhưng thiếu tồn kho.")
+                            success, msg = True, "Đã xác nhận thanh toán nhưng thiếu tồn kho. Cần xử lý thủ công."
+                        else:
+                            payment.payment_status = 'completed'
+                            payment.payment_date = timezone.now()
+                            payment.save()
+                            invoice = order.ensure_invoice()
+                            if invoice and invoice.status != 'paid':
+                                invoice.status = 'paid'
+                                invoice.save(update_fields=['status'])
+                            success, msg = True, "Đã xác nhận thanh toán."
+                    else:
+                        payment.payment_status = 'completed'
+                        payment.payment_date = timezone.now()
+                        payment.save()
+                        invoice = order.ensure_invoice()
+                        if invoice and invoice.status != 'paid':
+                            invoice.status = 'paid'
+                            invoice.save(update_fields=['status'])
+                        success, msg = True, "Đã xác nhận thanh toán."
+        elif action == 'update_status':
+            # Manual status updates with safety for inventory-related transitions
+            new_status = request.POST.get('status')
+            if new_status in dict(Order.STATUS_CHOICES):
+                if new_status == 'confirmed':
+                    success, msg = order.action_confirm(user=request.user)
+                elif new_status == 'cancelled':
+                    success, msg = order.action_cancel(user=request.user)
+                elif new_status == 'delivered':
+                    success, msg = order.action_complete(user=request.user)
+                else:
+                    success, msg = order.set_status(new_status, user=request.user, note="Cập nhật thủ công.")
+                    if success and new_status in ['processing', 'shipping']:
+                        order.ensure_invoice()
+        
+        if success:
+            messages.success(request, msg)
+        else:
+            messages.error(request, msg)
+            
+    # Timeline data
+    status_history = order.status_history.all()
+    inventory_logs = InventoryTransaction.objects.filter(reference_id=order.order_number).order_by('-timestamp')
+            
+    return render(request, 'admin/order_detail_manage.html', {
+        'order': order, 
+        'status_choices': Order.STATUS_CHOICES,
+        'status_history': status_history,
+        'inventory_logs': inventory_logs
+    })
 
 
 # ==================== PRODUCT CRUD ====================
 
-@admin_required
+@warehouse_required
 def product_list(request):
     products = Product.objects.select_related('category').all().order_by('-created_at')
     q = request.GET.get('q', '').strip()
@@ -191,9 +417,9 @@ def product_list(request):
     if category_filter:
         products = products.filter(category__slug=category_filter)
     if stock_filter == 'low':
-        products = products.filter(stock_quantity__lte=5, stock_quantity__gt=0)
+        products = products.filter(physical_stock__lte=5, physical_stock__gt=0)
     elif stock_filter == 'out':
-        products = products.filter(stock_quantity=0)
+        products = products.filter(physical_stock=0)
     total_count = products.count()
     paginator = Paginator(products, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
@@ -209,7 +435,7 @@ def product_list(request):
     })
 
 
-@admin_required
+@warehouse_required
 def product_create(request):
     if request.method == 'POST':
         form = ProductForm(request.POST, request.FILES)
@@ -221,7 +447,7 @@ def product_create(request):
     return render(request, 'admin/product_form.html', {'form': form, 'title': 'Thêm Sản Phẩm'})
 
 
-@admin_required
+@warehouse_required
 def product_edit(request, pk):
     product = get_object_or_404(Product, pk=pk)
     if request.method == 'POST':
@@ -443,7 +669,7 @@ def category_toggle_active(request, pk):
     return redirect('category_list')
 
 
-@admin_required
+@warehouse_required
 def admin_return_list(request):
     """
     List of all return and exchange requests.
@@ -453,13 +679,17 @@ def admin_return_list(request):
     
     if status_filter != 'all':
         returns = returns.filter(status=status_filter)
-        
+    
+    paginator = Paginator(returns, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     return render(request, 'admin/returns/return_list.html', {
-        'returns': returns,
+        'returns': page_obj,
+        'page_obj': page_obj,
         'current_status': status_filter
     })
 
-@admin_required
+@warehouse_required
 def admin_return_detail(request, return_id):
     """
     Manage a specific return request.
@@ -476,8 +706,7 @@ def admin_return_detail(request, return_id):
             return_req.status = 'approved'
             order = return_req.order
             # Update order status to reflect progress
-            order.status = 'return_approved'
-            order.save()
+            order.set_status('return_approved', user=request.user, note="Duyệt yêu cầu đổi/trả.")
             
             create_notification(
                 user=order.user,
@@ -492,8 +721,7 @@ def admin_return_detail(request, return_id):
             return_req.status = 'rejected'
             order = return_req.order
             # If rejected, revert order status back to delivered (or let admin decide)
-            order.status = 'delivered'
-            order.save()
+            order.set_status('delivered', user=request.user, note="Từ chối yêu cầu đổi/trả.")
             
             create_notification(
                 user=order.user,
@@ -508,23 +736,21 @@ def admin_return_detail(request, return_id):
             return_req.status = 'completed'
             order = return_req.order
             
-            if return_req.request_type == 'refund':
-                order.status = 'refunded'
-                # Optional: Restore stock if items were returned safely
-                for r_item in return_req.return_items.all():
+            if return_req.request_type in ['refund', 'cancel']:
+                order.set_status('refunded', user=request.user, note="Hoàn tiền/huỷ sau thanh toán.")
+                # Restore stock when items are returned
+                for r_item in return_req.return_items.select_related('order_item__product', 'order_item__variation'):
                     if r_item.order_item.variation:
-                        r_item.order_item.variation.stock_quantity += r_item.quantity
+                        r_item.order_item.variation.physical_stock = F('physical_stock') + r_item.quantity
                         r_item.order_item.variation.save()
                     elif r_item.order_item.product:
-                        r_item.order_item.product.stock_quantity += r_item.quantity
+                        r_item.order_item.product.physical_stock = F('physical_stock') + r_item.quantity
                         r_item.order_item.product.save()
-                        
+                    order.log_transaction(r_item.order_item, 'IN', r_item.quantity, is_physical=True, user=request.user)
             elif return_req.request_type == 'exchange':
-                order.status = 'exchanged'
-                # Note: Exchange might require more complex logic for multiple items, 
-                # but we'll simplify by completing it here.
-            
-            order.save()
+                order.set_status('exchanged', user=request.user, note="Đổi hàng.")
+            else:
+                order.set_status('returned', user=request.user, note="Đã nhận hàng trả.")
             
             create_notification(
                 user=order.user,
@@ -543,7 +769,7 @@ def admin_return_detail(request, return_id):
 
 # ==================== COUPON CRUD ====================
 
-@admin_required
+@accountant_required
 def coupon_list(request):
     coupons = Coupon.objects.all().order_by('-valid_to')
     q = request.GET.get('q', '').strip()
@@ -562,7 +788,7 @@ def coupon_list(request):
     return render(request, 'admin/coupon_list.html', {'coupons': page_obj, 'page_obj': page_obj, 'total_count': total_count, 'current_query': q, 'current_status': status_filter})
 
 
-@admin_required
+@accountant_required
 def coupon_create(request):
     if request.method == 'POST':
         form = CouponForm(request.POST)
@@ -575,9 +801,9 @@ def coupon_create(request):
     return render(request, 'admin/coupon_form.html', {'form': form, 'title': 'Thêm Mã Giảm Giá'})
 
 
-@admin_required
-def coupon_edit(request, pk):
-    coupon = get_object_or_404(Coupon, pk=pk)
+@accountant_required
+def coupon_edit(request, coupon_id):
+    coupon = get_object_or_404(Coupon, pk=coupon_id)
     if request.method == 'POST':
         form = CouponForm(request.POST, instance=coupon)
         if form.is_valid():
@@ -589,9 +815,9 @@ def coupon_edit(request, pk):
     return render(request, 'admin/coupon_form.html', {'form': form, 'coupon': coupon, 'title': 'Chỉnh Sửa Mã Giảm Giá'})
 
 
-@admin_required
-def coupon_delete(request, pk):
-    coupon = get_object_or_404(Coupon, pk=pk)
+@accountant_required
+def coupon_delete(request, coupon_id):
+    coupon = get_object_or_404(Coupon, pk=coupon_id)
     if request.method == 'POST':
         coupon.delete()
         messages.success(request, 'Đã xóa mã giảm giá.')
@@ -604,9 +830,9 @@ def coupon_delete(request, pk):
     })
 
 
-@admin_required
-def coupon_toggle(request, pk):
-    coupon = get_object_or_404(Coupon, pk=pk)
+@accountant_required
+def coupon_toggle(request, coupon_id):
+    coupon = get_object_or_404(Coupon, pk=coupon_id)
     coupon.active = not coupon.active
     coupon.save()
     status = 'kích hoạt' if coupon.active else 'tắt'
@@ -671,3 +897,96 @@ def admin_comment_delete(request, pk):
         'cancel_url': 'admin_comment_list',
         'title': 'Xóa Bình Luận'
     })
+@admin_required
+def admin_user_list(request):
+    users = User.objects.select_related('profile').all().order_by('-date_joined')
+    q = request.GET.get('q', '').strip()
+    role_filter = request.GET.get('role', '')
+    
+    if q:
+        users = users.filter(Q(username__icontains=q) | Q(email__icontains=q) | Q(first_name__icontains=q) | Q(last_name__icontains=q))
+    if role_filter:
+        users = users.filter(profile__role=role_filter)
+        
+    paginator = Paginator(users, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
+    return render(request, 'admin/user_list.html', {
+        'users': page_obj,
+        'page_obj': page_obj,
+        'current_query': q,
+        'current_role': role_filter,
+        'role_choices': UserProfile.ROLE_CHOICES
+    })
+
+@admin_required
+def admin_user_update_role(request, user_id):
+    if request.method == 'POST':
+        user_to_update = get_object_or_404(User, id=user_id)
+        new_role = request.POST.get('role')
+        if new_role in dict(UserProfile.ROLE_CHOICES):
+            user_to_update.profile.role = new_role
+            user_to_update.profile.save()
+            messages.success(request, f'Đã cập nhật vai trò cho {user_to_update.username} thành {dict(UserProfile.ROLE_CHOICES)[new_role]}.')
+        else:
+            messages.error(request, 'Vai trò không hợp lệ.')
+    return redirect('admin_user_list')
+
+@admin_required
+def admin_user_create(request):
+    if request.method == 'POST':
+        form = AdminUserForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            messages.success(request, f'Đã tạo người dùng {user.username} thành công.')
+            return redirect('admin_user_list')
+    else:
+        form = AdminUserForm()
+    return render(request, 'admin/user_form.html', {'form': form, 'title': 'Thêm Người Dùng'})
+
+@admin_required
+def admin_user_edit(request, user_id):
+    user_to_edit = get_object_or_404(User, id=user_id)
+    if request.method == 'POST':
+        form = AdminUserForm(request.POST, instance=user_to_edit)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Đã cập nhật người dùng {user_to_edit.username}.')
+            return redirect('admin_user_list')
+    else:
+        form = AdminUserForm(instance=user_to_edit)
+    return render(request, 'admin/user_form.html', {'form': form, 'user_to_edit': user_to_edit, 'title': 'Chỉnh Sửa Người Dùng'})
+
+@admin_required
+def admin_user_delete(request, user_id):
+    user_to_delete = get_object_or_404(User, id=user_id)
+    if user_to_delete == request.user:
+        messages.error(request, 'Bạn không thể tự xóa chính mình.')
+        return redirect('admin_user_list')
+    if user_to_delete.is_superuser and not request.user.is_superuser:
+        messages.error(request, 'Bạn không thể xóa Superuser.')
+        return redirect('admin_user_list')
+        
+    if request.method == 'POST':
+        user_to_delete.delete()
+        messages.success(request, f'Đã xóa người dùng {user_to_delete.username}.')
+        return redirect('admin_user_list')
+    return render(request, 'admin/confirm_delete.html', {
+        'object': user_to_delete,
+        'object_name': f'người dùng "{user_to_delete.username}"',
+        'cancel_url': 'admin_user_list'
+    })
+
+@admin_required
+def admin_user_password_reset(request, user_id):
+    user_to_reset = get_object_or_404(User, id=user_id)
+    if request.method == 'POST':
+        new_password = request.POST.get('new_password')
+        if new_password:
+            user_to_reset.set_password(new_password)
+            user_to_reset.save()
+            messages.success(request, f'Đã đổi mật khẩu cho {user_to_reset.username} thành công.')
+            return redirect('admin_user_list')
+        else:
+            messages.error(request, 'Vui lòng nhập mật khẩu mới.')
+    return render(request, 'admin/user_password_reset.html', {'user_to_reset': user_to_reset})

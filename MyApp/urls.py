@@ -33,10 +33,20 @@ urlpatterns = [
     
     # Admin Dashboard
     path('manage/', views.admin_dashboard, name='admin_dashboard'),
+    path('manage/users/', views.admin_user_list, name='admin_user_list'),
+    path('manage/users/add/', views.admin_user_create, name='admin_user_create'),
+    path('manage/users/<int:user_id>/edit/', views.admin_user_edit, name='admin_user_edit'),
+    path('manage/users/<int:user_id>/delete/', views.admin_user_delete, name='admin_user_delete'),
+    path('manage/users/<int:user_id>/password-reset/', views.admin_user_password_reset, name='admin_user_password_reset'),
+    path('manage/users/<int:user_id>/update-role/', views.admin_user_update_role, name='admin_user_update_role'),
     
     # Admin Statistics & Inventory
     path('manage/statistics/', views.admin_statistics, name='admin_statistics'),
     path('manage/inventory/', views.admin_inventory, name='admin_inventory'),
+    path('manage/inventory/ledger/', views.admin_inventory_ledger, name='admin_inventory_ledger'),
+    path('manage/inventory/receipt/new/', views.admin_inventory_receipt_create, name='admin_inventory_receipt_create'),
+    path('manage/orders/', views.admin_order_list, name='admin_order_list'),
+    path('manage/invoices/', views.admin_invoice_list, name='admin_invoice_list'),
     path('manage/orders/<str:order_number>/manage/', views.admin_order_detail_manage, name='admin_order_detail_manage'),
     path('manage/returns/', views.admin_return_list, name='admin_return_list'),
     path('manage/returns/<int:return_id>/', views.admin_return_detail, name='admin_return_detail'),
@@ -75,9 +85,9 @@ urlpatterns = [
     # Coupon CRUD
     path('manage/coupons/', views.coupon_list, name='coupon_list'),
     path('manage/coupons/add/', views.coupon_create, name='coupon_create'),
-    path('manage/coupons/<int:pk>/edit/', views.coupon_edit, name='coupon_edit'),
-    path('manage/coupons/<int:pk>/delete/', views.coupon_delete, name='coupon_delete'),
-    path('manage/coupons/<int:pk>/toggle/', views.coupon_toggle, name='coupon_toggle'),
+    path('manage/coupons/<int:coupon_id>/edit/', views.coupon_edit, name='coupon_edit'),
+    path('manage/coupons/<int:coupon_id>/delete/', views.coupon_delete, name='coupon_delete'),
+    path('manage/coupons/<int:coupon_id>/toggle/', views.coupon_toggle, name='coupon_toggle'),
     
     # Admin Review & Comment Moderation
     path('manage/reviews/', views.admin_review_list, name='admin_review_list'),

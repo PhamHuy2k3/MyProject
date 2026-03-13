@@ -1,0 +1,119 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}Quản Lý Hóa Đơn{% endblock %}
+{% block page_subtitle %}Danh sách hóa đơn và trạng thái thanh toán{% endblock %}
+
+{% block admin_content %}
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+    <p class="text-xs text-stone-500">Hóa đơn chỉ hiển thị khi đã được tạo cho đơn hàng.</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="backfill">
+        <button type="submit" class="btn-secondary px-4 py-2 text-xs">Tạo hóa đơn cho đơn đã xác nhận</button>
+    </form>
+</div>
+
+<div class="bg-white rounded-2xl border border-stone-200 p-6 mb-6">
+    <form method="get" class="flex flex-col lg:flex-row gap-3">
+        <div class="relative flex-1">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400"></i>
+            <input type="text" name="q" value="{{ current_query }}" placeholder="Tìm theo mã hóa đơn, mã đơn, khách hàng..."
+                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 text-sm focus:outline-none focus:border-emerald-600 bg-white">
+        </div>
+        <select name="status" class="rounded-xl border border-stone-200 px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-emerald-600">
+            <option value="" {% if not current_status %}selected{% endif %}>Tất cả trạng thái</option>
+            {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn-primary px-5 py-2.5 text-sm">Lọc</button>
+        <a href="{% url 'admin_invoice_list' %}"
+            class="flex items-center justify-center px-4 py-2.5 rounded-xl border border-stone-200 text-stone-500 hover:bg-stone-100 transition-colors text-sm">
+            Xóa lọc
+        </a>
+    </form>
+</div>
+
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="bg-stone-50/50 text-[10px] uppercase font-bold tracking-widest text-stone-400 border-b border-stone-100">
+                    <th class="px-6 py-4">Mã Hóa Đơn</th>
+                    <th class="px-6 py-4">Mã Đơn</th>
+                    <th class="px-6 py-4">Khách Hàng</th>
+                    <th class="px-6 py-4">Ngày Phát Hành</th>
+                    <th class="px-6 py-4">Tổng Tiền</th>
+                    <th class="px-6 py-4">Trạng Thái</th>
+                    <th class="px-6 py-4 text-right">Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-stone-50">
+                {% for inv in invoices %}
+                <tr class="hover:bg-stone-50/80 transition-colors group">
+                    <td class="px-6 py-4 font-mono text-xs font-bold text-emerald-900">
+                        {{ inv.invoice_number }}
+                    </td>
+                    <td class="px-6 py-4 font-mono text-xs text-stone-700">
+                        #{{ inv.order.order_number }}
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-bold text-stone-800">
+                            {{ inv.customer_name|default:inv.order.user.profile.get_full_name|default:inv.order.user.username }}
+                        </div>
+                        <div class="text-[10px] text-stone-400">{{ inv.order.user.email }}</div>
+                    </td>
+                    <td class="px-6 py-4 text-xs text-stone-500 font-mono">
+                        {{ inv.issue_date|date:"d/m/Y"|default:"—" }}
+                    </td>
+                    <td class="px-6 py-4 text-sm font-bold text-stone-800">
+                        {{ inv.total_amount|floatformat:0 }}₫
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if inv.status == 'draft' %}
+                        <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-stone-50 text-stone-600 border border-stone-200">
+                            Nháp
+                        </span>
+                        {% elif inv.status == 'issued' %}
+                        <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">
+                            Đã phát hành
+                        </span>
+                        {% elif inv.status == 'paid' %}
+                        <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100">
+                            Đã thanh toán
+                        </span>
+                        {% elif inv.status == 'cancelled' %}
+                        <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-100">
+                            Đã hủy
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-stone-50 text-stone-600 border border-stone-200">
+                            {{ inv.get_status_display }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="{% url 'invoice_pdf' inv.order.order_number %}" class="btn-secondary py-1.5 px-3 text-xs inline-flex items-center gap-1.5" target="_blank">
+                                PDF
+                            </a>
+                            <a href="{% url 'export_order_xml' inv.order.order_number %}" class="btn-secondary py-1.5 px-3 text-xs inline-flex items-center gap-1.5" target="_blank">
+                                XML
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center text-stone-500 italic">
+                        Không có hóa đơn nào trong danh sách này.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% include 'admin/includes/pagination.html' %}
+{% endblock %}

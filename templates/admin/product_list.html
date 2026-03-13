@@ -76,8 +76,8 @@
                     {% endif %}
                 </td>
                 <td class="px-6 py-4 hidden md:table-cell">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {% if product.stock_quantity == 0 %}bg-red-100 text-red-700{% elif product.stock_quantity <= 5 %}bg-yellow-100 text-yellow-700{% else %}bg-emerald-100 text-emerald-700{% endif %}">
-                        {{ product.stock_quantity }}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {% if product.physical_stock == 0 %}bg-red-100 text-red-700{% elif product.physical_stock <= 5 %}bg-yellow-100 text-yellow-700{% else %}bg-emerald-100 text-emerald-700{% endif %}">
+                        {{ product.physical_stock }}
                     </span>
                 </td>
                 <td class="px-6 py-4 text-sm text-stone-500 hidden md:table-cell">

@@ -126,7 +126,7 @@
                         </div>
                         <div class="space-y-2">
                             <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest">Số lượng tồn kho</label>
-                            {{ form.stock_quantity }}
+                            {{ form.physical_stock }}
                         </div>
                         {% if product %}
                         <div class="pt-3 border-t border-stone-100">
@@ -180,7 +180,7 @@
                             <span class="text-sm font-medium text-stone-700">{{ var.title }}</span>
                             <div class="text-right">
                                 <span class="text-sm font-bold text-emerald-700">{{ var.price|floatformat:0 }}₫</span>
-                                <span class="block text-[10px] text-stone-400">SL: {{ var.stock_quantity }}</span>
+                                <span class="block text-[10px] text-stone-400">SL: {{ var.physical_stock }}</span>
                             </div>
                         </div>
                         {% endfor %}

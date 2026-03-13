@@ -95,6 +95,11 @@ def storyboard_detail(request, pk):
 def product_detail(request, slug):
     active_filter = Q(category__isnull=True) | Q(category__is_active=True)
     product = get_object_or_404(Product.objects.select_related('category').filter(active_filter), slug=slug)
+    variations = list(product.variations.all())
+    if variations:
+        available_stock = sum(v.available_stock for v in variations)
+    else:
+        available_stock = product.available_stock
     
     # Gallery images
     gallery_images = list(product.images.all())
@@ -127,6 +132,7 @@ def product_detail(request, slug):
 
     context = {
         'product': product,
+        'available_stock': available_stock,
         'gallery_images': gallery_images,
         'related_products': related_products,
         'reviews': reviews,
@@ -196,7 +202,7 @@ def product_list_view(request):
     """Trang danh sách sản phẩm với tìm kiếm, lọc nâng cao và phân trang"""
     active_filter = Q(category__isnull=True) | Q(category__is_active=True)
     # Thêm prefetch_related('images')
-    products = Product.objects.select_related('category').prefetch_related('images').filter(active_filter)
+    products = Product.objects.select_related('category').prefetch_related('images', 'variations').filter(active_filter)
     categories = Category.objects.filter(is_active=True)
 
     # Search
@@ -240,7 +246,13 @@ def product_list_view(request):
     page = max(1, page)
 
     end_idx = page * per_page
-    product_list = products[:end_idx]
+    product_list = list(products[:end_idx])
+    for p in product_list:
+        variations = list(p.variations.all())
+        if variations:
+            p.display_stock = sum(v.available_stock for v in variations)
+        else:
+            p.display_stock = p.available_stock
     has_more = total_count > end_idx
     remaining = total_count - end_idx if has_more else 0
 

@@ -35,7 +35,7 @@ class Command(BaseCommand):
                 'ingredients': 'Lá trà xanh Thái Nguyên 100% tự nhiên, không chất bảo quản.',
                 'brewing_guide': 'Dùng nước 80-85°C, cho 3-5g trà vào ấm 200ml. Hãm lần đầu 30 giây rồi đổ bỏ nước tráng. Hãm lần 2 khoảng 1-2 phút, thưởng thức.',
                 'price': 150000,
-                'stock_quantity': 120,
+                'physical_stock': 55,
                 'variations': [('Gói 100g', 150000), ('Gói 250g', 350000), ('Gói 500g', 650000)],
             },
             {
@@ -47,7 +47,7 @@ class Command(BaseCommand):
                 'ingredients': 'Bột trà xanh matcha 100%, xuất xứ Uji, Kyoto, Nhật Bản.',
                 'brewing_guide': 'Cho 2g matcha vào chawan (chén trà), thêm 70ml nước 75°C. Dùng chasen (chổi tre) đánh theo hình chữ W cho đến khi tạo bọt mịn. Thưởng thức ngay.',
                 'price': 320000,
-                'stock_quantity': 80,
+                'physical_stock': 80,
                 'variations': [('Hộp 30g', 320000), ('Hộp 100g', 950000)],
             },
             {
@@ -59,7 +59,7 @@ class Command(BaseCommand):
                 'ingredients': 'Trà xanh Tân Cương nguyên chất, thu hái thủ công.',
                 'brewing_guide': 'Tráng ấm bằng nước sôi. Cho 5g trà, đổ nước 85°C, hãm 2-3 phút. Có thể hãm 3-4 lần, mỗi lần tăng thêm 30 giây.',
                 'price': 200000,
-                'stock_quantity': 95,
+                'physical_stock': 95,
                 'variations': [('Gói 100g', 200000), ('Gói 200g', 380000)],
             },
             # ── Trà Đen ──
@@ -72,7 +72,7 @@ class Command(BaseCommand):
                 'ingredients': 'Trà đen Lâm Đồng 100%, lên men tự nhiên.',
                 'brewing_guide': 'Dùng nước sôi 95-100°C, cho 3-4g trà vào ấm 250ml. Hãm 3-5 phút tùy khẩu vị. Có thể thêm sữa hoặc mật ong.',
                 'price': 130000,
-                'stock_quantity': 150,
+                'physical_stock': 150,
                 'variations': [('Gói 100g', 130000), ('Gói 250g', 300000), ('Gói 500g', 550000)],
             },
             {
@@ -84,7 +84,7 @@ class Command(BaseCommand):
                 'ingredients': 'Trà đen Ceylon, tinh dầu bergamot tự nhiên.',
                 'brewing_guide': 'Nước sôi 100°C, cho 1 túi lọc hoặc 3g trà lá vào cốc 200ml. Hãm 3-4 phút, thêm một lát chanh tươi nếu thích.',
                 'price': 180000,
-                'stock_quantity': 100,
+                'physical_stock': 100,
                 'variations': [('Hộp 20 túi lọc', 180000), ('Gói lá 100g', 220000)],
             },
             {
@@ -96,7 +96,7 @@ class Command(BaseCommand):
                 'ingredients': 'Trà đen Assam TGFOP nguyên lá, xuất xứ Ấn Độ.',
                 'brewing_guide': 'Nước 95-100°C, 4g trà cho 200ml. Hãm 4-5 phút. Pha masala chai: đun sôi trà cùng sữa, gừng, quế, cardamom trong 5 phút.',
                 'price': 250000,
-                'stock_quantity': 65,
+                'physical_stock': 65,
                 'variations': [('Gói 50g', 250000), ('Gói 100g', 450000)],
             },
             # ── Ô Long ──
@@ -109,7 +109,7 @@ class Command(BaseCommand):
                 'ingredients': 'Trà ô long Cầu Đất, Đà Lạt, chế biến bán lên men.',
                 'brewing_guide': 'Nước 90-95°C, 5g trà cho ấm 150ml. Tráng trà lần đầu, bỏ nước. Hãm từ lần 2, mỗi lần 30-45 giây. Có thể hãm 5-7 lần.',
                 'price': 220000,
-                'stock_quantity': 85,
+                'physical_stock': 85,
                 'variations': [('Gói 100g', 220000), ('Gói 250g', 500000)],
             },
             {
@@ -121,7 +121,7 @@ class Command(BaseCommand):
                 'ingredients': 'Trà ô long Thiết Quan Âm, xuất xứ Phúc Kiến, Trung Quốc.',
                 'brewing_guide': 'Dùng ấm tử sa hoặc gaiwan. Nước 95°C, 7g trà cho 120ml. Tráng trà nhanh, hãm lần 1 khoảng 15 giây, tăng dần mỗi lần. Hãm được 7-10 lần.',
                 'price': 350000,
-                'stock_quantity': 50,
+                'physical_stock': 50,
                 'variations': [('Gói 50g', 350000), ('Gói 100g', 650000), ('Gói 250g', 1500000)],
             },
             {
@@ -133,7 +133,7 @@ class Command(BaseCommand):
                 'ingredients': 'Trà ô long Đông Phương Mỹ Nhân, lên men tự nhiên 60-70%.',
                 'brewing_guide': 'Nước 85-90°C, 5g trà cho 200ml. Hãm 2-3 phút. Không cần tráng trà. Uống chậm rãi để cảm nhận hương vị thay đổi.',
                 'price': 450000,
-                'stock_quantity': 35,
+                'physical_stock': 35,
                 'variations': [('Gói 50g', 450000), ('Gói 100g', 850000)],
             },
             # ── Trà Thảo Mộc ──
@@ -146,7 +146,7 @@ class Command(BaseCommand):
                 'ingredients': 'Hoa cúc vàng sấy khô, mật ong hoa nhãn nguyên chất.',
                 'brewing_guide': 'Cho 5-7 bông cúc vào cốc, đổ nước 90°C, hãm 5 phút. Thêm 1 thìa mật ong khi nước nguội bớt (dưới 60°C). Khuấy đều, thưởng thức.',
                 'price': 95000,
-                'stock_quantity': 200,
+                'physical_stock': 200,
                 'variations': [('Hộp 20 túi', 95000), ('Gói hoa khô 100g', 120000)],
             },
             {
@@ -158,7 +158,7 @@ class Command(BaseCommand):
                 'ingredients': 'Lá và hoa atiso Đà Lạt sấy khô 100% tự nhiên.',
                 'brewing_guide': 'Cho 10g atiso vào 500ml nước, đun sôi nhỏ lửa 10-15 phút. Lọc, thêm đường phèn nếu thích. Có thể uống nóng hoặc lạnh.',
                 'price': 75000,
-                'stock_quantity': 180,
+                'physical_stock': 180,
                 'variations': [('Gói 100g', 75000), ('Gói 250g', 170000), ('Gói 500g', 300000)],
             },
             {
@@ -170,7 +170,7 @@ class Command(BaseCommand):
                 'ingredients': 'Gừng sấy lạnh 60%, nghệ vàng sấy lạnh 40%. Không chất phụ gia.',
                 'brewing_guide': 'Cho 1 túi lọc hoặc 5g bột vào cốc 200ml nước sôi. Hãm 5-7 phút. Thêm mật ong và chanh tùy thích.',
                 'price': 85000,
-                'stock_quantity': 160,
+                'physical_stock': 160,
                 'variations': [('Hộp 20 túi lọc', 85000), ('Bột nghệ gừng 200g', 145000)],
             },
             {
@@ -182,7 +182,7 @@ class Command(BaseCommand):
                 'ingredients': 'Nụ hoa hồng Đà Lạt sấy khô 100%.',
                 'brewing_guide': 'Cho 5-8 nụ hồng vào cốc, đổ nước 85°C, hãm 5 phút. Có thể kết hợp cùng trà xanh hoặc mật ong.',
                 'price': 110000,
-                'stock_quantity': 140,
+                'physical_stock': 140,
                 'variations': [('Hộp 50g', 110000), ('Hộp 100g', 200000)],
             },
             # ── Phụ Kiện Pha Trà ──
@@ -195,7 +195,7 @@ class Command(BaseCommand):
                 'ingredients': 'Đất sét tử sa Nghi Hưng tự nhiên, nung thủ công ở 1100-1200°C.',
                 'brewing_guide': 'Trước khi dùng lần đầu: rửa sạch, đun sôi ấm trong nước trà loãng 30 phút. Sau mỗi lần dùng, rửa bằng nước nóng, không dùng xà phòng.',
                 'price': 850000,
-                'stock_quantity': 25,
+                'physical_stock': 25,
                 'variations': [('200ml - Tròn', 850000), ('150ml - Bẹt', 780000), ('300ml - Cao', 950000)],
             },
             {
@@ -207,7 +207,7 @@ class Command(BaseCommand):
                 'ingredients': 'Gốm Bát Tràng men lam, nung ở nhiệt độ cao, an toàn thực phẩm.',
                 'brewing_guide': 'Tráng chén bằng nước nóng trước khi rót trà. Rửa sạch sau khi dùng, tránh thay đổi nhiệt độ đột ngột.',
                 'price': 280000,
-                'stock_quantity': 40,
+                'physical_stock': 40,
                 'variations': [('Bộ 6 chén', 280000), ('Bộ 6 chén kèm khay tre', 420000)],
             },
             {
@@ -219,7 +219,7 @@ class Command(BaseCommand):
                 'ingredients': 'Tre già tự nhiên, chế tác thủ công truyền thống Nhật Bản.',
                 'brewing_guide': 'Ngâm chasen trong nước ấm 1 phút trước khi dùng. Đánh matcha theo hình chữ W. Sau khi dùng, rửa sạch bằng nước ấm, đặt lên đế giữ chasen.',
                 'price': 195000,
-                'stock_quantity': 55,
+                'physical_stock': 55,
                 'variations': [('Chasen 80 nan', 195000), ('Chasen 80 nan + đế', 260000), ('Bộ Matcha (chasen + chashaku + chawan)', 550000)],
             },
         ]
@@ -242,7 +242,7 @@ class Command(BaseCommand):
                     'ingredients': item['ingredients'],
                     'brewing_guide': item['brewing_guide'],
                     'price': item['price'],
-                    'stock_quantity': item['stock_quantity'],
+                    'physical_stock': item['physical_stock'],
                 }
             )
 
@@ -257,7 +257,7 @@ class Command(BaseCommand):
                         title=var_title,
                         defaults={
                             'price': var_price,
-                            'stock_quantity': random.randint(10, 50),
+                            'physical_stock': random.randint(10, 50),
                         }
                     )
             else:

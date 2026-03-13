@@ -95,7 +95,8 @@
                 <a href="{% url 'product_list_public' %}"
                     class="text-stone-600 hover:text-emerald-800 font-medium transition-colors">Sản phẩm</a>
 
-                {% if user.is_authenticated and user.is_staff %}
+                {% if user.is_authenticated %}
+                    {% if user.is_staff or user.profile.role == 'admin' or user.profile.role == 'accountant' or user.profile.role == 'warehouse' %}
                 <!-- Admin Menu -->
                 <div class="relative group">
                     <button
@@ -110,22 +111,40 @@
                                 class="flex items-center px-4 py-3 text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800">
                                 <i data-lucide="layout-dashboard" class="w-4 h-4 mr-2"></i> Dashboard
                             </a>
+                            {% if user.is_superuser or user.profile.role == 'admin' or user.profile.role == 'accountant' %}
                             <a href="{% url 'admin_statistics' %}"
                                 class="flex items-center px-4 py-3 text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800">
                                 <i data-lucide="bar-chart-3" class="w-4 h-4 mr-2"></i> Thống Kê
                             </a>
+                            {% endif %}
+                            {% if user.is_superuser or user.profile.role == 'admin' or user.profile.role == 'warehouse' %}
                             <a href="{% url 'admin_inventory' %}"
                                 class="flex items-center px-4 py-3 text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800">
-                                <i data-lucide="package" class="w-4 h-4 mr-2"></i> Quản Lý Kho
+                                <i data-lucide="package" class="w-4 h-4 mr-2"></i> Kho
                             </a>
-                            <div class="border-t border-stone-100 my-1"></div>
+                            <a href="{% url 'admin_order_list' %}"
+                                class="flex items-center px-4 py-3 text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800">
+                                <i data-lucide="clipboard-list" class="w-4 h-4 mr-2"></i> Đơn Hàng
+                            </a>
                             <a href="{% url 'product_list' %}"
                                 class="flex items-center px-4 py-3 text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800">
                                 <i data-lucide="list" class="w-4 h-4 mr-2"></i> Sản Phẩm
                             </a>
+                            {% endif %}
+                            {% if user.is_superuser or user.profile.role == 'admin' or user.profile.role == 'accountant' %}
+                            <a href="{% url 'admin_invoice_list' %}"
+                                class="flex items-center px-4 py-3 text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800">
+                                <i data-lucide="file-text" class="w-4 h-4 mr-2"></i> Hóa Đơn
+                            </a>
+                            <a href="{% url 'coupon_list' %}"
+                                class="flex items-center px-4 py-3 text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800">
+                                <i data-lucide="ticket" class="w-4 h-4 mr-2"></i> Mã Giảm Giá
+                            </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
+                    {% endif %}
                 {% endif %}
             </div>
 

@@ -73,7 +73,7 @@
                     <div class="flex items-center gap-2">
                         <form action="{% url 'cart_update' item.id %}" method="post" class="flex items-center">
                             {% csrf_token %}
-                            {% with stock_limit=item.variation.stock_quantity|default:item.product.stock_quantity %}
+                            {% with stock_limit=item.variation.available_stock|default:item.product.available_stock %}
                             <input type="number" name="quantity" value="{{ item.quantity }}" min="1"
                                 max="{{ stock_limit }}" title="Số lượng phải từ 1 đến {{ stock_limit }}"
                                 class="qty-input hover-trigger" required>

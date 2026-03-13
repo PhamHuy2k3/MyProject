@@ -18,6 +18,7 @@ class CategoryAdmin(admin.ModelAdmin):
 class ProductVariationInline(admin.TabularInline):
 	model = ProductVariation
 	extra = 1
+	fields = ('title', 'price', 'physical_stock', 'reserved_stock')
 
 
 from .models import ProductImage
@@ -30,7 +31,7 @@ class ProductImageInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-	list_display = ('title', 'slug', 'category', 'price', 'stock_quantity', 'created_at')
+	list_display = ('title', 'slug', 'category', 'price', 'physical_stock', 'reserved_stock', 'created_at')
 	list_filter = ('category',)
 	prepopulated_fields = {'slug': ('title',)}
 	inlines = [ProductVariationInline, ProductImageInline]
@@ -355,3 +356,20 @@ class SupportQuickReplyAdmin(admin.ModelAdmin):
 class SupportBusinessHoursAdmin(admin.ModelAdmin):
 	list_display = ('day_of_week', 'open_time', 'close_time', 'is_open')
 	list_editable = ('open_time', 'close_time', 'is_open')
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+	list_display = ('user', 'role', 'membership_level', 'points', 'member_since')
+	list_filter = ('role', 'membership_level', 'member_since')
+	search_fields = ('user__username', 'user__email', 'membership_number')
+	
+	fieldsets = (
+		('Người dùng', {
+			'fields': ('user', 'role', 'avatar', 'bio')
+		}),
+		('Liên hệ', {
+			'fields': ('phone', 'address', 'street_address', 'ward', 'district', 'province')
+		}),
+		('Thành viên', {
+			'fields': ('membership_level', 'membership_number', 'points')
+		}),
+	)

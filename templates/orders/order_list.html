@@ -38,6 +38,8 @@
                                 <span class="badge badge-warning">Chờ xử lý</span>
                                 {% elif order.status == 'confirmed' %}
                                 <span class="badge badge-success">Đã xác nhận</span>
+                                {% elif order.status == 'processing' %}
+                                <span class="badge badge-info">Đang đóng gói</span>
                                 {% elif order.status == 'shipping' %}
                                 <span class="badge badge-info">Đang giao</span>
                                 {% elif order.status == 'delivered' %}
@@ -46,6 +48,18 @@
                                 <span class="badge badge-success">Hoàn thành</span>
                                 {% elif order.status == 'cancelled' %}
                                 <span class="badge badge-danger">Đã hủy</span>
+                                {% elif order.status == 'return_requested' %}
+                                <span class="badge badge-warning">Yêu cầu trả</span>
+                                {% elif order.status == 'return_approved' %}
+                                <span class="badge badge-info">Duyệt trả</span>
+                                {% elif order.status == 'returned' %}
+                                <span class="badge badge-secondary">Đã nhận trả</span>
+                                {% elif order.status == 'refunded' %}
+                                <span class="badge badge-danger">Đã hoàn tiền</span>
+                                {% elif order.status == 'exchanged' %}
+                                <span class="badge badge-info">Đã đổi hàng</span>
+                                {% else %}
+                                <span class="badge badge-secondary">{{ order.get_status_display }}</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -58,6 +72,10 @@
                                 <span class="badge badge-warning">
                                     <i class="fas fa-hourglass-start"></i> Chờ thanh toán
                                 </span>
+                                {% elif order.payment.payment_status == 'pending_verification' %}
+                                <span class="badge badge-warning">
+                                    <i class="fas fa-hourglass-half"></i> Chờ xác nhận
+                                </span>
                                 {% elif order.payment.payment_status == 'processing' %}
                                 <span class="badge badge-info">
                                     <i class="fas fa-spinner"></i> Đang xử lý
@@ -66,6 +84,12 @@
                                 <span class="badge badge-danger">
                                     <i class="fas fa-times-circle"></i> Thất bại
                                 </span>
+                                {% elif order.payment.payment_status == 'cancelled' %}
+                                <span class="badge badge-secondary">
+                                    <i class="fas fa-ban"></i> Đã hủy
+                                </span>
+                                {% else %}
+                                <span class="badge badge-secondary">{{ order.payment.get_payment_status_display }}</span>
                                 {% endif %}
                                 {% else %}
                                 <span class="badge badge-secondary">N/A</span>
@@ -85,7 +109,7 @@
                                         title="XML" target="_blank">
                                         <i class="fas fa-file-code"></i>
                                     </a>
-                                    {% if order.payment and order.payment.payment_status != 'completed' %}
+                                    {% if order.payment and order.payment.payment_status == 'pending' %}
                                     <a href="{% url 'payment' order.order_number %}" class="btn btn-success"
                                         title="Thanh toán">
                                         <i class="fas fa-credit-card"></i>

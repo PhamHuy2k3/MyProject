@@ -14,7 +14,7 @@ from MyApp.models import (
     SupportTicket, SupportMessage, SupportAttachment, SupportRating,
     SupportQuickReply, SupportBusinessHours, Notification, User,
 )
-
+from .utils import management_required, is_management_staff
 
 # ==================== SUPPORT CHAT WIDGET PAGE ====================
 
@@ -89,21 +89,14 @@ def _notify_staff_new_ticket(ticket, first_message_content):
 
 
 def _get_avg_wait_minutes():
-    from django.db.models import Avg
     from datetime import timedelta
 
     cutoff = timezone.now() - timedelta(days=7)
-    avg = SupportTicket.objects.filter(
-        first_response_at__isnull=False,
-        created_at__gte=cutoff
-    ).annotate().aggregate(
-        avg_seconds=Avg('first_response_at')  # placeholder, calculate in Python
-    )
-    # Fallback: tính thủ công
+    # Tính thủ công để tránh lỗi aggregate datetime trên SQLite
     recent = SupportTicket.objects.filter(
         first_response_at__isnull=False,
         created_at__gte=cutoff
-    ).values_list('created_at', 'first_response_at')[:20]
+    ).values_list('created_at', 'first_response_at')[:50]
 
     if not recent:
         return 5  # Default 5 phút
@@ -519,8 +512,7 @@ def _is_staff(user):
     return user.is_authenticated and user.is_staff
 
 
-@login_required(login_url='login')
-@user_passes_test(_is_staff)
+@management_required
 def admin_support_dashboard(request):
     """
     GET /manage/support/
@@ -602,7 +594,7 @@ def admin_support_dashboard(request):
     return render(request, 'admin/support/dashboard.html', context)
 
 
-@user_passes_test(_is_staff)
+@management_required
 def admin_support_ticket_detail(request, ticket_id):
     """
     GET /manage/support/<ticket_id>/
@@ -660,9 +652,7 @@ def admin_support_ticket_detail(request, ticket_id):
     return render(request, 'admin/support/dashboard.html', context)
 
 
-@csrf_exempt
-@login_required(login_url='login')
-@user_passes_test(_is_staff)
+@management_required
 def api_agent_reply(request, ticket_id):
     """
     POST /manage/support/tickets/{id}/reply/
@@ -726,9 +716,7 @@ def api_agent_reply(request, ticket_id):
     return JsonResponse({'message': msg.to_dict()})
 
 
-@csrf_exempt
-@login_required(login_url='login')
-@user_passes_test(_is_staff)
+@management_required
 def api_agent_assign(request, ticket_id):
     """POST /manage/support/tickets/{id}/assign/ — Nhận ticket."""
     if request.method != 'POST':
@@ -765,9 +753,7 @@ def api_agent_assign(request, ticket_id):
     return JsonResponse({'success': True, 'agent': agent.get_full_name() or agent.username})
 
 
-@csrf_exempt
-@login_required(login_url='login')
-@user_passes_test(_is_staff)
+@management_required
 def api_agent_resolve(request, ticket_id):
     """POST /manage/support/tickets/{id}/resolve/ — Đánh dấu đã giải quyết."""
     if request.method != 'POST':
@@ -871,8 +857,7 @@ def request_return(request, order_number):
             return redirect('request_return', order_number=order_number)
         
         # Update order status
-        order.status = 'return_requested'
-        order.save()
+        order.set_status('return_requested', user=request.user, note="Khách gửi yêu cầu đổi/trả.")
         
         messages.success(request, 'Yêu cầu đổi trả của bạn đã được gửi. Chúng tôi sẽ phản hồi sớm nhất.')
         return redirect('order_detail', order_number=order_number)
@@ -886,21 +871,12 @@ def cancel_order(request, order_number):
     """
     order = get_object_or_404(Order, order_number=order_number, user=request.user)
     
-    if order.status != 'pending':
-        messages.error(request, 'Bạn không thể hủy đơn hàng này khi đã bắt đầu xử lý hoặc giao.')
-        return redirect('order_detail', order_number=order_number)
+    # Use the new OMS action to cancel (this handles reserved stock release and logging)
+    success, message = order.action_cancel(user=request.user)
     
-    # Restore stock
-    for item in order.items.all():
-        if item.variation:
-            item.variation.stock_quantity += item.quantity
-            item.variation.save()
-        elif item.product:
-            item.product.stock_quantity += item.quantity
-            item.product.save()
-            
-    order.status = 'cancelled'
-    order.save()
+    if not success:
+        messages.error(request, f"Không thể hủy đơn hàng: {message}")
+        return redirect('order_detail', order_number=order_number)
     
     messages.success(request, f'Đơn hàng {order_number} đã được hủy thành công.')
     return redirect('order_list')

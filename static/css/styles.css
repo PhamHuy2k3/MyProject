@@ -1,3 +1,32 @@
+/* --- FIX NAVBAR ICON ALIGNMENT --- */
+.navbar-icons,
+.flex.items-center.space-x-5.shrink-0 {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.navbar-icons a,
+.navbar-icons button,
+.flex.items-center.space-x-5.shrink-0 a,
+.flex.items-center.space-x-5.shrink-0 button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    min-width: 40px;
+    padding: 0;
+    background: none;
+    border: none;
+}
+
+/* Đảm bảo icon lucide luôn cùng kích thước và căn giữa */
+[data-lucide] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+}
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;300;400;500&display=swap');
 

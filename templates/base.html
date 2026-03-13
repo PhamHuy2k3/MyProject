@@ -131,11 +131,25 @@
 
             <!-- Search Bar -->
             <div class="flex flex-1 max-w-sm mx-4 md:mx-6 relative" id="search-container">
-                <form action="{% url 'product_list_public' %}" method="GET" class="w-full relative">
+                <form action="{% url 'product_list_public' %}" method="GET" class="w-full relative group/search">
                     <input type="text" name="q" id="search-input" placeholder="Tìm kiếm trà, ấm chén..."
                         autocomplete="off"
-                        class="w-full bg-stone-100 border-none rounded-full py-2 pl-10 pr-4 focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all text-sm outline-none">
+                        class="w-full bg-stone-100 border-none rounded-full py-2 pl-10 pr-12 focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all text-sm outline-none">
                     <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400"></i>
+                    
+                    <!-- Voice Search Button -->
+                    <button type="button" id="voice-search-btn" 
+                        class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all duration-200"
+                        title="Tìm bằng giọng nói">
+                        <i data-lucide="mic" class="w-4 h-4"></i>
+                    </button>
+
+                    <!-- Voice Listening Indicator -->
+                    <div id="voice-indicator" class="hidden absolute right-12 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                        <span class="w-1 h-3 bg-emerald-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></span>
+                        <span class="w-1 h-3 bg-emerald-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+                        <span class="w-1 h-3 bg-emerald-500 rounded-full animate-bounce" style="animation-delay: 0.3s"></span>
+                    </div>
                 </form>
 
                 <!-- Suggestions Dropdown -->
@@ -281,6 +295,7 @@
     {% include 'core/support_chat.html' %}
     {% block extra_scripts %}{% endblock %}
     <script src="{% static 'js/main.js' %}"></script>
+    <script src="{% static 'js/voice-search.js' %}"></script>
 
 
     <!-- Custom Scripts -->

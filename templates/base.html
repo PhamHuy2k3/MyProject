@@ -231,10 +231,10 @@
                 <a href="{% url 'wishlist' %}" class="relative text-stone-600 hover:text-emerald-800 transition-colors"
                     title="Yêu thích">
                     <i data-lucide="heart" class="w-5 h-5"></i>
-                    {% if user.is_authenticated and user.wishlist.products.count > 0 %}
+                    {% if user.is_authenticated and user.wishlists.count > 0 %}
                     <span
                         class="absolute -top-2 -right-2 w-4 h-4 bg-rose-500 text-white text-[10px] flex items-center justify-center rounded-full">
-                        {{ user.wishlist.products.count }}
+                        {{ user.wishlists.count }}
                     </span>
                     {% endif %}
                 </a>

@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.mail import send_mail
+from django.core.cache import cache
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -72,7 +73,18 @@ def cart_add(request, product_id):
     if not created:
         cart_item.quantity += qty
         cart_item.save()
-    
+
+    # Optionally remove from wishlist (when adding from wishlist page)
+    remove_from_wishlist = (
+        request.POST.get('remove_from_wishlist') == '1'
+        or request.GET.get('remove_from_wishlist') == '1'
+    )
+    if remove_from_wishlist and request.user.is_authenticated:
+        Wishlist.objects.filter(user=request.user, product=product).delete()
+
+    if request.user.is_authenticated:
+        cache.delete(f'user_badges_{request.user.id}')
+
     messages.success(request, f'Đã thêm "{product.title}" vào giỏ hàng!')
     return redirect(request.META.get('HTTP_REFERER', 'index'))
 
@@ -83,6 +95,8 @@ def cart_remove(request, item_id):
     cart_item = get_object_or_404(CartItem, id=item_id, cart=cart)
     title = cart_item.product.title
     cart_item.delete()
+    if request.user.is_authenticated:
+        cache.delete(f'user_badges_{request.user.id}')
     messages.success(request, f'Đã xóa "{title}" khỏi giỏ hàng.')
     return redirect('cart')
 
@@ -102,6 +116,8 @@ def cart_update(request, item_id):
             cart_item.save()
         else:
             cart_item.delete()
+        if request.user.is_authenticated:
+            cache.delete(f'user_badges_{request.user.id}')
     return redirect('cart')
 
 

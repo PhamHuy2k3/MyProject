@@ -47,6 +47,21 @@ def review_create(request, slug):
                     f'{request.user.username} rated {rating}★',
                     link=f'/product/{slug}/'
                 )
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            review_count = product.reviews.count()
+            avg_rating = product.reviews.aggregate(avg=Avg('rating'))['avg'] or 0
+            html = render_to_string('shop/partials/review_item.html', {
+                'reviews': [review],
+                'request': request,
+            })
+            return JsonResponse({
+                'success': True,
+                'review_id': review.id,
+                'created': created,
+                'review_count': review_count,
+                'avg_rating': round(avg_rating, 1),
+                'html': html,
+            })
     return redirect('product_detail', slug=slug)
 
 
@@ -143,6 +158,55 @@ def comments_ajax_view(request, slug):
         'has_next': page_obj.has_next(),
         'top_level_count': paginator.count,
         'total_count': product.comments.count(),
+    })
+
+
+def comment_locate_api(request, slug):
+    """Locate a comment within paginated top-level comments for deep-linking."""
+    product = get_object_or_404(Product, slug=slug)
+    try:
+        target_id = int(request.GET.get('comment_id', ''))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'invalid_comment_id'}, status=400)
+
+    comment = Comment.objects.filter(id=target_id, product=product).select_related('parent').first()
+    if not comment:
+        return JsonResponse({'success': False, 'error': 'not_found'}, status=404)
+
+    top_level = comment.parent or comment
+
+    sort = request.GET.get('sort', 'newest')
+    replies_qs = Comment.objects.select_related('user', 'user__profile').prefetch_related('media', 'interactions').order_by('created_at')
+    comments_qs = Comment.objects.filter(product=product, parent=None).annotate(
+        like_count=Count('interactions', filter=Q(interactions__is_like=True)),
+        dislike_count=Count('interactions', filter=Q(interactions__is_like=False)),
+        reply_count=Count('replies')
+    ).select_related('user', 'user__profile').prefetch_related('media', 'interactions', Prefetch('replies', queryset=replies_qs))
+
+    if sort == 'newest':
+        comments_qs = comments_qs.order_by('-created_at')
+    elif sort == 'oldest':
+        comments_qs = comments_qs.order_by('created_at')
+    elif sort == 'popular':
+        comments_qs = comments_qs.annotate(
+            popularity=F('like_count') + F('reply_count') * 2
+        ).order_by('-popularity', '-created_at')
+
+    ids = list(comments_qs.values_list('id', flat=True))
+    try:
+        idx = ids.index(top_level.id)
+    except ValueError:
+        idx = 0
+
+    per_page = 4
+    page = idx // per_page + 1
+
+    return JsonResponse({
+        'success': True,
+        'page': page,
+        'parent_id': top_level.id,
+        'target_id': comment.id,
+        'is_reply': bool(comment.parent_id),
     })
 
 

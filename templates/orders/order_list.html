@@ -1,134 +1,152 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}Danh sách đơn hàng | Tea Company{% endblock %}
+{% block title %}Lịch sử đơn hàng | TeaZen{% endblock %}
 
 {% block content %}
-<div class="container my-5">
-    <div class="row">
-        <div class="col-md-12">
-            <h1 class="mb-4">Danh sách đơn hàng của tôi</h1>
+<!-- Hero Section -->
+<div class="relative py-16 overflow-hidden bg-stone-50">
+    <!-- Decorative background elements -->
+    <div class="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-96 h-96 bg-emerald-100/50 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-72 h-72 bg-emerald-50/50 rounded-full blur-3xl"></div>
 
-            {% if orders %}
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Số hóa đơn</th>
-                            <th>Ngày tạo</th>
-                            <th>Số lượng sản phẩm</th>
-                            <th>Tổng tiền</th>
-                            <th>Trạng thái</th>
-                            <th>Thanh toán</th>
-                            <th>Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for order in orders %}
-                        <tr>
-                            <td>
-                                <strong>{{ order.order_number }}</strong>
-                            </td>
-                            <td>{{ order.created_at|date:"d/m/Y" }}</td>
-                            <td>{{ order.items.count }}</td>
-                            <td class="text-right">
-                                <strong>{{ order.total_amount|floatformat:0 }} ₫</strong>
-                            </td>
-                            <td>
-                                {% if order.status == 'pending' %}
-                                <span class="badge badge-warning">Chờ xử lý</span>
-                                {% elif order.status == 'confirmed' %}
-                                <span class="badge badge-success">Đã xác nhận</span>
-                                {% elif order.status == 'processing' %}
-                                <span class="badge badge-info">Đang đóng gói</span>
-                                {% elif order.status == 'shipping' %}
-                                <span class="badge badge-info">Đang giao</span>
-                                {% elif order.status == 'delivered' %}
-                                <span class="badge badge-success">Đã giao</span>
-                                {% elif order.status == 'completed' %}
-                                <span class="badge badge-success">Hoàn thành</span>
-                                {% elif order.status == 'cancelled' %}
-                                <span class="badge badge-danger">Đã hủy</span>
-                                {% elif order.status == 'return_requested' %}
-                                <span class="badge badge-warning">Yêu cầu trả</span>
-                                {% elif order.status == 'return_approved' %}
-                                <span class="badge badge-info">Duyệt trả</span>
-                                {% elif order.status == 'returned' %}
-                                <span class="badge badge-secondary">Đã nhận trả</span>
-                                {% elif order.status == 'refunded' %}
-                                <span class="badge badge-danger">Đã hoàn tiền</span>
-                                {% elif order.status == 'exchanged' %}
-                                <span class="badge badge-info">Đã đổi hàng</span>
-                                {% else %}
-                                <span class="badge badge-secondary">{{ order.get_status_display }}</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if order.payment %}
-                                {% if order.payment.payment_status == 'completed' %}
-                                <span class="badge badge-success">
-                                    <i class="fas fa-check-circle"></i> Đã thanh toán
-                                </span>
-                                {% elif order.payment.payment_status == 'pending' %}
-                                <span class="badge badge-warning">
-                                    <i class="fas fa-hourglass-start"></i> Chờ thanh toán
-                                </span>
-                                {% elif order.payment.payment_status == 'pending_verification' %}
-                                <span class="badge badge-warning">
-                                    <i class="fas fa-hourglass-half"></i> Chờ xác nhận
-                                </span>
-                                {% elif order.payment.payment_status == 'processing' %}
-                                <span class="badge badge-info">
-                                    <i class="fas fa-spinner"></i> Đang xử lý
-                                </span>
-                                {% elif order.payment.payment_status == 'failed' %}
-                                <span class="badge badge-danger">
-                                    <i class="fas fa-times-circle"></i> Thất bại
-                                </span>
-                                {% elif order.payment.payment_status == 'cancelled' %}
-                                <span class="badge badge-secondary">
-                                    <i class="fas fa-ban"></i> Đã hủy
-                                </span>
-                                {% else %}
-                                <span class="badge badge-secondary">{{ order.payment.get_payment_status_display }}</span>
-                                {% endif %}
-                                {% else %}
-                                <span class="badge badge-secondary">N/A</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'order_detail' order.order_number %}" class="btn btn-primary"
-                                        title="Chi tiết">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="{% url 'invoice_pdf' order.order_number %}" class="btn btn-info"
-                                        title="PDF" target="_blank">
-                                        <i class="fas fa-file-pdf"></i>
-                                    </a>
-                                    <a href="{% url 'export_order_xml' order.order_number %}" class="btn btn-secondary"
-                                        title="XML" target="_blank">
-                                        <i class="fas fa-file-code"></i>
-                                    </a>
-                                    {% if order.payment and order.payment.payment_status == 'pending' %}
-                                    <a href="{% url 'payment' order.order_number %}" class="btn btn-success"
-                                        title="Thanh toán">
-                                        <i class="fas fa-credit-card"></i>
-                                    </a>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> Bạn chưa có đơn hàng nào.
-                <a href="{% url 'index' %}">Mua sắm ngay</a>
-            </div>
-            {% endif %}
+    <div class="container mx-auto px-6 relative z-10">
+        <div class="max-w-4xl">
+            <h1 class="text-4xl md:text-5xl font-art font-extrabold text-stone-900 mb-4 tracking-tight">
+                Lịch sử <span class="text-emerald-700">Đơn hàng</span>
+            </h1>
+            <p class="text-lg text-stone-600 max-w-2xl leading-relaxed italic">
+                "Thưởng trà không chỉ là uống nước, mà là trân trọng từng khoảnh khắc."
+            </p>
+            <p class="text-sm text-stone-500 mt-2">
+                Dưới đây là hành trình nghệ thuật trà đạo của bạn tại TeaZen.
+            </p>
         </div>
+    </div>
+</div>
+
+<div class="container mx-auto px-6 -mt-8 pb-24 relative z-20">
+    <div class="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl shadow-stone-200/50 border border-stone-100 overflow-hidden">
+        
+        {% if orders %}
+        <!-- Desktop Table -->
+        <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="bg-stone-50/50 border-b border-stone-100">
+                        <th class="px-8 py-5 text-xs font-bold text-stone-400 uppercase tracking-widest">Mã đơn hàng</th>
+                        <th class="px-6 py-5 text-xs font-bold text-stone-400 uppercase tracking-widest">Ngày đặt</th>
+                        <th class="px-6 py-5 text-xs font-bold text-stone-400 uppercase tracking-widest text-center">Sản phẩm</th>
+                        <th class="px-6 py-5 text-xs font-bold text-stone-400 uppercase tracking-widest">Tổng cộng</th>
+                        <th class="px-6 py-5 text-xs font-bold text-stone-400 uppercase tracking-widest">Trạng thái</th>
+                        <th class="px-8 py-5 text-xs font-bold text-stone-400 uppercase tracking-widest text-right">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-stone-50">
+                    {% for order in orders %}
+                    <tr class="group hover:bg-emerald-50/30 transition-all duration-300">
+                        <td class="px-8 py-6">
+                            <span class="font-mono font-bold text-stone-800 tracking-tighter">{{ order.order_number }}</span>
+                        </td>
+                        <td class="px-6 py-6 text-sm text-stone-600 font-medium italic">
+                            {{ order.created_at|date:"d/m/Y" }}
+                        </td>
+                        <td class="px-6 py-6 text-sm text-stone-600 text-center font-bold">
+                            <span class="bg-stone-100 px-2 py-1 rounded-lg">{{ order.items.count }}</span>
+                        </td>
+                        <td class="px-6 py-6 font-bold text-emerald-950">
+                            {{ order.total_amount|floatformat:0 }}đ
+                        </td>
+                        <td class="px-6 py-6">
+                            {% include "orders/includes/status_badge.html" with status=order.status %}
+                        </td>
+                        <td class="px-8 py-6 text-right">
+                            <div class="flex items-center justify-end space-x-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
+                                <a href="{% url 'order_detail' order.order_number %}" 
+                                   class="p-2.5 rounded-xl bg-white border border-stone-100 text-stone-600 hover:text-emerald-700 hover:border-emerald-200 hover:shadow-lg transition-all"
+                                   title="Chi tiết">
+                                    <i data-lucide="eye" class="w-4.5 h-4.5"></i>
+                                </a>
+                                <a href="{% url 'invoice_pdf' order.order_number %}" target="_blank"
+                                   class="p-2.5 rounded-xl bg-white border border-stone-100 text-stone-600 hover:text-rose-600 hover:border-rose-200 hover:shadow-lg transition-all"
+                                   title="Tải PDF">
+                                    <i data-lucide="file-text" class="w-4.5 h-4.5"></i>
+                                </a>
+                                <a href="{% url 'export_order_xml' order.order_number %}" target="_blank"
+                                   class="p-2.5 rounded-xl bg-white border border-stone-100 text-stone-600 hover:text-blue-600 hover:border-blue-200 hover:shadow-lg transition-all"
+                                   title="Tải XML">
+                                    <i data-lucide="file-code" class="w-4.5 h-4.5"></i>
+                                </a>
+                                {% if order.payment and order.payment.payment_status == 'pending' %}
+                                <a href="{% url 'payment' order.order_number %}"
+                                   class="px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 shadow-xl shadow-emerald-200/50 transition-all">
+                                    Thanh toán
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile View -->
+        <div class="md:hidden divide-y divide-stone-50">
+            {% for order in orders %}
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <p class="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Đơn hàng</p>
+                        <p class="font-mono font-bold text-stone-800">{{ order.order_number }}</p>
+                    </div>
+                    {% include "orders/includes/status_badge.html" with status=order.status %}
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-6 p-4 bg-stone-50 rounded-2xl">
+                    <div>
+                        <p class="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Ngày đặt</p>
+                        <p class="text-sm text-stone-800 font-bold italic">{{ order.created_at|date:"d/m/Y" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Tổng tiền</p>
+                        <p class="text-sm text-emerald-800 font-bold">{{ order.total_amount|floatformat:0 }}đ</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <a href="{% url 'order_detail' order.order_number %}" 
+                       class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-stone-200 text-stone-800 font-bold text-xs hover:bg-stone-100 transition-colors">
+                        Chi tiết
+                    </a>
+                    {% if order.payment and order.payment.payment_status == 'pending' %}
+                    <a href="{% url 'payment' order.order_number %}"
+                       class="flex-[1.5] py-3 rounded-xl bg-emerald-600 text-white font-bold text-xs text-center shadow-lg shadow-emerald-200/40">
+                        Thanh toán ngay
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% else %}
+        <!-- Empty State -->
+        <div class="py-32 text-center px-6">
+            <div class="relative inline-block mb-8">
+                <div class="absolute inset-0 bg-emerald-100 rounded-full blur-2xl animate-pulse"></div>
+                <div class="relative w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto border border-stone-100 shadow-xl">
+                    <i data-lucide="shopping-bag" class="w-10 h-10 text-emerald-200"></i>
+                </div>
+            </div>
+            <h3 class="text-2xl font-bold text-stone-800 mb-2">Hành trình chè thơm đang chờ bạn</h3>
+            <p class="text-stone-500 mb-10 max-w-sm mx-auto leading-relaxed italic">"Một tách trà, vạn tâm tư." Hãy bắt đầu đơn hàng đầu tiên của bạn tại TeaZen.</p>
+            <a href="{% url 'product_list_public' %}" 
+               class="inline-flex items-center gap-3 px-10 py-4 rounded-full bg-emerald-800 text-white font-bold shadow-xl shadow-emerald-200/50 hover:bg-emerald-950 hover:-translate-y-1 transition-all duration-300 group">
+                Khám phá ngay <i data-lucide="arrow-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+            </a>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

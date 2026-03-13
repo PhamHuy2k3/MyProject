@@ -58,8 +58,7 @@
                             <span class="text-emerald-700 text-lg">({{ item.variation.title }})</span>
                             {% endif %}
                         </h4>
-                        <p class="text-xs text-stone-500 mt-1 uppercase tracking-wider">{{
-                            item.product.excerpt|truncatechars:30 }}</p>
+                        <p class="text-xs text-stone-500 mt-1 uppercase tracking-wider">{{ item.product.excerpt|truncatechars:30 }}</p>
                         <div class="font-mono text-emerald-900 mt-2">
                             {% if item.variation and item.variation.price %}
                             {{ item.variation.price|floatformat:0 }}₫

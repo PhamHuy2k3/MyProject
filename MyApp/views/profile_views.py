@@ -13,6 +13,7 @@ from django.db.models import Count, Sum, Avg, F, Q, DecimalField, IntegerField
 from django.db.models.functions import Coalesce
 from decimal import Decimal
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
+from django.core.cache import cache
 
 from MyApp.models import *
 from MyApp.forms import *
@@ -85,6 +86,8 @@ def wishlist_add(request, product_id):
         messages.success(request, f'Đã thêm "{product.title}" vào danh sách yêu thích!')
     else:
         messages.info(request, f'"{product.title}" đã có trong danh sách yêu thích.')
+
+    cache.delete(f'user_badges_{request.user.id}')
     
     return redirect(request.META.get('HTTP_REFERER', 'index'))
 
@@ -94,6 +97,7 @@ def wishlist_remove(request, product_id):
     """Xóa sản phẩm khỏi wishlist"""
     product = get_object_or_404(Product, id=product_id)
     Wishlist.objects.filter(user=request.user, product=product).delete()
+    cache.delete(f'user_badges_{request.user.id}')
     messages.success(request, f'Đã xóa "{product.title}" khỏi danh sách yêu thích.')
     return redirect(request.META.get('HTTP_REFERER', 'profile'))
 

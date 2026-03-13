@@ -103,6 +103,7 @@ urlpatterns = [
     # Comments specifically
     path('product/<slug:slug>/comment/', views.comment_create, name='comment_create'),
     path('product/<slug:slug>/comments-ajax/', views.comments_ajax_view, name='comments_ajax_view'),
+    path('product/<slug:slug>/comment-locate/', views.comment_locate_api, name='comment_locate_api'),
     path('comment/<int:comment_id>/interact/', views.comment_interact_api, name='comment_interact_api'),
     path('comment/<int:comment_id>/delete/', views.comment_delete_api, name='comment_delete_api'),
     

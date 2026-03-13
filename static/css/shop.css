@@ -96,6 +96,18 @@
         outline: none;
     }
 
+/* Comment & Review Highlight */
+.comment-highlight {
+    background: #ecfdf5;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35);
+    transition: background-color 0.6s ease, box-shadow 0.6s ease;
+}
+.review-highlight {
+    background: #f0fdf4;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35);
+    transition: background-color 0.6s ease, box-shadow 0.6s ease;
+}
+
 /* Extracted from checkout.html */
 .checkout-step {
         position: relative;

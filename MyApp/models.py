@@ -395,6 +395,23 @@ class Order(models.Model):
 		self.status = new_status
 		self.save(update_fields=['status', 'updated_at'])
 		OrderStatusHistory.objects.create(order=self, status=new_status, user=user, note=note)
+
+		# Create notification for the user
+		try:
+			from django.urls import reverse
+			status_display = self.get_status_display()
+			Notification.objects.create(
+				user=self.user,
+				actor=user,
+				notification_type='order',
+				title=f"Cập nhật đơn hàng {self.order_number}",
+				message=f"Đơn hàng của bạn đã chuyển sang trạng thái: {status_display}. {note}",
+				link=reverse('order_detail', kwargs={'order_number': self.order_number})
+			)
+		except Exception:
+			# Silently fail for notification to avoid breaking order flow
+			pass
+
 		return True, "Cập nhật trạng thái thành công."
 
 	def ensure_invoice(self):

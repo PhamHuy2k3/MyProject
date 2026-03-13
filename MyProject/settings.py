@@ -79,6 +79,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'MyApp.context_processors.categories',
                 'MyApp.context_processors.support_context',
+                'MyApp.context_processors.user_badges',
             ],
         },
     },

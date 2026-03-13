@@ -250,20 +250,20 @@
                 <a href="{% url 'wishlist' %}" class="relative text-stone-600 hover:text-emerald-800 transition-colors"
                     title="Yêu thích">
                     <i data-lucide="heart" class="w-5 h-5"></i>
-                    {% if user.is_authenticated and user.wishlists.count > 0 %}
+                    {% if user.is_authenticated and wishlist_count|default:0 > 0 %}
                     <span
                         class="absolute -top-2 -right-2 w-4 h-4 bg-rose-500 text-white text-[10px] flex items-center justify-center rounded-full">
-                        {{ user.wishlists.count }}
+                        {{ wishlist_count }}
                     </span>
                     {% endif %}
                 </a>
 
                 <a href="{% url 'cart' %}" class="relative text-stone-600 hover:text-emerald-800 transition-colors">
                     <i data-lucide="shopping-bag" class="w-5 h-5"></i>
-                    {% if user.is_authenticated and user.cart.items.count > 0 %}
+                    {% if user.is_authenticated and cart_item_count|default:0 > 0 %}
                     <span
                         class="absolute -top-2 -right-2 w-4 h-4 bg-emerald-600 text-white text-[10px] flex items-center justify-center rounded-full">
-                        {{ user.cart.items.count }}
+                        {{ cart_item_count }}
                     </span>
                     {% endif %}
                 </a>
@@ -414,7 +414,7 @@
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
             const formData = new FormData();
             formData.append('notification_id', id);
-            fetch('/notifications/mark-read/', {
+            const markPromise = fetch('/notifications/mark-read/', {
                 method: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken },
                 body: formData,
@@ -427,7 +427,11 @@
                     if (dot) dot.remove();
                 }
             }).catch(() => {});
-            if (link) window.location.href = link;
+            if (link) {
+                Promise.resolve(markPromise).finally(() => {
+                    window.location.href = link;
+                });
+            }
         }
 
         // Toggle dropdown
@@ -545,7 +549,7 @@
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>`;
             toast.addEventListener('click', () => {
-                if (notif.link) window.location.href = notif.link;
+                handleNotifClick(notif.id, notif.link);
                 toast.remove();
             });
             document.body.appendChild(toast);

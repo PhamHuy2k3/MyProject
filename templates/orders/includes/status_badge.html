@@ -1,0 +1,49 @@
+{% if status == 'pending' %}
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 text-[11px] font-bold uppercase tracking-wider border border-amber-100">
+    <i data-lucide="clock" class="w-3.5 h-3.5"></i> Chờ xử lý
+</span>
+{% elif status == 'confirmed' %}
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold uppercase tracking-wider border border-blue-100">
+    <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Đã xác nhận
+</span>
+{% elif status == 'processing' %}
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold uppercase tracking-wider border border-emerald-100">
+    <i data-lucide="package" class="w-3.5 h-3.5"></i> Đang đóng gói
+</span>
+{% elif status == 'shipping' %}
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-bold uppercase tracking-wider border border-indigo-100">
+    <i data-lucide="truck" class="w-3.5 h-3.5"></i> Đang giao
+</span>
+{% elif status == 'delivered' %}
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold uppercase tracking-wider border border-emerald-200">
+    <i data-lucide="package-check" class="w-3.5 h-3.5"></i> Đã giao
+</span>
+{% elif status == 'completed' %}
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-700 text-white text-[11px] font-bold uppercase tracking-wider shadow-lg shadow-emerald-200/50">
+    <i data-lucide="award" class="w-3.5 h-3.5"></i> Hoàn tất
+</span>
+{% elif status == 'cancelled' %}
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 text-stone-500 text-[11px] font-bold uppercase tracking-wider border border-stone-200">
+    <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Đã hủy
+</span>
+{% elif status == 'return_requested' %}
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-50 text-rose-700 text-[11px] font-bold uppercase tracking-wider border border-rose-100">
+    <i data-lucide="backspace" class="w-3.5 h-3.5"></i> Yêu cầu trả
+</span>
+{% elif status == 'returned' %}
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-100 text-rose-800 text-[11px] font-bold uppercase tracking-wider border border-rose-200">
+    <i data-lucide="corner-up-left" class="w-3.5 h-3.5"></i> Đã trả hàng
+</span>
+{% elif status == 'refunded' %}
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-700 text-white text-[11px] font-bold uppercase tracking-wider shadow-lg shadow-rose-200/50">
+    <i data-lucide="wallet" class="w-3.5 h-3.5"></i> Hoàn tiền
+</span>
+{% elif status == 'exchanged' %}
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-bold uppercase tracking-wider border border-indigo-100">
+    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Đã đổi hàng
+</span>
+{% else %}
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 text-stone-600 text-[11px] font-bold uppercase tracking-wider">
+    {{ status }}
+</span>
+{% endif %}

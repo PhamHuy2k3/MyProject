@@ -1,5 +1,7 @@
 from django.contrib.auth.decorators import user_passes_test, login_required
 from MyApp.models import Notification
+from django.db.models import Q
+import re
 
 def is_admin(user):
     return user.is_authenticated and (
@@ -66,3 +68,36 @@ def create_notification(user, notification_type, title, message_text, link='', a
         message=message_text,
         link=link,
     )
+
+def get_smart_search_filter(query, fields):
+    """
+    Returns a Q object that cleans the search query and ensures all words
+    are present across the specified fields.
+    """
+    if not query:
+        return Q()
+
+    # Clean query: Remove punctuation and special characters
+    # Keep alphanumeric (including Vietnamese chars) and spaces
+    # \w in Python 3 includes Unicode word characters by default
+    clean_query = re.sub(r'[^\w\s]', ' ', query)
+    words = clean_query.split()
+
+    if not words:
+        return Q()
+
+    # Combine words with AND logic
+    # Each word must appear in at least one of the specified fields
+    combined_q = Q()
+    for word in words:
+        word_q = Q()
+        for field in fields:
+            # We use icontains for partial matching of each word
+            word_q |= Q(**{f"{field}__icontains": word})
+        
+        if combined_q:
+            combined_q &= word_q
+        else:
+            combined_q = word_q
+
+    return combined_q

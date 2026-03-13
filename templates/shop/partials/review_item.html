@@ -1,7 +1,7 @@
 {% load static %}
 
 {% for review in reviews %}
-<div class="bg-white rounded-[2rem] p-6 shadow-sm border border-stone-100 mb-4 transition-all hover:shadow-md">
+<div id="review-{{ review.id }}" class="bg-white rounded-[2rem] p-6 shadow-sm border border-stone-100 mb-4 transition-all hover:shadow-md">
     <!-- Header -->
     <div class="flex items-start justify-between mb-4">
         <div class="flex gap-4">

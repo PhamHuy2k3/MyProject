@@ -282,20 +282,19 @@
                 <div id="cabinet-container" class="flex flex-col h-[700px] border-t border-emerald-800 fade-up">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-8 p-8">
                         {% for item in cabinet_items %}
-                        {% if item.link_url %}<a href="{{ item.link_url }}" class="block group">{% else %}<div
-                                class="block group">{% endif %}
-                                <div
-                                    class="p-6 bg-white/5 rounded-[2rem] shadow-inner hover:shadow-xl transition-shadow group-hover:bg-white/10 h-full">
-                                    <div class="overflow-hidden rounded-[1.5rem] aspect-[4/3] mb-4">
-                                        <img src="{% if item.image %}{{ item.image.url }}{% else %}https://images.unsplash.com/photo-1597481499750-3e6b22637e12?q=80&w=800{% endif %}"
-                                            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
-                                    </div>
-                                    <h4
-                                        class="font-art text-xl font-bold group-hover:text-emerald-300 transition-colors">
-                                        {{ item.title }}</h4>
-                                    <p class="text-sm text-emerald-200/60 mt-2">{{ item.note }}</p>
+                        <a class="block group" {% if item.link_url %}href="{{ item.link_url }}"{% else %}aria-disabled="true"{% endif %}>
+                            <div
+                                class="p-6 bg-white/5 rounded-[2rem] shadow-inner hover:shadow-xl transition-shadow group-hover:bg-white/10 h-full">
+                                <div class="overflow-hidden rounded-[1.5rem] aspect-[4/3] mb-4">
+                                    <img src="{% if item.image %}{{ item.image.url }}{% else %}https://images.unsplash.com/photo-1597481499750-3e6b22637e12?q=80&w=800{% endif %}"
+                                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
                                 </div>
-                                {% if item.link_url %}</a>{% else %}</div>{% endif %}
+                                <h4
+                                    class="font-art text-xl font-bold group-hover:text-emerald-300 transition-colors">
+                                    {{ item.title }}</h4>
+                                <p class="text-sm text-emerald-200/60 mt-2">{{ item.note }}</p>
+                            </div>
+                        </a>
 
                     {% empty %}
                     <p class="text-stone-500">No cabinet items yet.</p>
@@ -620,7 +619,6 @@
             </div>
             <div class="border-t border-[#dcfce7]/10 pt-8 flex flex-col md:flex-row justify-between items-end">
                 <h2 class="font-art text-[15vw] leading-[0.8] font-bold opacity-20 select-none">TEAZEN</h2>
-                <p class="text-xs opacity-40 uppercase tracking-widest mb-4 md:mb-8">© 2024 Design by Gemini</p>
             </div>
         </div>
     </footer>

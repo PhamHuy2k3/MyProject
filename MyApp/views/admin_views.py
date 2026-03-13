@@ -137,7 +137,20 @@ def admin_statistics(request):
 
 @warehouse_required
 def admin_inventory(request):
-    product_list = Product.objects.all().order_by('physical_stock')
+    product_list = Product.objects.with_available_stock().select_related('category').order_by('available_stock_value')
+
+    q = request.GET.get('q', '').strip()
+    category_filter = request.GET.get('category', '').strip()
+    stock_filter = request.GET.get('stock', '').strip()
+
+    if q:
+        product_list = product_list.filter(get_smart_search_filter(q, ['title', 'slug', 'excerpt']))
+    if category_filter:
+        product_list = product_list.filter(category__slug=category_filter)
+    if stock_filter == 'low':
+        product_list = product_list.filter(available_stock_value__lte=10, available_stock_value__gt=0)
+    elif stock_filter == 'out':
+        product_list = product_list.filter(available_stock_value__lte=0)
     
     # Pagination
     paginator = Paginator(product_list, 10)
@@ -155,6 +168,10 @@ def admin_inventory(request):
     context = {
         'products': products,
         'recent_transactions': recent_transactions,
+        'categories': Category.objects.filter(is_active=True),
+        'current_query': q,
+        'current_category': category_filter,
+        'current_stock': stock_filter,
         'stats': {
             'total_physical': total_physical,
             'total_reserved': total_reserved,
@@ -173,14 +190,10 @@ def admin_order_list(request):
     status = request.GET.get('status', '').strip()
 
     if q:
-        orders = orders.filter(
-            Q(order_number__icontains=q) |
-            Q(user__username__icontains=q) |
-            Q(user__email__icontains=q) |
-            Q(user__first_name__icontains=q) |
-            Q(user__last_name__icontains=q) |
-            Q(user__profile__phone__icontains=q)
-        )
+        orders = orders.filter(get_smart_search_filter(q, [
+            'order_number', 'user__username', 'user__email', 
+            'user__first_name', 'user__last_name', 'user__profile__phone'
+        ]))
 
     if status and status != 'all':
         orders = orders.filter(status=status)
@@ -218,16 +231,11 @@ def admin_invoice_list(request):
     status = request.GET.get('status', '').strip()
 
     if q:
-        invoices = invoices.filter(
-            Q(invoice_number__icontains=q) |
-            Q(order__order_number__icontains=q) |
-            Q(customer_name__icontains=q) |
-            Q(customer_tax_code__icontains=q) |
-            Q(order__user__username__icontains=q) |
-            Q(order__user__email__icontains=q) |
-            Q(order__user__first_name__icontains=q) |
-            Q(order__user__last_name__icontains=q)
-        )
+        invoices = invoices.filter(get_smart_search_filter(q, [
+            'invoice_number', 'order__order_number', 'customer_name', 
+            'customer_tax_code', 'order__user__username', 'order__user__email',
+            'order__user__first_name', 'order__user__last_name'
+        ]))
 
     if status:
         invoices = invoices.filter(status=status)

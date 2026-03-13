@@ -88,6 +88,27 @@ def _notify_staff_new_ticket(ticket, first_message_content):
         )
 
 
+def _notify_staff_return_request(return_req):
+    """
+    Notify all staff members when a new return/exchange request is submitted.
+    """
+    from django.urls import reverse
+    order = return_req.order
+    request_type_display = "Đổi trả" if return_req.request_type == 'refund' else "Đổi hàng"
+    
+    # Notify all staff (is_staff=True)
+    staff_users = User.objects.filter(is_staff=True)
+    for staff in staff_users:
+        Notification.objects.create(
+            user=staff,
+            actor=order.user,
+            notification_type='order',
+            title=f'📦 Yêu cầu {request_type_display} mới: {order.order_number}',
+            message=f'Khách hàng {order.user.username} đã gửi yêu cầu cho đơn hàng {order.order_number}.',
+            link=f'/manage/returns/' # Direct to the returns management page
+        )
+
+
 def _get_avg_wait_minutes():
     from datetime import timedelta
 
@@ -858,6 +879,12 @@ def request_return(request, order_number):
         
         # Update order status
         order.set_status('return_requested', user=request.user, note="Khách gửi yêu cầu đổi/trả.")
+        
+        # Notify all staff members
+        try:
+            _notify_staff_return_request(return_req)
+        except Exception:
+            pass # Don't block the user if notification fails
         
         messages.success(request, 'Yêu cầu đổi trả của bạn đã được gửi. Chúng tôi sẽ phản hồi sớm nhất.')
         return redirect('order_detail', order_number=order_number)

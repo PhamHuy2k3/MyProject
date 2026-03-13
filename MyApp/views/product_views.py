@@ -208,9 +208,7 @@ def product_list_view(request):
     # Search
     query = request.GET.get('q', '').strip()
     if query:
-        products = products.filter(
-            Q(title__icontains=query) | Q(excerpt__icontains=query) | Q(description__icontains=query)
-        )
+        products = products.filter(get_smart_search_filter(query, ['title', 'excerpt', 'description']))
 
     # Advanced Filters
     min_price = request.GET.get('min_price')
@@ -260,9 +258,7 @@ def product_list_view(request):
     category_counts = {}
     all_products_in_filter = Product.objects.select_related('category').filter(active_filter)
     if query:
-        all_products_in_filter = all_products_in_filter.filter(
-            Q(title__icontains=query) | Q(excerpt__icontains=query) | Q(description__icontains=query)
-        )
+        all_products_in_filter = all_products_in_filter.filter(get_smart_search_filter(query, ['title', 'excerpt', 'description']))
     for cat_count in all_products_in_filter.values('category__slug', 'category__name').annotate(count=Count('id')):
         if cat_count['category__slug']:
             category_counts[cat_count['category__slug']] = cat_count['count']
@@ -301,7 +297,7 @@ def search_suggestions(request):
     
     active_filter = Q(category__isnull=True) | Q(category__is_active=True)
     products = Product.objects.filter(active_filter).filter(
-        Q(title__icontains=q) | Q(excerpt__icontains=q) | Q(category__name__icontains=q)
+        get_smart_search_filter(q, ['title', 'excerpt', 'category__name'])
     ).select_related('category')[:6]
     
     results = []
@@ -328,6 +324,3 @@ def review_vote_helpful(request, review_id):
         review.refresh_from_db()
         return JsonResponse({'success': True, 'helpful_votes': review.helpful_votes})
     return JsonResponse({'success': False, 'error': 'Invalid request'})
-
-
-

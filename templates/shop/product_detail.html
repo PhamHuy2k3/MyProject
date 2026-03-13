@@ -107,7 +107,7 @@
                             {% endfor %}
                         </div>
                         <span class="font-bold text-sm text-stone-700">{{ avg_rating }}</span>
-                        <span class="text-sm text-stone-500 group-hover:text-emerald-700 group-hover:underline transition-colors">({{ review_count }} đánh giá)</span>
+                        <span id="review-count-inline" class="text-sm text-stone-500 group-hover:text-emerald-700 group-hover:underline transition-colors">({{ review_count }} đánh giá)</span>
                     </a>
                     
                     {% if product.excerpt %}
@@ -352,7 +352,7 @@
                             {% endfor %}
                         </div>
                         
-                        <p class="text-stone-500 text-sm mb-6">{{ review_count }} bài đánh giá</p>
+                        <p id="review-count-text" class="text-stone-500 text-sm mb-6">{{ review_count }} bài đánh giá</p>
                         
                         <button onclick="document.getElementById('review-form-container').classList.toggle('hidden')" class="hover-trigger inline-flex items-center gap-2 bg-emerald-900 text-white px-6 py-3 rounded-xl font-bold text-sm tracking-wide hover:bg-emerald-800 transition-colors w-full justify-center md:w-auto">
                             <i data-lucide="edit-3" class="w-4 h-4"></i>
@@ -415,7 +415,7 @@
                             <i data-lucide="x" class="w-4 h-4"></i>
                         </button>
                     </div>
-                <form method="post" action="{% url 'review_create' product.slug %}" class="space-y-4">
+                <form id="review-form" method="post" action="{% url 'review_create' product.slug %}" class="space-y-4">
                     {% csrf_token %}
                     <!-- Star Rating -->
                     <div>
@@ -679,7 +679,7 @@ function fetchReviews(page = 1) {
     
     const url = `/product/{{ product.slug }}/reviews-ajax/?page=${page}&sort=${sort}&q=${encodeURIComponent(query)}`;
     
-    fetch(url)
+    return fetch(url)
         .then(response => response.json())
         .then(data => {
             container.innerHTML = data.html;
@@ -689,6 +689,9 @@ function fetchReviews(page = 1) {
             currentReviewPage = page;
             hasNextReviewPage = !!data.has_next;
             updateReviewNav();
+            if (typeof data.total_count === 'number') {
+                updateReviewCount(data.total_count);
+            }
         })
         .catch(error => {
             console.error('Error fetching reviews:', error);
@@ -808,6 +811,14 @@ document.addEventListener('DOMContentLoaded', function() {
             searchTimeout = setTimeout(() => fetchReviews(1), 400);
         });
     }
+
+    const reviewForm = document.getElementById('review-form');
+    if (reviewForm) {
+        reviewForm.addEventListener('submit', submitReview);
+    }
+
+    fetchComments(1).then(() => handleCommentHash());
+    window.addEventListener('hashchange', handleCommentHash);
 });
 
 // Lightbox functionality
@@ -875,6 +886,59 @@ function setRating(value) {
     document.querySelectorAll('.star-btn').forEach((btn, index) => {
         btn.classList.toggle('text-amber-400', index < value);
         btn.classList.toggle('text-stone-300', index >= value);
+    });
+}
+
+function submitReview(e) {
+    e.preventDefault();
+    const form = e.target;
+    const btn = form.querySelector('button[type="submit"]');
+    if (!btn) return;
+
+    const originalBtnHtml = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Gửi...';
+    btn.disabled = true;
+    if (window.lucide) window.lucide.createIcons();
+
+    const formData = new FormData(form);
+    fetch(form.action, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData,
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data || !data.success) {
+            throw new Error(data?.error || 'REQUEST_FAILED');
+        }
+
+        form.reset();
+        setRating(5);
+
+        if (typeof data.review_count === 'number') {
+            updateReviewCount(data.review_count);
+        }
+
+        fetchReviews(1).then(() => {
+            const el = document.getElementById('review-' + data.review_id);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                highlightElement(el, 'review-highlight');
+            }
+        });
+
+        const container = document.getElementById('review-form-container');
+        if (container) container.classList.add('hidden');
+
+        showCommentToast(data.created ? 'Đã gửi đánh giá.' : 'Đã cập nhật đánh giá.');
+    })
+    .catch(() => {
+        showCommentToast('Không thể gửi đánh giá. Vui lòng thử lại.', 'error');
+    })
+    .finally(() => {
+        btn.innerHTML = originalBtnHtml;
+        btn.disabled = false;
+        if (window.lucide) window.lucide.createIcons();
     });
 }
 
@@ -949,6 +1013,38 @@ function showReplyWindowAtEnd(commentId) {
     if (total === 0) return;
     replyWindowState[commentId] = Math.max(0, Math.ceil(total / 4) - 1);
     showReplyWindow(commentId);
+}
+
+let commentHashInFlight = false;
+function locateCommentAndScroll(targetId) {
+    if (commentHashInFlight) return;
+    commentHashInFlight = true;
+    const sort = document.getElementById('comment-sort')?.value || 'newest';
+    fetch(`/product/{{ product.slug }}/comment-locate/?comment_id=${targetId}&sort=${sort}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data || !data.success) return;
+            return fetchComments(data.page, false).then(() => {
+                if (data.is_reply && data.parent_id) {
+                    showReplyWindowAtEnd(data.parent_id);
+                }
+                const el = document.getElementById('comment-' + data.target_id) || document.getElementById('comment-' + data.parent_id);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    highlightElement(el, 'comment-highlight');
+                }
+            });
+        })
+        .catch(() => {})
+        .finally(() => { commentHashInFlight = false; });
+}
+
+function handleCommentHash() {
+    const hash = window.location.hash || '';
+    if (!hash.startsWith('#comment-')) return;
+    const id = parseInt(hash.replace('#comment-', ''), 10);
+    if (!Number.isFinite(id)) return;
+    locateCommentAndScroll(id);
 }
 
 // User Profile Popup
@@ -1043,6 +1139,13 @@ function formatCommentCount(value) {
     return `${value}`;
 }
 
+function updateReviewCount(total) {
+    const inlineEl = document.getElementById('review-count-inline');
+    if (inlineEl) inlineEl.textContent = `(${total} đánh giá)`;
+    const textEl = document.getElementById('review-count-text');
+    if (textEl) textEl.textContent = `${total} bài đánh giá`;
+}
+
 function updateCommentCount(total) {
     const countText = document.getElementById('comment-count-text');
     if (countText) {
@@ -1050,6 +1153,12 @@ function updateCommentCount(total) {
         countText.textContent = `${formatted} bình luận`;
         countText.title = `${total} bình luận`;
     }
+}
+
+function highlightElement(el, className) {
+    if (!el) return;
+    el.classList.add(className);
+    setTimeout(() => el.classList.remove(className), 2500);
 }
 
 function updateCommentsLoadControl() {
@@ -1447,10 +1556,6 @@ function deleteComment(commentId) {
     }
 }
 
-// Initial fetch
-document.addEventListener('DOMContentLoaded', () => {
-    fetchComments(1);
-});
 </script>
 
 <!-- RELATED PRODUCTS SECTION (Optional) -->

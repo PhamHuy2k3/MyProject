@@ -178,113 +178,117 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const diffRows = document.querySelectorAll('tr[id^="diff-"]');
     diffRows.forEach(row => {
-        const logId = row.id.split('diff-')[1];
-        const beforeEl = document.getElementById(`before-${logId}`);
-        const afterEl = document.getElementById(`after-${logId}`);
-        const viewer = document.getElementById(`diff-viewer-${logId}`);
-        
-        if (!beforeEl || !afterEl || !viewer) return;
-        
-        let beforeObj = {};
-        let afterObj = {};
-        
-        const tryParse = (str) => {
-            if (!str || str === 'null' || str === 'None') return null;
-            try { return JSON.parse(str); } catch(e) { return null; }
-        };
+        try {
+            const logId = row.id.split('diff-')[1];
+            const beforeEl = document.getElementById(`before-${logId}`);
+            const afterEl = document.getElementById(`after-${logId}`);
+            const viewer = document.getElementById(`diff-viewer-${logId}`);
+            
+            if (!beforeEl || !afterEl || !viewer) return;
+            
+            let beforeObj = {};
+            let afterObj = {};
+            
+            const tryParse = (str) => {
+                if (!str || str === 'null' || str === 'None') return null;
+                try { return JSON.parse(str); } catch(e) { return null; }
+            };
 
-        beforeObj = tryParse(beforeEl.textContent.trim());
-        afterObj = tryParse(afterEl.textContent.trim());
-        
-        // If parsing as object failed, but we have raw string, wrap it
-        if (!beforeObj && beforeEl.textContent.trim() && beforeEl.textContent.trim() !== 'null') beforeObj = { "data": beforeEl.textContent.trim() };
-        if (!afterObj && afterEl.textContent.trim() && afterEl.textContent.trim() !== 'null') afterObj = { "data": afterEl.textContent.trim() };
+            beforeObj = tryParse(beforeEl.textContent.trim());
+            afterObj = tryParse(afterEl.textContent.trim());
+            
+            // If parsing as object failed, but we have raw string, wrap it
+            if (!beforeObj && beforeEl.textContent.trim() && beforeEl.textContent.trim() !== 'null') beforeObj = { "data": beforeEl.textContent.trim() };
+            if (!afterObj && afterEl.textContent.trim() && afterEl.textContent.trim() !== 'null') afterObj = { "data": afterEl.textContent.trim() };
 
-        const allKeys = new Set([...Object.keys(beforeObj || {}), ...Object.keys(afterObj || {})]);
-        
-        if (allKeys.size === 0) {
-            viewer.innerHTML = `
-                <div class="p-10 bg-stone-50 text-center rounded-xl border border-dashed border-stone-200">
-                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-stone-100 text-stone-400 mb-3">
-                        <i data-lucide="info" class="w-6 h-6"></i>
+            const allKeys = new Set([...Object.keys(beforeObj || {}), ...Object.keys(afterObj || {})]);
+            
+            if (allKeys.size === 0) {
+                viewer.innerHTML = `
+                    <div class="p-10 bg-stone-50 text-center rounded-xl border border-dashed border-stone-200">
+                        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-stone-100 text-stone-400 mb-3">
+                            <i data-lucide="info" class="w-6 h-6"></i>
+                        </div>
+                        <p class="text-stone-500 font-medium">Không có dữ liệu thay đổi chi tiết nào được ghi nhận.</p>
+                        <p class="text-stone-400 text-xs mt-1">Sự kiện này chỉ ghi nhận thông tin cấp độ hệ thống.</p>
                     </div>
-                    <p class="text-stone-500 font-medium">Không có dữ liệu thay đổi chi tiết nào được ghi nhận.</p>
-                    <p class="text-stone-400 text-xs mt-1">Sự kiện này chỉ ghi nhận thông tin cấp độ hệ thống.</p>
-                </div>
-            `;
-            Lucide.createIcons();
-            return;
-        }
-        
-        let hasChanges = false;
-        let html = `
-        <div class="bg-white overflow-hidden rounded-xl border border-stone-200 shadow-sm mt-2 mb-6">
-            <table class="w-full text-sm text-left border-collapse">
-                <thead class="bg-stone-50 border-b border-stone-200">
-                    <tr>
-                        <th class="py-3 px-5 font-black text-stone-500 text-[10px] uppercase tracking-widest w-[25%]">Trường dữ liệu</th>
-                        <th class="py-3 px-5 font-black text-stone-500 text-[10px] uppercase tracking-widest w-[37.5%]">Trạng thái cũ</th>
-                        <th class="py-3 px-5 font-black text-stone-500 text-[10px] uppercase tracking-widest w-[37.5%]">Trạng thái mới</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-stone-100">
-        `;
-        
-        const sortedKeys = Array.from(allKeys).sort();
-        sortedKeys.forEach(key => {
-            const beforeVal = beforeObj ? beforeObj[key] : undefined;
-            const afterVal = afterObj ? afterObj[key] : undefined;
-            
-            if (JSON.stringify(beforeVal) === JSON.stringify(afterVal)) return;
-            hasChanges = true;
-            
-            let strBefore = formatValue(beforeVal);
-            let strAfter = formatValue(afterVal);
-            
-            if (strBefore.length > 150) strBefore = `<div class="max-h-32 overflow-y-auto pr-2 custom-scrollbar text-xs leading-relaxed">${strBefore}</div>`;
-            if (strAfter.length > 150) strAfter = `<div class="max-h-32 overflow-y-auto pr-2 custom-scrollbar text-xs leading-relaxed">${strAfter}</div>`;
-            
-            let beforeBg = "";
-            let afterBg = "";
-            let badge = "";
-            
-            if (beforeVal === undefined && afterVal !== undefined) {
-                afterBg = "bg-emerald-50/30";
-                badge = '<span class="px-1.5 py-0.5 rounded-full text-[8px] font-black bg-emerald-100 text-emerald-700 leading-none border border-emerald-200">NEW</span>';
-            } else if (beforeVal !== undefined && afterVal === undefined) {
-                beforeBg = "bg-red-50/30";
-                badge = '<span class="px-1.5 py-0.5 rounded-full text-[8px] font-black bg-red-100 text-red-700 leading-none border border-red-200">DEL</span>';
-            } else {
-                beforeBg = "bg-amber-50/10";
-                afterBg = "bg-emerald-50/10";
-                badge = '<span class="px-1.5 py-0.5 rounded-full text-[8px] font-black bg-stone-100 text-stone-600 leading-none border border-stone-200">MOD</span>';
+                `;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                return;
             }
             
-            html += `
-                <tr class="hover:bg-stone-50/50 transition-colors group">
-                    <td class="py-4 px-5 font-mono text-[11px] text-stone-400 font-bold align-top border-r border-stone-100 bg-stone-50/20">
-                        <div class="flex items-center justify-between">
-                            <span class="group-hover:text-stone-800 transition-colors uppercase">${key.replace(/_/g, ' ')}</span>
-                            ${badge}
-                        </div>
-                    </td>
-                    <td class="py-4 px-5 font-mono text-[13px] ${beforeBg} align-top border-r border-stone-100 border-dashed">
-                        <div class="opacity-70 group-hover:opacity-100 transition-opacity">${strBefore}</div>
-                    </td>
-                    <td class="py-4 px-5 font-mono text-[13px] ${afterBg} align-top">
-                        <div class="transition-opacity">${strAfter}</div>
-                    </td>
-                </tr>
+            let hasChanges = false;
+            let html = `
+            <div class="bg-white overflow-hidden rounded-xl border border-stone-200 shadow-sm mt-2 mb-6">
+                <table class="w-full text-sm text-left border-collapse">
+                    <thead class="bg-stone-50 border-b border-stone-200">
+                        <tr>
+                            <th class="py-3 px-5 font-black text-stone-500 text-[10px] uppercase tracking-widest w-[25%]">Trường dữ liệu</th>
+                            <th class="py-3 px-5 font-black text-stone-500 text-[10px] uppercase tracking-widest w-[37.5%]">Trạng thái cũ</th>
+                            <th class="py-3 px-5 font-black text-stone-500 text-[10px] uppercase tracking-widest w-[37.5%]">Trạng thái mới</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-stone-100">
             `;
-        });
-        
-        if (!hasChanges) {
-             html += `<tr><td colspan="3" class="p-12 text-center text-stone-400 bg-stone-50 italic text-sm">Nội dung dữ liệu không đổi (Bản ghi chỉ được cập nhật metadata).</td></tr>`;
+            
+            const sortedKeys = Array.from(allKeys).sort();
+            sortedKeys.forEach(key => {
+                const beforeVal = beforeObj ? beforeObj[key] : undefined;
+                const afterVal = afterObj ? afterObj[key] : undefined;
+                
+                if (JSON.stringify(beforeVal) === JSON.stringify(afterVal)) return;
+                hasChanges = true;
+                
+                let strBefore = formatValue(beforeVal);
+                let strAfter = formatValue(afterVal);
+                
+                if (strBefore.length > 150) strBefore = `<div class="max-h-32 overflow-y-auto pr-2 custom-scrollbar text-xs leading-relaxed">${strBefore}</div>`;
+                if (strAfter.length > 150) strAfter = `<div class="max-h-32 overflow-y-auto pr-2 custom-scrollbar text-xs leading-relaxed">${strAfter}</div>`;
+                
+                let beforeBg = "";
+                let afterBg = "";
+                let badge = "";
+                
+                if (beforeVal === undefined && afterVal !== undefined) {
+                    afterBg = "bg-emerald-50/30";
+                    badge = '<span class="px-1.5 py-0.5 rounded-full text-[8px] font-black bg-emerald-100 text-emerald-700 leading-none border border-emerald-200">NEW</span>';
+                } else if (beforeVal !== undefined && afterVal === undefined) {
+                    beforeBg = "bg-red-50/30";
+                    badge = '<span class="px-1.5 py-0.5 rounded-full text-[8px] font-black bg-red-100 text-red-700 leading-none border border-red-200">DEL</span>';
+                } else {
+                    beforeBg = "bg-amber-50/10";
+                    afterBg = "bg-emerald-50/10";
+                    badge = '<span class="px-1.5 py-0.5 rounded-full text-[8px] font-black bg-stone-100 text-stone-600 leading-none border border-stone-200">MOD</span>';
+                }
+                
+                html += `
+                    <tr class="hover:bg-stone-50/50 transition-colors group">
+                        <td class="py-4 px-5 font-mono text-[11px] text-stone-400 font-bold align-top border-r border-stone-100 bg-stone-50/20">
+                            <div class="flex items-center justify-between">
+                                <span class="group-hover:text-stone-800 transition-colors uppercase">${key.replace(/_/g, ' ')}</span>
+                                ${badge}
+                            </div>
+                        </td>
+                        <td class="py-4 px-5 font-mono text-[13px] ${beforeBg} align-top border-r border-stone-100 border-dashed">
+                            <div class="opacity-70 group-hover:opacity-100 transition-opacity">${strBefore}</div>
+                        </td>
+                        <td class="py-4 px-5 font-mono text-[13px] ${afterBg} align-top">
+                            <div class="transition-opacity">${strAfter}</div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            if (!hasChanges) {
+                 html += `<tr><td colspan="3" class="p-12 text-center text-stone-400 bg-stone-50 italic text-sm">Nội dung dữ liệu không đổi (Bản ghi chỉ được cập nhật metadata).</td></tr>`;
+            }
+            
+            html += `</tbody></table></div>`;
+            viewer.innerHTML = html;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        } catch (err) {
+            console.error("Error rendering diff for row:", row.id, err);
         }
-        
-        html += `</tbody></table></div>`;
-        viewer.innerHTML = html;
-        Lucide.createIcons();
     });
 });
 </script>

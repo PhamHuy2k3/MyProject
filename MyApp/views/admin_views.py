@@ -183,7 +183,7 @@ def admin_inventory(request):
     return render(request, 'admin/inventory.html', context)
 
 
-@warehouse_required
+@accountant_required
 def admin_order_list(request):
     orders = Order.objects.select_related('user', 'user__profile').order_by('-created_at')
     q = request.GET.get('q', '').strip()
@@ -330,7 +330,7 @@ def admin_inventory_receipt_create(request):
     return render(request, 'admin/inventory_receipt_form.html', {'products': products})
 
 
-@warehouse_required
+@accountant_required
 def admin_order_detail_manage(request, order_number):
     order = get_object_or_404(Order, order_number=order_number)
     if request.method == 'POST':
@@ -468,7 +468,7 @@ def product_edit(request, pk):
     return render(request, 'admin/product_form.html', {'form': form, 'product': product, 'title': 'Chỉnh Sửa Sản Phẩm'})
 
 
-@admin_required
+@warehouse_required
 def product_delete(request, pk):
     product = get_object_or_404(Product, pk=pk)
     if request.method == 'POST':
@@ -623,7 +623,7 @@ def cabinet_delete(request, pk):
 
 # ==================== CATEGORY CRUD ====================
 
-@admin_required
+@warehouse_required
 def category_list(request):
     items = Category.objects.annotate(product_count=Count('products')).all().order_by('-created_at')
     q = request.GET.get('q', '').strip()
@@ -635,7 +635,7 @@ def category_list(request):
     return render(request, 'admin/category_list.html', {'items': page_obj, 'page_obj': page_obj, 'total_count': total_count, 'current_query': q})
 
 
-@admin_required
+@warehouse_required
 def category_create(request):
     if request.method == 'POST':
         form = CategoryForm(request.POST, request.FILES)
@@ -647,7 +647,7 @@ def category_create(request):
     return render(request, 'admin/category_form.html', {'form': form})
 
 
-@admin_required
+@warehouse_required
 def category_edit(request, pk):
     item = get_object_or_404(Category, pk=pk)
     if request.method == 'POST':
@@ -660,7 +660,7 @@ def category_edit(request, pk):
     return render(request, 'admin/category_form.html', {'form': form, 'item': item})
 
 
-@admin_required
+@warehouse_required
 def category_delete(request, pk):
     item = get_object_or_404(Category, pk=pk)
     if request.method == 'POST':
@@ -668,7 +668,7 @@ def category_delete(request, pk):
         return redirect('category_list')
     return render(request, 'admin/confirm_delete.html', {'object': item})
 
-@admin_required
+@warehouse_required
 def category_toggle_active(request, pk):
     item = get_object_or_404(Category, pk=pk)
     if request.method == 'POST':
@@ -677,7 +677,7 @@ def category_toggle_active(request, pk):
     return redirect('category_list')
 
 
-@warehouse_required
+@accountant_required
 def admin_return_list(request):
     """
     List of all return and exchange requests.
@@ -697,13 +697,10 @@ def admin_return_list(request):
         'current_status': status_filter
     })
 
-@warehouse_required
+
+@accountant_required
 def admin_return_detail(request, return_id):
-    """
-    Manage a specific return request.
-    """
     return_req = get_object_or_404(ReturnRequest, id=return_id)
-    
     if request.method == 'POST':
         action = request.POST.get('action')
         admin_note = request.POST.get('admin_note', '')

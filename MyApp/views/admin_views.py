@@ -1044,6 +1044,7 @@ def admin_user_password_reset(request, user_id):
 @user_passes_test(lambda u: u.is_superuser or (hasattr(u, 'profile') and getattr(u.profile, 'role', '') == 'admin'))
 def admin_audit_log_list(request):
     from MyApp.audit_models import AuditLog
+    from django.contrib.auth.models import User
     import json
     
     logs = AuditLog.objects.all().order_by('-timestamp')
@@ -1070,8 +1071,15 @@ def admin_audit_log_list(request):
     paginator = Paginator(logs, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
     
+    # Get all actors from this page to fetch their info in one query
+    actor_ids = [log.actor_id for log in page_obj if log.actor_id]
+    actors_map = {u.id: u for u in User.objects.filter(id__in=actor_ids).select_related('profile')}
+    
     # Process JSON for visualization in template
     for log in page_obj:
+        # Attach User object for richer UI
+        log.actor_user = actors_map.get(log.actor_id)
+        
         try:
             log.before_parsed = json.loads(log.before_state) if log.before_state else None
         except:
@@ -1081,8 +1089,8 @@ def admin_audit_log_list(request):
         except:
             log.after_parsed = log.after_state
             
-        log.before_formatted = json.dumps(log.before_parsed, indent=2, ensure_ascii=False) if log.before_parsed else 'None'
-        log.after_formatted = json.dumps(log.after_parsed, indent=2, ensure_ascii=False) if log.after_parsed else 'None'
+        log.before_formatted = json.dumps(log.before_parsed, indent=2, ensure_ascii=False) if log.before_parsed else 'null'
+        log.after_formatted = json.dumps(log.after_parsed, indent=2, ensure_ascii=False) if log.after_parsed else 'null'
     
     return render(request, 'admin/audit_log_list.html', {
         'logs': page_obj,

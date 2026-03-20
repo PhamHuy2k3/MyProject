@@ -51,16 +51,39 @@ def get_actor_info():
     }
 
 def serialize_instance(instance):
-    """Safely serialize model instance to dict, ignoring non-serializable fields."""
+    """Safely serialize model instance to dict with human-readable labels for FKs and Choices."""
+    if not instance:
+        return None
     try:
-        data = model_to_dict(instance)
-        # Convert non-serializable objects (like datetime, imagefields) to strings
-        for key, value in data.items():
-            if value is not None and not isinstance(value, (str, int, float, bool, dict, list)):
-                data[key] = str(value)
+        from django.db.models import ForeignKey
+        data = {}
+        opts = instance._meta
+        
+        # We manually build the dict to handle labels better than model_to_dict
+        for f in opts.concrete_fields:
+            value = f.value_from_object(instance)
+            
+            # 1. Handle Choices
+            if f.choices:
+                display_value = getattr(instance, f'get_{f.name}_display')()
+                data[f.name] = f"{display_value} ({value})" if value is not None else None
+            # 2. Handle Foreign Keys
+            elif isinstance(f, ForeignKey):
+                related_obj = getattr(instance, f.name)
+                if related_obj:
+                    data[f.name] = f"{str(related_obj)} [ID: {value}]"
+                else:
+                    data[f.name] = None
+            # 3. Handle normal fields
+            else:
+                if value is not None and not isinstance(value, (str, int, float, bool, dict, list)):
+                    data[f.name] = str(value)
+                else:
+                    data[f.name] = value
+                    
         return data
-    except Exception:
-        return {'id': getattr(instance, 'pk', str(instance))}
+    except Exception as e:
+        return {'id': getattr(instance, 'pk', 'Unknown'), 'error': str(e)}
 
 # ================= AUTH SIGNALS =================
 

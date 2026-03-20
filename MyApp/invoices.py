@@ -108,6 +108,10 @@ class InvoicePDFGenerator:
                 Paragraph(f"<b>Trạng thái:</b> {self._get_status_display()}", normal_style),
                 Paragraph(f"<b>Ngày cập nhật:</b> {self.order.updated_at.strftime('%d/%m/%Y %H:%M')}", normal_style),
             ],
+            [
+                Paragraph(f"<b>Phương thức TT:</b> {self._get_payment_method_display()}", normal_style),
+                Paragraph("", normal_style),
+            ],
         ]
         
         header_table = Table(header_data, colWidths=[3.5*inch, 3.5*inch])
@@ -233,6 +237,13 @@ class InvoicePDFGenerator:
     
     def _format_currency(self, amount):
         return f"{int(amount):,.0f} ₫".replace(',', '.')
+
+    def _get_payment_method_display(self):
+        try:
+            payment = self.order.payment
+            return payment.get_payment_method_display()
+        except Exception:
+            return 'N/A'
 
 
 class QRCodePaymentGenerator:
@@ -400,7 +411,7 @@ class InvoiceWithQRGenerator:
             ],
             [
                 Paragraph(f"<b>Trạng thái:</b> {self.invoice_gen._get_status_display()}", normal_style),
-                Paragraph(f"<b>Phương thức:</b> QR Code", normal_style),
+                Paragraph(f"<b>Phương thức:</b> {self.invoice_gen._get_payment_method_display()}", normal_style),
             ],
         ]
         
@@ -481,52 +492,80 @@ class InvoiceWithQRGenerator:
         ]))
         elements.append(items_table)
         elements.append(Spacer(1, 0.2*inch))
-        elements.append(Paragraph("<b>MÃ QR THANH TOÁN</b>", heading_style))
-        qr_img = self.qr_gen.generate(size=8)
-        qr_bytes = BytesIO()
-        qr_img.save(qr_bytes, format='PNG')
-        qr_bytes.seek(0)
-        import tempfile
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
-        qr_img.save(temp_file.name)
-        temp_file.close()
-        qr_code_image = RLImage(
-            temp_file.name,
-            width=2*inch,
-            height=2*inch
-        )
-        
-        qr_info_text = (
-            f"<b>Hướng dẫn thanh toán:</b><br/>"
-            f"1. Sử dụng ứng dụng ngân hàng hoặc ứng dụng quét mã QR<br/>"
-            f"2. Quét mã QR bên cạnh<br/>"
-            f"3. Kiểm tra thông tin: Số tiền, Người nhận<br/>"
-            f"4. Nhập tham chiếu: {self.order.order_number}<br/>"
-            f"5. Xác nhận và gửi<br/><br/>"
-            f"<b>Thông tin thanh toán:</b><br/>"
-            f"Số tiền: {self.invoice_gen._format_currency(self.order.total_amount)}"
-        )
-        
-        qr_section_data = [
-            [
-                qr_code_image,
-                Paragraph(qr_info_text, normal_style)
+
+        # Check if payment is COD
+        is_cod = False
+        try:
+            if self.order.payment and self.order.payment.payment_method == 'cod':
+                is_cod = True
+        except Exception:
+            pass
+
+        if is_cod:
+            # COD: Show text instead of QR code
+            elements.append(Paragraph("<b>PHƯƠNG THỨC THANH TOÁN</b>", heading_style))
+            cod_style = ParagraphStyle(
+                'CODInfo',
+                parent=normal_style,
+                fontSize=12,
+                textColor=colors.HexColor('#e67e22'),
+                fontName=DEFAULT_FONT_BOLD
+            )
+            elements.append(Paragraph("💵 THANH TOÁN KHI NHẬN HÀNG (COD)", cod_style))
+            elements.append(Spacer(1, 0.1*inch))
+            elements.append(Paragraph(
+                f"Khách hàng sẽ thanh toán số tiền <b>{self.invoice_gen._format_currency(self.order.total_amount)}</b> "
+                f"trực tiếp cho nhân viên giao hàng khi nhận hàng.",
+                normal_style
+            ))
+        else:
+            # QR Bank: Show QR code as before
+            elements.append(Paragraph("<b>MÃ QR THANH TOÁN</b>", heading_style))
+            qr_img = self.qr_gen.generate(size=8)
+            qr_bytes = BytesIO()
+            qr_img.save(qr_bytes, format='PNG')
+            qr_bytes.seek(0)
+            import tempfile
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+            qr_img.save(temp_file.name)
+            temp_file.close()
+            qr_code_image = RLImage(
+                temp_file.name,
+                width=2*inch,
+                height=2*inch
+            )
+            
+            qr_info_text = (
+                f"<b>Hướng dẫn thanh toán:</b><br/>"
+                f"1. Sử dụng ứng dụng ngân hàng hoặc ứng dụng quét mã QR<br/>"
+                f"2. Quét mã QR bên cạnh<br/>"
+                f"3. Kiểm tra thông tin: Số tiền, Người nhận<br/>"
+                f"4. Nhập tham chiếu: {self.order.order_number}<br/>"
+                f"5. Xác nhận và gửi<br/><br/>"
+                f"<b>Thông tin thanh toán:</b><br/>"
+                f"Số tiền: {self.invoice_gen._format_currency(self.order.total_amount)}"
+            )
+            
+            qr_section_data = [
+                [
+                    qr_code_image,
+                    Paragraph(qr_info_text, normal_style)
+                ]
             ]
-        ]
-        
-        qr_section_table = Table(
-            qr_section_data,
-            colWidths=[2.5*inch, 4.0*inch],
-            rowHeights=[2.5*inch]
-        )
-        qr_section_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (0, 0), 'CENTER'),
-            ('ALIGN', (1, 0), (1, 0), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 10),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
-        ]))
-        elements.append(qr_section_table)
+            
+            qr_section_table = Table(
+                qr_section_data,
+                colWidths=[2.5*inch, 4.0*inch],
+                rowHeights=[2.5*inch]
+            )
+            qr_section_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (0, 0), 'CENTER'),
+                ('ALIGN', (1, 0), (1, 0), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 10),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+            ]))
+            elements.append(qr_section_table)
         elements.append(Spacer(1, 0.2*inch))
         footer_style = ParagraphStyle(
             'Footer',

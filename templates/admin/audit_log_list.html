@@ -1,0 +1,265 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}Audit Log (Hệ thống){% endblock %}
+{% block page_subtitle %}Theo dõi mọi thay đổi và hoạt động quan trọng trong hệ thống{% endblock %}
+
+{% block admin_content %}
+<!-- Search & Filter Bar -->
+<div class="flex flex-col md:flex-row gap-3 mb-6">
+    <form method="get" class="flex-1 flex gap-2 w-full flex-wrap">
+        <div class="relative flex-1 min-w-[200px]">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400"></i>
+            <input type="text" name="q" value="{{ current_query }}" placeholder="Tìm theo Username, IP, ID..."
+                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-300 text-sm focus:outline-none focus:border-emerald-600 bg-white">
+        </div>
+        
+        <select name="event_type" class="rounded-xl border border-stone-300 px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-emerald-600">
+            <option value="">Loại sự kiện</option>
+            {% for evt in event_types %}
+            <option value="{{ evt }}" {% if current_event_type == evt %}selected{% endif %}>{{ evt }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="severity" class="rounded-xl border border-stone-300 px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-emerald-600">
+            <option value="">Mức độ</option>
+            {% for code, label in severity_choices %}
+            <option value="{{ code }}" {% if current_severity == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="actor_role" class="rounded-xl border border-stone-300 px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-emerald-600">
+            <option value="">Role người thao tác</option>
+            {% for role in actor_roles %}
+            <option value="{{ role }}" {% if current_role == role %}selected{% endif %}>{{ role|title }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit" class="bg-emerald-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-800 transition-colors">Lọc</button>
+        
+        {% if current_query or current_event_type or current_severity or current_role %}
+        <a href="{% url 'admin_audit_log_list' %}" class="flex items-center justify-center px-3 py-2.5 rounded-xl border border-stone-300 text-stone-500 hover:bg-stone-100 transition-colors" title="Xóa bộ lọc">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-stone-50 border-b border-stone-200">
+                <tr>
+                    <th class="text-left px-6 py-4 text-xs font-semibold text-stone-500 uppercase tracking-wider">Thời gian (UTC)</th>
+                    <th class="text-left px-6 py-4 text-xs font-semibold text-stone-500 uppercase tracking-wider">Sự kiện</th>
+                    <th class="text-left px-6 py-4 text-xs font-semibold text-stone-500 uppercase tracking-wider">Chủ thể (Actor)</th>
+                    <th class="text-left px-6 py-4 text-xs font-semibold text-stone-500 uppercase tracking-wider">Tài nguyên</th>
+                    <th class="text-left px-6 py-4 text-xs font-semibold text-stone-500 uppercase tracking-wider">Mức độ</th>
+                    <th class="text-right px-6 py-4 text-xs font-semibold text-stone-500 uppercase tracking-wider"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-stone-100">
+                {% for log in logs %}
+                <tr class="hover:bg-stone-50 transition-colors">
+                    <td class="px-6 py-4 text-sm font-medium text-stone-700 whitespace-nowrap">
+                        {{ log.timestamp|date:"d/m/Y H:i:s" }}
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-stone-100 text-stone-700 border border-stone-300">
+                            {{ log.event_type }}
+                        </span>
+                        {% if log.reason %}
+                        <div class="text-xs text-stone-500 mt-1 max-w-[200px] truncate" title="{{ log.reason }}">{{ log.reason }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-medium text-stone-800">{{ log.actor_id|default:"system" }}</div>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="text-xs text-stone-500">{{ log.ip_address }}</span>
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase {% if log.actor_role == 'admin' %}bg-purple-100 text-purple-700{% elif log.actor_role == 'system' %}bg-stone-800 text-white{% else %}bg-blue-100 text-blue-700{% endif %}">{{ log.actor_role|default:"None" }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-medium text-stone-800">{{ log.resource_type|default:"—" }}</div>
+                        <div class="text-xs text-stone-500 truncate max-w-[150px]" title="{{ log.resource_id }}">{{ log.resource_id|default:"" }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if log.severity_level == 'INFO' %}
+                        <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-600">INFO</span>
+                        {% elif log.severity_level == 'WARNING' %}
+                        <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-600">WARNING</span>
+                        {% elif log.severity_level == 'ERROR' %}
+                        <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-red-50 text-red-600">ERROR</span>
+                        {% elif log.severity_level == 'CRITICAL' %}
+                        <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-red-600 text-white">CRITICAL</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <!-- Toggle Diff Button Using pure JS -->
+                        <button type="button" onclick="toggleDiff('{{ log.log_id }}')" class="px-3 py-1.5 text-xs font-bold bg-white border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50 transition-colors shadow-sm">
+                            <i data-lucide="eye" class="w-3.5 h-3.5 inline mr-1 text-emerald-600"></i> Xem chi tiết
+                        </button>
+                    </td>
+                </tr>
+                <!-- Expandable Diff Viewer row -->
+                <tr id="diff-{{ log.log_id }}" class="hidden bg-stone-100 border-t-0 shadow-inner">
+                    <td colspan="6" class="p-6">
+                        <script type="application/json" id="before-{{ log.log_id }}">{{ log.before_formatted|safe }}</script>
+                        <script type="application/json" id="after-{{ log.log_id }}">{{ log.after_formatted|safe }}</script>
+                        
+                        <div id="diff-viewer-{{ log.log_id }}" class="w-full mb-3 shadow-sm rounded-xl overflow-hidden border border-emerald-900 shadow-xl"></div>
+                        
+                        <div class="mt-4 p-3 bg-white rounded-xl border border-stone-200 flex items-center justify-between text-[11px] text-stone-500 font-mono">
+                            <div><span class="text-stone-800 font-bold uppercase mr-2"><i data-lucide="link" class="w-3 h-3 inline"></i> Prev_Hash:</span> {{ log.previous_hash }}</div>
+                            <div><span class="text-emerald-700 font-bold uppercase mr-2"><i data-lucide="hash" class="w-3 h-3 inline"></i> Curr_Hash:</span> {{ log.current_hash }}</div>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-stone-500">
+                        <i data-lucide="shield-alert" class="w-12 h-12 mx-auto mb-4 text-stone-300"></i>
+                        <p class="font-medium">Chưa có bản ghi Audit Log nào</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% include 'admin/includes/pagination.html' %}
+
+<script>
+function toggleDiff(logId) {
+    const el = document.getElementById('diff-' + logId);
+    el.classList.toggle('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const diffRows = document.querySelectorAll('tr[id^="diff-"]');
+    diffRows.forEach(row => {
+        const logId = row.id.split('diff-')[1];
+        const beforeEl = document.getElementById(`before-${logId}`);
+        const afterEl = document.getElementById(`after-${logId}`);
+        const viewer = document.getElementById(`diff-viewer-${logId}`);
+        
+        if (!beforeEl || !afterEl || !viewer) return;
+        
+        let beforeObj = {};
+        let afterObj = {};
+        
+        try { 
+            const rawBefore = beforeEl.textContent.trim();
+            if(rawBefore !== 'None' && rawBefore !== 'null') beforeObj = JSON.parse(rawBefore); 
+        } catch(e) {}
+        
+        try { 
+            const rawAfter = afterEl.textContent.trim();
+            if(rawAfter !== 'None' && rawAfter !== 'null') afterObj = JSON.parse(rawAfter); 
+        } catch(e) {}
+        
+        const allKeys = new Set([...Object.keys(beforeObj || {}), ...Object.keys(afterObj || {})]);
+        
+        if (allKeys.size === 0) {
+            viewer.innerHTML = '<div class="p-6 bg-white text-center text-stone-500 italic text-sm rounded-xl">Không có payload ghi nhận.</div>';
+            return;
+        }
+        
+        // Count changes
+        let hasChanges = false;
+        let html = `
+        <div class="bg-white">
+            <table class="w-full text-sm text-left border-collapse">
+                <thead class="bg-emerald-900 border-b border-emerald-950">
+                    <tr>
+                        <th class="py-3 px-5 font-bold text-stone-200 text-xs uppercase tracking-wider w-[25%]">DỮ LIỆU ĐƯỢC CHỈNH SỬA</th>
+                        <th class="py-3 px-5 font-bold text-red-100 text-xs uppercase tracking-wider w-[37%]">TRƯỚC (BEFORE)</th>
+                        <th class="py-3 px-5 font-bold text-emerald-100 text-xs uppercase tracking-wider w-[38%]">SAU (AFTER)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-stone-100">
+        `;
+        
+        Array.from(allKeys).sort().forEach(key => {
+            const beforeVal = beforeObj ? beforeObj[key] : undefined;
+            const afterVal = afterObj ? afterObj[key] : undefined;
+            
+            // Only show changed values (diff) to make UI ultra sleek
+            if (JSON.stringify(beforeVal) === JSON.stringify(afterVal)) return;
+            hasChanges = true;
+            
+            let strBefore = beforeVal !== undefined ? JSON.stringify(beforeVal) : '<em class="text-stone-300 font-sans">Trống</em>';
+            let strAfter = afterVal !== undefined ? JSON.stringify(afterVal) : '<em class="text-stone-300 font-sans">Trống</em>';
+            
+            if (typeof beforeVal === 'string' && beforeVal.length > 100) strBefore = `<div class="max-h-24 overflow-y-auto pr-2 custom-scrollbar">${strBefore}</div>`;
+            if (typeof afterVal === 'string' && afterVal.length > 100) strAfter = `<div class="max-h-24 overflow-y-auto pr-2 custom-scrollbar">${strAfter}</div>`;
+            
+            let rowClass = "hover:bg-stone-50 transition-colors";
+            let beforeCellClass = "";
+            let afterCellClass = "";
+            let beforeTextClass = "text-stone-600";
+            let afterTextClass = "text-stone-800 font-medium";
+            let badge = "";
+            
+            if (beforeVal === undefined && afterVal !== undefined) {
+                // ADDED
+                afterCellClass = "bg-emerald-50";
+                afterTextClass = "text-emerald-700 font-bold bg-white px-2 py-1 rounded border border-emerald-200 shadow-sm";
+                badge = '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500 text-white leading-none">+ MỚI</span>';
+            } else if (beforeVal !== undefined && afterVal === undefined) {
+                // DELETED
+                beforeCellClass = "bg-red-50";
+                beforeTextClass = "text-red-700 font-medium line-through opacity-70 bg-white px-2 py-1 rounded border border-red-200 shadow-sm";
+                badge = '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-red-500 text-white leading-none">- XÓA</span>';
+            } else {
+                // MODIFIED
+                beforeCellClass = "bg-amber-50/30";
+                afterCellClass = "bg-emerald-50/30";
+                beforeTextClass = "text-amber-700 font-medium line-through opacity-60 bg-white px-2 py-1 rounded border border-amber-100 shadow-sm";
+                afterTextClass = "text-emerald-700 font-bold bg-white px-2 py-1 rounded border border-emerald-200 shadow-sm";
+                badge = '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white leading-none">SỬA</span>';
+            }
+            
+            html += `
+                <tr class="${rowClass} border-b border-stone-100">
+                    <td class="py-4 px-5 font-mono text-sm text-stone-800 font-bold align-top border-r border-stone-200 bg-stone-50/50 w-[25%]">
+                        <div class="flex items-center justify-between">
+                            <span class="truncate" title="${key}">${key}</span>
+                            ${badge}
+                        </div>
+                    </td>
+                    <td class="py-4 px-5 font-mono text-[13px] ${beforeCellClass} align-top border-r border-stone-200 border-dashed w-[37.5%] break-all">
+                        <div class="${beforeTextClass} inline-block w-full">
+                            ${strBefore}
+                        </div>
+                    </td>
+                    <td class="py-4 px-5 font-mono text-[13px] ${afterCellClass} align-top w-[37.5%] break-all">
+                        <div class="${afterTextClass} inline-block w-full">
+                            ${strAfter}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        if (!hasChanges) {
+             html += `<tr><td colspan="3" class="p-6 text-center text-stone-500 bg-stone-50 font-medium">Không có bản ghi dữ liệu nào bị thay đổi nội dung (Chỉ thay đổi thuộc tính ẩn).</td></tr>`;
+        }
+        
+        html += `
+                </tbody>
+            </table>
+        </div>
+        `;
+        
+        viewer.innerHTML = html;
+    });
+});
+</script>
+<style>
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8a29e; }
+</style>
+{% endblock %}

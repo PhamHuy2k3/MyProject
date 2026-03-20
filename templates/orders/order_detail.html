@@ -336,6 +336,10 @@
                             <span class="inline-flex items-center gap-1 text-emerald-700 font-bold text-xs">
                                 <i data-lucide="check-circle-2" class="w-3 h-3"></i> Đã thanh toán
                             </span>
+                            {% elif payment.payment_status == 'cod_pending' %}
+                            <span class="inline-flex items-center gap-1 text-amber-600 font-bold text-xs">
+                                <i data-lucide="banknote" class="w-3 h-3"></i> Thu tiền khi giao
+                            </span>
                             {% elif payment.payment_status == 'pending' %}
                             <span class="inline-flex items-center gap-1 text-amber-600 font-bold text-xs">
                                 <span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span> Chờ thanh toán
@@ -431,7 +435,7 @@
 
             <!-- ACTIONS -->
             <div class="space-y-3">
-                {% if payment and payment.payment_status == 'pending' %}
+                {% if payment and payment.payment_status == 'pending' and payment.payment_method != 'cod' %}
                 <a href="{% url 'payment' order.order_number %}"
                     class="w-full bg-emerald-900 text-white font-bold py-4 uppercase tracking-widest hover:bg-emerald-800 transition-all text-sm rounded shadow-lg flex items-center justify-center gap-2">
                     <i data-lucide="credit-card" class="w-4 h-4"></i> Thanh toán ngay
@@ -482,7 +486,9 @@
                     class="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-emerald-400 shadow-sm border border-emerald-500">
                 </div>
                 <p class="font-hand text-xl text-stone-700 text-center">
-                    {% if order.status == 'pending' %}
+                    {% if order.status == 'pending' and payment and payment.payment_method == 'cod' %}
+                    💵 Đơn hàng COD — bạn sẽ thanh toán khi nhận hàng!
+                    {% elif order.status == 'pending' %}
                     🍵 Đơn hàng đang chờ xác nhận, vui lòng thanh toán!
                     {% elif order.status == 'confirmed' %}
                     Đơn hàng đã được xác nhận và đang chờ đóng gói.

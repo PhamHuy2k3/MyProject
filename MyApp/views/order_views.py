@@ -105,6 +105,16 @@ def export_order_xml(request, order_number):
     ET.SubElement(totals, "DiscountAmount").text = str(order.discount_amount)
     ET.SubElement(totals, "TotalAmount").text = str(order.total_amount)
 
+    # Payment method info
+    payment_info = ET.SubElement(root, "PaymentInfo")
+    try:
+        payment = order.payment
+        ET.SubElement(payment_info, "PaymentMethod").text = str(payment.get_payment_method_display())
+        ET.SubElement(payment_info, "PaymentStatus").text = str(payment.get_payment_status_display())
+    except Exception:
+        ET.SubElement(payment_info, "PaymentMethod").text = "N/A"
+        ET.SubElement(payment_info, "PaymentStatus").text = "N/A"
+
     xml_str = minidom.parseString(ET.tostring(root)).toprettyxml(indent="   ")
     response = HttpResponse(xml_str, content_type='application/xml')
     response['Content-Disposition'] = f'attachment; filename="order-{order.order_number}.xml"'
@@ -122,6 +132,15 @@ def payment_view(request, order_number):
 
     logger = logging.getLogger(__name__)
     order = get_object_or_404(Order, order_number=order_number, user=request.user)
+
+    # COD orders don't need QR payment page — redirect to order detail
+    try:
+        existing_payment = order.payment
+        if existing_payment.payment_method == 'cod':
+            return redirect('order_detail', order_number=order.order_number)
+    except Exception:
+        pass
+
     payment, created = Payment.objects.get_or_create(
         order=order,
         defaults={'amount': order.total_amount, 'payment_method': 'qr_bank'}
@@ -229,6 +248,10 @@ def checkout(request):
 
     if request.method == 'POST':
         note = request.POST.get('note', '').strip()
+        payment_method = request.POST.get('payment_method', 'qr_bank')
+        if payment_method not in ('qr_bank', 'cod'):
+            payment_method = 'qr_bank'
+
         total_amount = cart.get_total_price()
         discount_amount = cart.get_discount_amount()
 
@@ -271,7 +294,20 @@ def checkout(request):
                 link=f'/manage/orders/{order.order_number}/manage/'
             )
 
-        Payment.objects.create(order=order, amount=total_amount, payment_method='qr_bank')
+        # Create Payment record based on chosen method
+        if payment_method == 'cod':
+            Payment.objects.create(
+                order=order,
+                amount=total_amount,
+                payment_method='cod',
+                payment_status='cod_pending'
+            )
+        else:
+            Payment.objects.create(
+                order=order,
+                amount=total_amount,
+                payment_method='qr_bank'
+            )
 
         cart_items.delete()
         cart.coupon = None
@@ -284,6 +320,11 @@ def checkout(request):
                 f'  - {item.product.title} x{item.quantity}'
                 for item in order.items.all()
             )
+            if payment_method == 'cod':
+                payment_instruction = 'Bạn sẽ thanh toán khi nhận hàng. Vui lòng chuẩn bị số tiền chính xác.'
+            else:
+                payment_instruction = 'Vui lòng thanh toán qua chuyển khoản để chúng tôi xử lý đơn hàng.'
+
             send_mail(
                 f'Xác nhận đơn hàng {order.order_number} - TeaZen',
                 f'Xin chào {request.user.get_full_name() or request.user.username},\n\n'
@@ -291,7 +332,7 @@ def checkout(request):
                 f'Mã đơn: {order.order_number}\n'
                 f'Sản phẩm:\n{items_text}\n\n'
                 f'Tổng tiền: {total_amount:,.0f}đ\n\n'
-                f'Vui lòng thanh toán để chúng tôi xử lý đơn hàng.\n\n'
+                f'{payment_instruction}\n\n'
                 f'Trân trọng,\nTeaZen',
                 None,
                 [request.user.email],
@@ -299,7 +340,12 @@ def checkout(request):
             )
 
         messages.success(request, 'Đơn hàng đã được tạo!')
-        return redirect('payment', order_number=order.order_number)
+
+        # Redirect based on payment method
+        if payment_method == 'cod':
+            return redirect('order_detail', order_number=order.order_number)
+        else:
+            return redirect('payment', order_number=order.order_number)
 
     return render(request, 'shop/checkout.html', {
         'cart': cart,

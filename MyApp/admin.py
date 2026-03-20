@@ -373,3 +373,96 @@ class UserProfileAdmin(admin.ModelAdmin):
 			'fields': ('membership_level', 'membership_number', 'points')
 		}),
 	)
+
+from .audit_models import AuditLog
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    list_display = ('timestamp', 'event_type', 'actor_role', 'actor_id', 'resource_type', 'resource_id', 'status', 'severity_level_html')
+    list_filter = ('event_type', 'severity_level', 'status', 'actor_role', 'resource_type', 'timestamp')
+    search_fields = ('event_type', 'actor_id', 'ip_address', 'resource_id', 'reason', 'log_id')
+    readonly_fields = ('log_id', 'timestamp', 'event_type', 'severity_level', 'actor_id', 'actor_role', 
+                       'ip_address', 'user_agent', 'resource_type', 'resource_id', 'status', 'reason', 
+                       'previous_hash', 'current_hash', 'diff_view')
+    
+    # Do not allow adding or changing (Append-only)
+    def has_add_permission(self, request):
+        return False
+        
+    def has_change_permission(self, request, obj=None):
+        return False
+        
+    def has_delete_permission(self, request, obj=None):
+        return False
+        
+    list_per_page = 20
+    
+    fieldsets = (
+        ('Thông tin cơ bản', {
+            'fields': ('log_id', 'timestamp', 'event_type', 'severity_level', 'status', 'reason')
+        }),
+        ('Chủ thể thực hiện (Actor)', {
+            'fields': ('actor_id', 'actor_role', 'ip_address', 'user_agent')
+        }),
+        ('Tài nguyên bị tác động (Resource)', {
+            'fields': ('resource_type', 'resource_id')
+        }),
+        ('Dữ liệu thay đổi (Payload Delta)', {
+            'fields': ('diff_view',)
+        }),
+        ('Tính toàn vẹn (Integrity)', {
+            'fields': ('previous_hash', 'current_hash'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def severity_level_html(self, obj):
+        from django.utils.html import format_html
+        colors = {
+            'INFO': 'blue',
+            'WARNING': 'orange',
+            'ERROR': 'red',
+            'CRITICAL': 'darkred'
+        }
+        color = colors.get(obj.severity_level, 'gray')
+        # Using obj.get_severity_level_display() for translated/friendly name.
+        return format_html('<span style="color: {}; font-weight: bold;">{}</span>', color, obj.get_severity_level_display())
+    severity_level_html.short_description = 'Mức độ'
+
+    def diff_view(self, obj):
+        from django.utils.html import format_html
+        import json
+        
+        try:
+            # Parse dicts if they are serialized json strings
+            before = obj.before_state
+            if isinstance(before, str) and before:
+                try: before = json.loads(before)
+                except: pass
+            
+            after = obj.after_state
+            if isinstance(after, str) and after:
+                try: after = json.loads(after)
+                except: pass
+
+            before_str = json.dumps(before, indent=2, ensure_ascii=False) if before else 'None'
+            after_str = json.dumps(after, indent=2, ensure_ascii=False) if after else 'None'
+            
+            html = f"""
+            <div style="display: flex; gap: 20px;">
+                <div style="flex: 1; border: 1px solid #ffcccc; background-color: #fff0f0; padding: 10px; border-radius: 4px;">
+                    <h4 style="margin-top: 0; color: #cc0000;">Dữ liệu cũ (Before)</h4>
+                    <pre style="white-space: pre-wrap; font-size: 12px; margin: 0;">{before_str}</pre>
+                </div>
+                <div style="flex: 1; border: 1px solid #ccffcc; background-color: #f0fff0; padding: 10px; border-radius: 4px;">
+                    <h4 style="margin-top: 0; color: #008800;">Dữ liệu mới (After)</h4>
+                    <pre style="white-space: pre-wrap; font-size: 12px; margin: 0;">{after_str}</pre>
+                </div>
+            </div>
+            """
+            return format_html(html)
+        except Exception as e:
+            return str(e)
+            
+    diff_view.short_description = 'So sánh Dữ liệu'
+

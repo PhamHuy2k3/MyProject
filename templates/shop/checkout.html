@@ -126,6 +126,47 @@
                     </div>
                 </div>
 
+                <!-- ====== PAYMENT METHOD ====== -->
+                <div class="bg-white p-8 shadow-lg border-l-4 border-transparent hover:border-emerald-300 transition-all" id="payment-method-card">
+                    <h3 class="font-art text-2xl font-bold mb-6 flex items-center gap-2">
+                        <i data-lucide="wallet" class="w-5 h-5 text-emerald-700"></i> Phương thức thanh toán
+                    </h3>
+
+                    <input type="hidden" name="payment_method" id="payment-method-input" value="qr_bank">
+
+                    <div class="space-y-3">
+                        <!-- QR Bank Option -->
+                        <label class="payment-option flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all border-emerald-600 bg-emerald-50/50" id="opt-qr_bank" onclick="selectPayment('qr_bank')">
+                            <div class="w-5 h-5 rounded-full border-2 border-emerald-600 flex items-center justify-center flex-shrink-0">
+                                <div class="w-2.5 h-2.5 rounded-full bg-emerald-600 payment-dot" id="dot-qr_bank"></div>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="qr-code" class="w-5 h-5 text-emerald-700"></i>
+                            </div>
+                            <div class="flex-grow">
+                                <div class="font-bold text-sm text-stone-800">QR Code - Chuyển khoản ngân hàng</div>
+                                <div class="text-xs text-stone-500 mt-0.5">Quét mã QR hoặc chuyển khoản qua app ngân hàng</div>
+                            </div>
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-600 flex-shrink-0 payment-check" id="check-qr_bank"></i>
+                        </label>
+
+                        <!-- COD Option -->
+                        <label class="payment-option flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all border-stone-200 hover:border-stone-300" id="opt-cod" onclick="selectPayment('cod')">
+                            <div class="w-5 h-5 rounded-full border-2 border-stone-300 flex items-center justify-center flex-shrink-0">
+                                <div class="w-2.5 h-2.5 rounded-full bg-emerald-600 payment-dot hidden" id="dot-cod"></div>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="banknote" class="w-5 h-5 text-amber-700"></i>
+                            </div>
+                            <div class="flex-grow">
+                                <div class="font-bold text-sm text-stone-800">Thanh toán khi nhận hàng (COD)</div>
+                                <div class="text-xs text-stone-500 mt-0.5">Trả tiền mặt trực tiếp cho nhân viên giao hàng</div>
+                            </div>
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-600 flex-shrink-0 payment-check hidden" id="check-cod"></i>
+                        </label>
+                    </div>
+                </div>
+
                 <!-- Order Notes -->
                 <div
                     class="bg-white p-8 shadow-lg border-l-4 border-transparent hover:border-emerald-300 transition-all">
@@ -290,6 +331,33 @@
             return;
         }
         document.getElementById('checkout-form').submit();
+    }
+
+    function selectPayment(method) {
+        document.getElementById('payment-method-input').value = method;
+        // Reset all options
+        document.querySelectorAll('.payment-option').forEach(el => {
+            el.className = el.className.replace(/border-emerald-600/g, 'border-stone-200').replace(/bg-emerald-50\/50/g, '');
+        });
+        document.querySelectorAll('.payment-dot').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.payment-check').forEach(el => el.classList.add('hidden'));
+        // Activate selected
+        const opt = document.getElementById('opt-' + method);
+        opt.classList.remove('border-stone-200');
+        opt.classList.add('border-emerald-600', 'bg-emerald-50/50');
+        document.getElementById('dot-' + method).classList.remove('hidden');
+        document.getElementById('check-' + method).classList.remove('hidden');
+        // Update radio circle border
+        opt.querySelector('.rounded-full').classList.remove('border-stone-300');
+        opt.querySelector('.rounded-full').classList.add('border-emerald-600');
+        // Reset other radio borders
+        document.querySelectorAll('.payment-option').forEach(el => {
+            if (el.id !== 'opt-' + method) {
+                el.querySelector('.rounded-full').classList.remove('border-emerald-600');
+                el.querySelector('.rounded-full').classList.add('border-stone-300');
+            }
+        });
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 </script>
 {% endblock %}

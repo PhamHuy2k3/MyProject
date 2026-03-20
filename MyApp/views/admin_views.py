@@ -957,6 +957,49 @@ def admin_user_edit(request, user_id):
         if form.is_valid():
             form.save()
             messages.success(request, f'Đã cập nhật người dùng {user_to_edit.username}.')
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
+    return render(request, 'admin/user_list.html', {
+        'users': page_obj,
+        'page_obj': page_obj,
+        'current_query': q,
+        'current_role': role_filter,
+        'role_choices': UserProfile.ROLE_CHOICES
+    })
+
+@admin_required
+def admin_user_update_role(request, user_id):
+    if request.method == 'POST':
+        user_to_update = get_object_or_404(User, id=user_id)
+        new_role = request.POST.get('role')
+        if new_role in dict(UserProfile.ROLE_CHOICES):
+            user_to_update.profile.role = new_role
+            user_to_update.profile.save()
+            messages.success(request, f'Đã cập nhật vai trò cho {user_to_update.username} thành {dict(UserProfile.ROLE_CHOICES)[new_role]}.')
+        else:
+            messages.error(request, 'Vai trò không hợp lệ.')
+    return redirect('admin_user_list')
+
+@admin_required
+def admin_user_create(request):
+    if request.method == 'POST':
+        form = AdminUserForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            messages.success(request, f'Đã tạo người dùng {user.username} thành công.')
+            return redirect('admin_user_list')
+    else:
+        form = AdminUserForm()
+    return render(request, 'admin/user_form.html', {'form': form, 'title': 'Thêm Người Dùng'})
+
+@admin_required
+def admin_user_edit(request, user_id):
+    user_to_edit = get_object_or_404(User, id=user_id)
+    if request.method == 'POST':
+        form = AdminUserForm(request.POST, instance=user_to_edit)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Đã cập nhật người dùng {user_to_edit.username}.')
             return redirect('admin_user_list')
     else:
         form = AdminUserForm(instance=user_to_edit)
@@ -995,3 +1038,61 @@ def admin_user_password_reset(request, user_id):
         else:
             messages.error(request, 'Vui lòng nhập mật khẩu mới.')
     return render(request, 'admin/user_password_reset.html', {'user_to_reset': user_to_reset})
+
+# ==================== AUDIT LOG (SYSTEM EVENTS) ====================
+
+@user_passes_test(lambda u: u.is_superuser or (hasattr(u, 'profile') and getattr(u.profile, 'role', '') == 'admin'))
+def admin_audit_log_list(request):
+    from MyApp.audit_models import AuditLog
+    import json
+    
+    logs = AuditLog.objects.all().order_by('-timestamp')
+    
+    # Filters
+    q = request.GET.get('q', '').strip()
+    event_type = request.GET.get('event_type', '')
+    severity = request.GET.get('severity', '')
+    actor_role = request.GET.get('actor_role', '')
+    
+    if q:
+        logs = logs.filter(Q(actor_id__icontains=q) | Q(ip_address__icontains=q) | Q(reason__icontains=q) | Q(resource_id__icontains=q) | Q(log_id__icontains=q))
+    if event_type:
+        logs = logs.filter(event_type=event_type)
+    if severity:
+        logs = logs.filter(severity_level=severity)
+    if actor_role:
+        logs = logs.filter(actor_role=actor_role)
+        
+    # Get distinct options for dropdowns
+    event_types = AuditLog.objects.values_list('event_type', flat=True).distinct()
+    roles = AuditLog.objects.exclude(actor_role__isnull=True).exclude(actor_role='').values_list('actor_role', flat=True).distinct()
+    
+    paginator = Paginator(logs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
+    # Process JSON for visualization in template
+    for log in page_obj:
+        try:
+            log.before_parsed = json.loads(log.before_state) if log.before_state else None
+        except:
+            log.before_parsed = log.before_state
+        try:
+            log.after_parsed = json.loads(log.after_state) if log.after_state else None
+        except:
+            log.after_parsed = log.after_state
+            
+        log.before_formatted = json.dumps(log.before_parsed, indent=2, ensure_ascii=False) if log.before_parsed else 'None'
+        log.after_formatted = json.dumps(log.after_parsed, indent=2, ensure_ascii=False) if log.after_parsed else 'None'
+    
+    return render(request, 'admin/audit_log_list.html', {
+        'logs': page_obj,
+        'page_obj': page_obj,
+        'current_query': q,
+        'current_event_type': event_type,
+        'current_severity': severity,
+        'current_role': actor_role,
+        'event_types': event_types,
+        'actor_roles': roles,
+        'severity_choices': AuditLog.SEVERITY_CHOICES
+    })
+

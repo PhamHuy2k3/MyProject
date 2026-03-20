@@ -40,6 +40,9 @@ urlpatterns = [
     path('manage/users/<int:user_id>/password-reset/', views.admin_user_password_reset, name='admin_user_password_reset'),
     path('manage/users/<int:user_id>/update-role/', views.admin_user_update_role, name='admin_user_update_role'),
     
+    # Audit Logs
+    path('manage/audit-logs/', views.admin_audit_log_list, name='admin_audit_log_list'),
+    
     # Admin Statistics & Inventory
     path('manage/statistics/', views.admin_statistics, name='admin_statistics'),
     path('manage/inventory/', views.admin_inventory, name='admin_inventory'),

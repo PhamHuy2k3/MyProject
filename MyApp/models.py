@@ -387,6 +387,26 @@ class Order(models.Model):
 				self.log_transaction(item, 'OUT', -item.quantity, is_physical=True, user=user)
 			
 			self.set_status('delivered', user=user, note="Giao hàng thành công.")
+
+			# Auto-complete COD payment when order is delivered
+			try:
+				payment = self.payment
+				if payment.payment_method == 'cod' and payment.payment_status in ('cod_pending', 'pending'):
+					payment.payment_status = 'completed'
+					payment.payment_date = timezone.now()
+					payment.notes = 'Đã thu tiền mặt khi giao hàng.'
+					payment.save(update_fields=['payment_status', 'payment_date', 'notes', 'updated_at'])
+					# Update invoice to paid
+					try:
+						invoice = self.invoice
+						if invoice and invoice.status != 'paid':
+							invoice.status = 'paid'
+							invoice.save(update_fields=['status'])
+					except Invoice.DoesNotExist:
+						pass
+			except Payment.DoesNotExist:
+				pass
+
 			return True, "Đơn hàng đã hoàn tất, kho vật lý đã cập nhật."
 
 	def set_status(self, new_status, user=None, note=''):
@@ -703,12 +723,14 @@ class Payment(models.Model):
 		('qr_bank', 'QR Code - Ngân hàng'),
 		('transfer', 'Chuyển khoản'),
 		('cash', 'Thanh toán tại chỗ'),
+		('cod', 'Thanh toán khi nhận hàng (COD)'),
 		('wallet', 'Ví điện tử'),
 		('other', 'Khác'),
 	]
 	
 	PAYMENT_STATUS_CHOICES = [
 		('pending', 'Chờ thanh toán'),
+		('cod_pending', 'Thu tiền khi giao hàng'),
 		('pending_verification', 'Chờ xác nhận'),
 		('processing', 'Đang xử lý'),
 		('completed', 'Hoàn thành'),

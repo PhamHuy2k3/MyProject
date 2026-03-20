@@ -26,8 +26,11 @@
                         </a>
                         {% endif %}
                         {% if user.is_superuser or user.profile.role == 'admin' %}
-                        <a href="{% url 'admin_user_list' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'user' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                        <a href="{% url 'admin_user_list' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if request.resolver_match.url_name == 'admin_user_list' or request.resolver_match.url_name == 'admin_user_create' or request.resolver_match.url_name == 'admin_user_edit' %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
                             <i data-lucide="users" class="w-4 h-4"></i> Người Dùng
+                        </a>
+                        <a href="{% url 'admin_audit_log_list' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-stone-600 hover:bg-emerald-50 hover:text-emerald-800 transition-colors {% if 'audit_log' in request.resolver_match.url_name %}bg-emerald-50 text-emerald-800 font-semibold{% endif %}">
+                            <i data-lucide="shield" class="w-4 h-4"></i> Audit Log
                         </a>
                         {% endif %}
 

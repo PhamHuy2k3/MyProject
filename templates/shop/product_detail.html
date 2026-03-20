@@ -189,21 +189,21 @@
                     <div class="p-6">
                         <div id="tab-desc" class="product-tab-content">
                             {% if product.description %}
-                            <div class="prose prose-stone max-w-none text-stone-700 leading-relaxed">{{ product.description|linebreaks }}</div>
+                            <div class="prose prose-stone max-w-none text-stone-700 leading-relaxed">{{ product.description|safe }}</div>
                             {% else %}
                             <p class="text-stone-400 italic">Chưa có mô tả cho sản phẩm này.</p>
                             {% endif %}
                         </div>
                         <div id="tab-ingredients" class="product-tab-content hidden">
                             {% if product.ingredients %}
-                            <div class="prose prose-stone max-w-none text-stone-700 leading-relaxed">{{ product.ingredients|linebreaks }}</div>
+                            <div class="prose prose-stone max-w-none text-stone-700 leading-relaxed">{{ product.ingredients|safe }}</div>
                             {% else %}
                             <p class="text-stone-400 italic">Chưa có thông tin thành phần.</p>
                             {% endif %}
                         </div>
                         <div id="tab-brewing" class="product-tab-content hidden">
                             {% if product.brewing_guide %}
-                            <div class="prose prose-stone max-w-none text-stone-700 leading-relaxed">{{ product.brewing_guide|linebreaks }}</div>
+                            <div class="prose prose-stone max-w-none text-stone-700 leading-relaxed">{{ product.brewing_guide|safe }}</div>
                             {% else %}
                             <p class="text-stone-400 italic">Chưa có hướng dẫn pha chế.</p>
                             {% endif %}

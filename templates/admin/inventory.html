@@ -124,20 +124,20 @@
                                 <div class="flex items-center gap-2">
                                     <div class="text-center px-3 py-2 rounded-xl bg-stone-50 border border-stone-100">
                                         <p class="text-[9px] uppercase font-bold text-stone-400 mb-0.5">Vật lý</p>
-                                        <p class="text-sm font-black text-stone-700">{{ product.physical_stock }}</p>
+                                        <p class="text-sm font-black text-stone-700">{{ product.eff_physical }}</p>
                                     </div>
                                     <div class="text-center px-3 py-2 rounded-xl bg-stone-50 border border-stone-100">
                                         <p class="text-[9px] uppercase font-bold text-stone-400 mb-0.5">Tạm giữ</p>
-                                        <p class="text-sm font-black text-amber-600">{{ product.reserved_stock }}</p>
+                                        <p class="text-sm font-black text-amber-600">{{ product.eff_reserved }}</p>
                                     </div>
                                 </div>
                             </td>
                             <td class="px-4 py-5">
                                 <div class="flex flex-col items-center">
-                                    <span class="text-xl font-art font-black {% if product.available_stock <= 0 %}text-rose-500{% elif product.available_stock <= 10 %}text-amber-500{% else %}text-emerald-600{% endif %}">
-                                        {{ product.available_stock }}
+                                    <span class="text-xl font-art font-black {% if product.eff_available <= 0 %}text-rose-500{% elif product.eff_available <= 10 %}text-amber-500{% else %}text-emerald-600{% endif %}">
+                                        {{ product.eff_available }}
                                     </span>
-                                    {% if product.available_stock <= 0 %}
+                                    {% if product.eff_available <= 0 %}
                                     <span class="text-[9px] font-bold text-rose-400 uppercase">Hết hàng</span>
                                     {% endif %}
                                 </div>

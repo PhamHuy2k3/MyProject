@@ -297,8 +297,8 @@ def checkout(request):
                     price=item_price or 0
                 )
 
-            # Thực hiện giữ chỗ kho hàng ngay lập tức
-            success, msg = order.action_confirm(user=request.user)
+            # Thực hiện giữ chỗ kho hàng (từ giỏ hàng sang đơn hàng)
+            success, msg = order.action_confirm(user=request.user, from_cart=True)
             if not success:
                 # Nếu vì lý do gì đó fail (dù đã check ở trên), rollback transaction
                 messages.error(request, f"Lỗi giữ kho: {msg}")

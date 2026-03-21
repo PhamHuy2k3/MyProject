@@ -291,15 +291,20 @@ class Order(models.Model):
 			self.order_number = f'ORD-{now.strftime("%Y%m%d")}-{short_uuid}'
 		super().save(*args, **kwargs)
 
-	def log_transaction(self, item, transaction_type, quantity, is_physical=True, user=None):
+	def log_transaction(self, item, transaction_type, quantity, is_physical=True, user=None, note=''):
 		"""Giao thức ghi sổ cái nội bộ."""
+		# Nếu có note, đính kèm vào reference_id (giới hạn 100 ký tự)
+		ref_id = self.order_number
+		if note:
+			ref_id = f"{ref_id} | {note}"[:100]
+			
 		InventoryTransaction.objects.create(
 			product=item.product,
 			variation=item.variation,
 			transaction_type=transaction_type,
 			quantity=quantity,
 			is_physical=is_physical,
-			reference_id=self.order_number,
+			reference_id=ref_id,
 			user=user
 		)
 
@@ -311,8 +316,8 @@ class Order(models.Model):
 				return False, f"Sản phẩm {target} không đủ tồn kho khả dụng."
 		return True, ""
 
-	def action_confirm(self, user=None):
-		"""Xác nhận đơn hàng: Tạm giữ hàng (Reserved)."""
+	def action_confirm(self, user=None, from_cart=False):
+		"""Xác nhận đơn hàng: Tạm giữ hàng (Reserved). Nếu from_cart=True, coi như hàng đã được giữ từ Giỏ hàng."""
 		if self.status in ['confirmed', 'processing', 'shipping', 'delivered', 'completed']:
 			return True, "Đơn hàng đã được xác nhận trước đó."
 		if self.status in ['cancelled', 'refunded', 'exchanged', 'return_requested', 'return_approved', 'returned']:
@@ -327,12 +332,14 @@ class Order(models.Model):
 				return False, msg
 
 			for item in items:
-				target = item.variation if item.variation else item.product
-				# Update reserved stock
-				target.reserved_stock = F('reserved_stock') + item.quantity
-				target.save()
-				# Log reservation (Logical)
-				self.log_transaction(item, 'RESERVE', item.quantity, is_physical=False, user=user)
+				if not from_cart:
+					target = item.variation if item.variation else item.product
+					# Update reserved stock only if not coming from already reserved cart
+					target.reserved_stock = F('reserved_stock') + item.quantity
+					target.save()
+				
+				# Ghi log giữ hàng cho Đơn hàng (dù từ giỏ hay không đều cần log của Order)
+				self.log_transaction(item, 'RESERVE', item.quantity, is_physical=False, user=user, note="Tạm giữ khi xác nhận đơn hàng.")
 			
 			self.set_status('confirmed', user=user, note="Xác nhận đơn hàng và giữ kho.")
 			self.ensure_invoice()
@@ -350,9 +357,12 @@ class Order(models.Model):
 			if self.status in ['confirmed', 'processing', 'shipping']:
 				for item in items:
 					target = item.variation if item.variation else item.product
-					target.reserved_stock = F('reserved_stock') - item.quantity
-					target.save()
-					self.log_transaction(item, 'RELEASE', -item.quantity, is_physical=False, user=user)
+					# Safe Release: Đảm bảo không trừ âm reserved_stock
+					release_qty = min(item.quantity, target.reserved_stock)
+					if release_qty > 0:
+						target.reserved_stock = F('reserved_stock') - release_qty
+						target.save()
+						self.log_transaction(item, 'RELEASE', -release_qty, is_physical=False, user=user, note=f"Giải phóng kho do hủy đơn hàng {self.order_number}")
 			
 			self.set_status('cancelled', user=user, note="Hủy đơn hàng.")
 			try:
@@ -378,13 +388,20 @@ class Order(models.Model):
 			
 			for item in items:
 				target = item.variation if item.variation else item.product
-				# Physical deduction
+				# Physical deduction (Physical stock MUST exist)
 				target.physical_stock = F('physical_stock') - item.quantity
-				# Release logical reservation
-				target.reserved_stock = F('reserved_stock') - item.quantity
+				
+				# Release logical reservation (Safe Release)
+				release_qty = min(item.quantity, target.reserved_stock)
+				if release_qty > 0:
+					target.reserved_stock = F('reserved_stock') - release_qty
+				
 				target.save()
 				# Log physical move (OUT)
-				self.log_transaction(item, 'OUT', -item.quantity, is_physical=True, user=user)
+				self.log_transaction(item, 'OUT', -item.quantity, is_physical=True, user=user, note=f"Xuất kho cho đơn hàng {self.order_number}")
+				# Log release if there was a reservation
+				if release_qty > 0:
+					self.log_transaction(item, 'RELEASE', -release_qty, is_physical=False, user=user, note=f"Giải phóng tạm giữ cho đơn hàng {self.order_number}")
 			
 			self.set_status('delivered', user=user, note="Giao hàng thành công.")
 

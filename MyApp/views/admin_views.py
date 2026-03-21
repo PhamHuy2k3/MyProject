@@ -137,7 +137,13 @@ def admin_statistics(request):
 
 @warehouse_required
 def admin_inventory(request):
-    product_list = Product.objects.with_available_stock().select_related('category').order_by('available_stock_value')
+    product_list = Product.objects.annotate(
+        # Hiệu dụng (effective) stock: Cộng dồn từ cả biến thể và sản phẩm gốc để tránh mất dữ liệu
+        eff_physical=Coalesce(Sum('variations__physical_stock'), 0) + F('physical_stock'),
+        eff_reserved=Coalesce(Sum('variations__reserved_stock'), 0) + F('reserved_stock'),
+    ).annotate(
+        eff_available=F('eff_physical') - F('eff_reserved')
+    ).select_related('category').prefetch_related('variations').order_by('eff_available')
 
     q = request.GET.get('q', '').strip()
     category_filter = request.GET.get('category', '').strip()
@@ -148,9 +154,9 @@ def admin_inventory(request):
     if category_filter:
         product_list = product_list.filter(category__slug=category_filter)
     if stock_filter == 'low':
-        product_list = product_list.filter(available_stock_value__lte=10, available_stock_value__gt=0)
+        product_list = product_list.filter(eff_available__lte=10, eff_available__gt=0)
     elif stock_filter == 'out':
-        product_list = product_list.filter(available_stock_value__lte=0)
+        product_list = product_list.filter(eff_available__lte=0)
     
     # Pagination
     paginator = Paginator(product_list, 10)
@@ -160,10 +166,16 @@ def admin_inventory(request):
     # Immutable Ledger snapshot (last 10 transactions)
     recent_transactions = InventoryTransaction.objects.select_related('product', 'variation', 'user').order_by('-timestamp')[:10]
     
-    # Stats
-    total_physical = Product.objects.aggregate(total=Sum('physical_stock'))['total'] or 0
-    total_reserved = Product.objects.aggregate(total=Sum('reserved_stock'))['total'] or 0
-    low_stock_count = Product.objects.filter(physical_stock__lte=10).count()
+    # Stats (Tổng hợp toàn bộ hệ thống bao gồm cả biến thể)
+    total_physical_p = Product.objects.aggregate(total=Sum('physical_stock'))['total'] or 0
+    total_physical_v = ProductVariation.objects.aggregate(total=Sum('physical_stock'))['total'] or 0
+    total_physical = total_physical_p + total_physical_v
+
+    total_reserved_p = Product.objects.aggregate(total=Sum('reserved_stock'))['total'] or 0
+    total_reserved_v = ProductVariation.objects.aggregate(total=Sum('reserved_stock'))['total'] or 0
+    total_reserved = total_reserved_p + total_reserved_v
+
+    low_stock_count = product_list.filter(eff_physical__lte=10).count()
     
     context = {
         'products': products,
@@ -319,7 +331,7 @@ def admin_inventory_receipt_create(request):
                     transaction_type='IN',
                     quantity=quantity,
                     is_physical=True,
-                    reference_id=receipt.receipt_number,
+                    reference_id=f"{receipt.receipt_number} | Nhập từ {supplier}"[:100],
                     user=request.user
                 )
                 

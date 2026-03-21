@@ -14,6 +14,7 @@ from django.db.models import Count, Sum, Avg, F, Q, DecimalField, IntegerField
 from django.db.models.functions import Coalesce
 from decimal import Decimal
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
+from django.db import transaction
 
 from MyApp.models import *
 from MyApp.forms import *
@@ -50,7 +51,7 @@ def cart_view(request):
 
 
 def cart_add(request, product_id):
-    """Thêm sản phẩm vào giỏ hàng"""
+    """Thêm sản phẩm vào giỏ hàng - Giữ chỗ kho hàng"""
     product = get_object_or_404(Product, id=product_id)
     cart = get_or_create_cart(request)
     variation_id = request.POST.get('variation')
@@ -64,24 +65,44 @@ def cart_add(request, product_id):
         qty = 1
     qty = max(1, qty)
 
-    cart_item, created = CartItem.objects.get_or_create(
-        cart=cart,
-        product=product,
-        variation=variation,
-        defaults={'quantity': qty}
-    )
-    
-    if not created:
-        cart_item.quantity += qty
-        cart_item.save()
+    # Thực hiện giữ chỗ kho hàng (Reservation)
+    with transaction.atomic():
+        # Lock target to prevent race condition
+        if variation:
+            target = ProductVariation.objects.select_for_update().get(id=variation.id)
+            product = target.product # Refresh product ref
+        else:
+            target = Product.objects.select_for_update().get(id=product.id)
 
-    # Optionally remove from wishlist (when adding from wishlist page)
-    remove_from_wishlist = (
-        request.POST.get('remove_from_wishlist') == '1'
-        or request.GET.get('remove_from_wishlist') == '1'
-    )
-    if remove_from_wishlist and request.user.is_authenticated:
-        Wishlist.objects.filter(user=request.user, product=product).delete()
+        # Check availability
+        if target.available_stock < qty:
+            messages.error(request, f'Sản phẩm "{product.title}" hiện không đủ tồn kho để thêm vào giỏ.')
+            return redirect(request.META.get('HTTP_REFERER', 'index'))
+
+        cart_item, created = CartItem.objects.get_or_create(
+            cart=cart,
+            product=product,
+            variation=variation,
+            defaults={'quantity': qty}
+        )
+        
+        if not created:
+            cart_item.quantity += qty
+            cart_item.save()
+
+        # Tăng số lượng tạm giữ
+        target.reserved_stock = F('reserved_stock') + qty
+        target.save()
+
+        # Ghi log giao dịch kho
+        InventoryTransaction.objects.create(
+            product=product,
+            variation=variation,
+            transaction_type='RESERVE',
+            quantity=qty,
+            user=request.user if request.user.is_authenticated else None,
+            reference_id=f"CART_{cart.id} | Giữ hàng khi thêm vào giỏ"[:100]
+        )
 
     if request.user.is_authenticated:
         cache.delete(f'user_badges_{request.user.id}')
@@ -91,11 +112,39 @@ def cart_add(request, product_id):
 
 
 def cart_remove(request, item_id):
-    """Xóa sản phẩm khỏi giỏ hàng"""
+    """Xóa sản phẩm khỏi giỏ hàng - Giải phóng kho an toàn"""
     cart = get_or_create_cart(request)
     cart_item = get_object_or_404(CartItem, id=item_id, cart=cart)
     title = cart_item.product.title
-    cart_item.delete()
+    qty = cart_item.quantity
+    product = cart_item.product
+    variation = cart_item.variation
+
+    with transaction.atomic():
+        # Lấy bản ghi và khóa để cập nhật
+        if variation:
+            target = ProductVariation.objects.select_for_update().get(id=variation.id)
+        else:
+            target = Product.objects.select_for_update().get(id=product.id)
+
+        # Đảm bảo không trừ âm - Fallback cho các item cũ chưa được giữ chỗ
+        release_qty = min(qty, target.reserved_stock)
+        if release_qty > 0:
+            target.reserved_stock = F('reserved_stock') - release_qty
+            target.save()
+
+            # Ghi log giải phóng kho thực tế
+            InventoryTransaction.objects.create(
+                product=product,
+                variation=variation,
+                transaction_type='RELEASE',
+                quantity=release_qty,
+                user=request.user if request.user.is_authenticated else None,
+                reference_id=f"CART_{cart.id} | Giải phóng {release_qty} khi xóa"[:100]
+            )
+
+        cart_item.delete()
+
     if request.user.is_authenticated:
         cache.delete(f'user_badges_{request.user.id}')
     messages.success(request, f'Đã xóa "{title}" khỏi giỏ hàng.')
@@ -103,20 +152,66 @@ def cart_remove(request, item_id):
 
 
 def cart_update(request, item_id):
-    """Cập nhật số lượng sản phẩm trong giỏ hàng"""
+    """Cập nhật số lượng sản phẩm trong giỏ hàng - Điều chỉnh giữ chỗ an toàn"""
     if request.method == 'POST':
         cart = get_or_create_cart(request)
         cart_item = get_object_or_404(CartItem, id=item_id, cart=cart)
         try:
-            quantity = int(request.POST.get('quantity', 1))
+            new_quantity = int(request.POST.get('quantity', 1))
         except ValueError:
             return redirect('cart')
         
-        if quantity > 0:
-            cart_item.quantity = quantity
+        old_quantity = cart_item.quantity
+        delta = new_quantity - old_quantity
+
+        if new_quantity <= 0:
+            return cart_remove(request, item_id)
+
+        if delta == 0:
+            return redirect('cart')
+
+        product = cart_item.product
+        variation = cart_item.variation
+
+        with transaction.atomic():
+            if variation:
+                target = ProductVariation.objects.select_for_update().get(id=variation.id)
+            else:
+                target = Product.objects.select_for_update().get(id=product.id)
+            
+            if delta > 0:
+                # Tăng số lượng - Kiểm tra kho
+                if target.available_stock < delta:
+                    messages.error(request, f'Không đủ hàng để tăng số lượng cho "{product.title}".')
+                    return redirect('cart')
+                target.reserved_stock = F('reserved_stock') + delta
+                trans_type = 'RESERVE'
+                actual_delta = delta
+                note = f"Tăng số lượng trong giỏ (Cart ID: {cart.id})"
+            else:
+                # Giảm số lượng - Giải phóng an toàn
+                release_qty = min(abs(delta), target.reserved_stock)
+                actual_delta = release_qty
+                if release_qty > 0:
+                    target.reserved_stock = F('reserved_stock') - release_qty
+                trans_type = 'RELEASE'
+                note = f"Giảm số lượng trong giỏ (Cart ID: {cart.id})"
+
+            target.save()
+            cart_item.quantity = new_quantity
             cart_item.save()
-        else:
-            cart_item.delete()
+
+            # Ghi log nếu có thay đổi stock thực tế
+            if actual_delta > 0:
+                InventoryTransaction.objects.create(
+                    product=product,
+                    variation=variation,
+                    transaction_type=trans_type,
+                    quantity=actual_delta,
+                    user=request.user if request.user.is_authenticated else None,
+                    reference_id=f"CART_{cart.id} | {trans_type} {actual_delta}"[:100]
+                )
+
         if request.user.is_authenticated:
             cache.delete(f'user_badges_{request.user.id}')
     return redirect('cart')
@@ -166,10 +261,12 @@ def merge_cart_items(user, session_key):
             ).first()
 
             if user_item:
-                # Nếu có rồi thì cộng dồn số lượng
+                # Nếu có rồi thì cộng dồn số lượng. 
+                # Lưu ý: g_item đã thực hiện giữ chỗ rồi, nên khi gộp vào user_item 
+                # thì TỔNG reserved_stock trên toàn hệ thống không đổi.
                 user_item.quantity += g_item.quantity
                 user_item.save()
-                g_item.delete() # Xóa item ở giỏ guest
+                g_item.delete() # Xóa item ở giỏ guest (không release vì đã merge sang user_item)
             else:
                 # Nếu chưa có thì chuyển item sang giỏ user
                 g_item.cart = user_cart
@@ -181,7 +278,8 @@ def merge_cart_items(user, session_key):
                 user_cart.coupon = guest_cart.coupon
                 user_cart.save()
 
-        # Xóa giỏ hàng vãng lai sau khi đã merge
+        # Xóa giỏ hàng vãng lai sau khi đã merge. 
+        # Cực kỳ quan trọng: Phải bảo lưu reserved_stock vì item đã được chuyển.
         guest_cart.delete()
         
         # Xóa cache badges nếu có

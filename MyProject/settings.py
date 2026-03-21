@@ -141,20 +141,20 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 BANK_ACCOUNT = {
-    'code': '970418',
-    'account_number': '5801569928',
-    'account_name': 'PHAM QUOC HUY',
+    'code': os.environ.get('BANK_CODE', '970418'),
+    'account_number': os.environ.get('BANK_ACCOUNT_NUMBER', '5801569928'),
+    'account_name': os.environ.get('BANK_ACCOUNT_NAME', 'PHAM QUOC HUY'),
 }
 VIETQR_CONFIG = {
-    'use_dev': True,
-    'client_id': 'af354177-fce4-4647-adb9-9a44e0518241',
-    'api_key': '5b69bbe5-56a0-43a3-a63d-50f0b62d3616',
+    'use_dev': os.environ.get('VIETQR_USE_DEV', 'True').lower() == 'true',
+    'client_id': os.environ.get('VIETQR_CLIENT_ID', 'af354177-fce4-4647-adb9-9a44e0518241'),
+    'api_key': os.environ.get('VIETQR_API_KEY', '5b69bbe5-56a0-43a3-a63d-50f0b62d3616'),
 }
 
 # Casso webhook API key — get this from your Casso dashboard at casso.vn
 # Leave empty during development (webhook won't require auth)
 # In production, set this to match what Casso sends in the "Authorization: Apikey xxx" header
-CASSO_APIKEY = ''  # Example: 'AK.xxxxxxxx.xxxxxxxxxx'
+CASSO_APIKEY = os.environ.get('CASSO_APIKEY', '')  # Example: 'AK.xxxxxxxx.xxxxxxxxxx'
 
 # ==================== ALLAUTH / GOOGLE LOGIN ====================
 AUTHENTICATION_BACKENDS = [

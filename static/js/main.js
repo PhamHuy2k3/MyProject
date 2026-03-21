@@ -1,35 +1,32 @@
-// --- THREE.JS: THE DIGITAL ZEN ARTIFACT ---
+/**
+ * TEAZEN - MAIN JAVASCRIPT
+ * Tệp này chứa toàn bộ logic tương tác của website, được tập trung tại đây để dễ quản lý.
+ */
+
+// =============================================================================
+// I. HIỆU ỨNG 3D (THREE.JS) - VẬT THỂ SỐ ZEN
+// =============================================================================
 (function() {
     const container = document.getElementById('artifact-container');
     const canvas = document.getElementById('webgl-canvas');
     if (!container || !canvas || !window.THREE) return;
+    
     const scene = new THREE.Scene();
-
-    // Camera
     const camera = new THREE.PerspectiveCamera(45, container.offsetWidth / container.offsetHeight, 0.1, 100);
     camera.position.z = 25;
 
-    // Renderer
     const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
     renderer.setSize(container.offsetWidth, container.offsetHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
 
-    // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
-    const pointLight = new THREE.PointLight(0x10b981, 2); // Emerald light
+    const pointLight = new THREE.PointLight(0x10b981, 2); 
     pointLight.position.set(10, 10, 10);
     scene.add(pointLight);
 
-    const pointLight2 = new THREE.PointLight(0x34d399, 1); // Teal light
-    pointLight2.position.set(-10, -10, 10);
-    scene.add(pointLight2);
-
-    // The Artifact (Icosahedron -> Sphere Morph)
-    const geometry = new THREE.IcosahedronGeometry(6, 4); // High detail sphere
-
-    // Using MeshPhysicalMaterial for glass-like water effect
+    const geometry = new THREE.IcosahedronGeometry(6, 4); 
     const material = new THREE.MeshPhysicalMaterial({
         color: 0x059669,
         roughness: 0.1,
@@ -43,79 +40,39 @@
     const sphere = new THREE.Mesh(geometry, material);
     scene.add(sphere);
 
-    // Original positions for morphing
     const originalPositions = geometry.attributes.position.array.slice();
     const count = geometry.attributes.position.count;
 
-    // Mouse Interaction
-    let mouseX = 0;
-    let mouseY = 0;
-
+    let mouseX = 0, mouseY = 0;
     container.addEventListener('mousemove', (e) => {
         const rect = container.getBoundingClientRect();
         mouseX = (e.clientX - rect.left - rect.width / 2) * 0.005;
         mouseY = (e.clientY - rect.top - rect.height / 2) * 0.005;
     });
 
-    // Particles
-    const particlesGeometry = new THREE.BufferGeometry();
-    const particlesCount = 300;
-    const posArray = new Float32Array(particlesCount * 3);
-    for (let i = 0; i < particlesCount * 3; i++) {
-        posArray[i] = (Math.random() - 0.5) * 50;
-    }
-    particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-    const particlesMaterial = new THREE.PointsMaterial({
-        size: 0.1,
-        color: 0x6ee7b7,
-        transparent: true,
-        opacity: 0.8
-    });
-    const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
-    scene.add(particlesMesh);
-
-    // Animation Loop
     const clock = new THREE.Clock();
-
     function animate() {
         const time = clock.getElapsedTime();
-
-        // Rotate based on mouse
         sphere.rotation.y += 0.005;
         sphere.rotation.x += (mouseY - sphere.rotation.x) * 0.05;
         sphere.rotation.y += (mouseX - sphere.rotation.y) * 0.05;
 
-        // Morphing Logic (Simplex Noise approximation using Sine waves)
         const positions = geometry.attributes.position.array;
-
         for (let i = 0; i < count; i++) {
-            const ix = i * 3;
-            const iy = i * 3 + 1;
-            const iz = i * 3 + 2;
-
-            const ox = originalPositions[ix];
-            const oy = originalPositions[iy];
-            const oz = originalPositions[iz];
-
+            const ix = i * 3, iy = i * 3 + 1, iz = i * 3 + 2;
+            const ox = originalPositions[ix], oy = originalPositions[iy], oz = originalPositions[iz];
             const distortion = Math.sin(ox * 0.5 + time) * Math.cos(oy * 0.5 + time) * Math.sin(oz * 0.5 + time);
             const scale = 1 + distortion * 0.2;
-
             positions[ix] = ox * scale;
             positions[iy] = oy * scale;
             positions[iz] = oz * scale;
         }
         geometry.attributes.position.needsUpdate = true;
-
-        particlesMesh.rotation.y = -time * 0.1;
-        particlesMesh.rotation.x = time * 0.05;
-
         renderer.render(scene, camera);
         requestAnimationFrame(animate);
     }
-
     animate();
 
-    // Resize Handler
     window.addEventListener('resize', () => {
         camera.aspect = container.offsetWidth / container.offsetHeight;
         camera.updateProjectionMatrix();
@@ -123,237 +80,372 @@
     });
 })();
 
-// --- ANIMATION OBSERVER ---
-const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            entry.target.classList.add('in-view');
+// =============================================================================
+// II. HỆ THỐNG TÌM KIẾM GỢI Ý (SEARCH SUGGESTIONS)
+// =============================================================================
+(function() {
+    const searchInput = document.getElementById('search-input');
+    const suggestionsBox = document.getElementById('search-suggestions');
+    const suggestionsList = document.getElementById('suggestions-list');
+    const resultsCountBadge = document.getElementById('results-count');
+    const viewAllResults = document.getElementById('view-all-results');
+    let searchTimeout = null;
+
+    if (!searchInput || !suggestionsBox) return;
+
+    // Hiển thị khung gợi ý với hiệu ứng animation
+    const showSuggestions = () => {
+        suggestionsBox.classList.remove('hidden');
+        setTimeout(() => {
+            suggestionsBox.style.opacity = '1';
+            suggestionsBox.style.transform = 'translateY(0) scale(1)';
+        }, 10);
+    };
+
+    // Ẩn khung gợi ý
+    const hideSuggestions = () => {
+        suggestionsBox.style.opacity = '0';
+        suggestionsBox.style.transform = 'translateY(-10px) scale(0.95)';
+        setTimeout(() => suggestionsBox.classList.add('hidden'), 300);
+    };
+
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        clearTimeout(searchTimeout);
+
+        if (query.length < 1) {
+            hideSuggestions();
+            return;
         }
+
+        // Debounce: Chờ người dùng dừng gõ 150ms mới gửi yêu cầu AJAX
+        searchTimeout = setTimeout(() => {
+            fetch(`/api/search-suggestions/?q=${encodeURIComponent(query)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.results && data.results.length > 0) {
+                        if (resultsCountBadge) resultsCountBadge.textContent = `${data.results.length} kết quả`;
+
+                        // Render danh sách sản phẩm gợi ý
+                        suggestionsList.innerHTML = data.results.map(p => `
+                            <a href="${p.url}" class="group flex flex-col bg-stone-50/50 rounded-xl overflow-hidden border border-transparent hover:border-emerald-200 hover:bg-white hover:shadow-lg transition-all duration-300">
+                                <div class="aspect-[4/3] overflow-hidden relative">
+                                    ${p.image_url 
+                                        ? `<img src="${p.image_url}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">`
+                                        : `<div class="w-full h-full flex items-center justify-center bg-stone-100 text-stone-400 font-bold text-xs">TEA</div>`
+                                    }
+                                    <div class="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded-lg shadow-sm">
+                                        <span class="text-[10px] font-bold text-emerald-700">${new Intl.NumberFormat('vi-VN').format(p.price)}đ</span>
+                                    </div>
+                                </div>
+                                <div class="p-3">
+                                    <div class="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-1">${p.category}</div>
+                                    <div class="text-xs font-bold text-stone-800 line-clamp-1 group-hover:text-emerald-700 transition-colors">${p.title}</div>
+                                </div>
+                            </a>
+                        `).join('');
+
+                        showSuggestions();
+                        
+                        // Cập nhật link "Xem tất cả"
+                        if (viewAllResults) {
+                            const baseUrl = searchInput.dataset.searchUrl || '/shop/';
+                            viewAllResults.href = `${baseUrl}?q=${encodeURIComponent(query)}`;
+                        }
+                        if (window.lucide) window.lucide.createIcons();
+                    } else {
+                        hideSuggestions();
+                    }
+                });
+        }, 150);
     });
-}, { threshold: 0.1 });
 
-function observeElements() {
-    document.querySelectorAll('.reveal-text-container, .fade-up, .reveal-img-scale, .tree-node').forEach(el => observer.observe(el));
-}
+    // Đóng khi click ra ngoài
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) hideSuggestions();
+    });
+})();
 
-// --- NEW: HORIZONTAL SCROLL LOGIC ---
-const hScrollSection = document.querySelector('.h-scroll-section');
-const hScrollContainer = document.querySelector('.h-scroll-container');
+// =============================================================================
+// III. HỆ THỐNG THẺ THÔNG TIN (PRODUCT TOOLTIP)
+// =============================================================================
+(function() {
+    const tooltip = document.getElementById('product-tooltip');
+    if (!tooltip) return;
 
-window.addEventListener('scroll', () => {
-    if (!hScrollSection || !hScrollContainer) return;
-    const rect = hScrollSection.getBoundingClientRect();
-    const offsetTop = rect.top;
-    const sectionHeight = hScrollSection.offsetHeight;
-    const windowHeight = window.innerHeight;
+    const tImg = document.getElementById('tooltip-img');
+    const tTitle = document.getElementById('tooltip-title');
+    const tPrice = document.getElementById('tooltip-price');
+    const tExcerpt = document.getElementById('tooltip-excerpt');
+    const OFFSET = 15; // Khoảng cách từ con trỏ chuột đến tooltip
 
-    let percentage = 0;
-    if (offsetTop <= 0) {
-        percentage = Math.abs(offsetTop) / (sectionHeight - windowHeight);
+    // Khi di chuột vào sản phẩm
+    function onEnter(e) {
+        const el = e.currentTarget;
+        const title = el.dataset.title || '';
+        const image = el.dataset.image || '';
+        if (!title) return;
+
+        tTitle.textContent = title;
+        tPrice.textContent = el.dataset.price || '';
+        tExcerpt.textContent = el.dataset.excerpt || '';
+        tImg.src = image;
+        tImg.style.display = image ? '' : 'none';
+        tooltip.style.opacity = '1';
     }
-    percentage = Math.min(Math.max(percentage, 0), 1);
 
-    const x = -(hScrollContainer.scrollWidth - window.innerWidth) * percentage;
-    hScrollContainer.style.transform = `translateX(${x}px)`;
-});
+    // Khi di chuyển chuột bên trong sản phẩm (tooltip đi theo chuột)
+    function onMove(e) {
+        if (tooltip.style.opacity === '0') return;
+        const rect = tooltip.getBoundingClientRect();
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        
+        let x = e.clientX + OFFSET;
+        let y = e.clientY + OFFSET;
 
-// --- TREE LEAVES ---
-function createTreeLeaves() {
-    const container = document.getElementById('tree-leaves');
-    if (!container) return;
-    const leafSVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23064e3b' opacity='0.3' stroke='none'%3E%3Cpath d='M2 22s5-3 5-9c0-4.5-2.5-9-7-11 8 1 14 6 14 11 0 3.5-1.5 6-3.5 8'/%3E%3C/svg%3E";
-
-    for (let i = 0; i < 10; i++) {
-        const leaf = document.createElement('div');
-        leaf.classList.add('falling-leaf');
-        leaf.style.backgroundImage = `url("${leafSVG}")`;
-        leaf.style.width = Math.random() * 15 + 10 + 'px';
-        leaf.style.height = leaf.style.width;
-        leaf.style.left = Math.random() * 100 + '%';
-        leaf.style.animation = `leaf-fall ${Math.random() * 5 + 5}s linear infinite`;
-        leaf.style.animationDelay = Math.random() * 5 + 's';
-        container.appendChild(leaf);
+        // Xử lý tràn màn hình
+        if (x + rect.width > vw) x = e.clientX - rect.width - OFFSET;
+        if (y + rect.height > vh) y = e.clientY - rect.height - OFFSET;
+        
+        tooltip.style.left = Math.max(4, x) + 'px';
+        tooltip.style.top = Math.max(4, y) + 'px';
     }
-}
-createTreeLeaves();
 
-// --- NAVIGATION LOGIC ---
-function navigateTo(pageId) {
-    const home = document.getElementById('page-home');
-    const story = document.getElementById('page-story');
-    const target = document.getElementById(`page-${pageId}`);
-    if (home && story) {
-        home.classList.add('page-hidden');
-        home.classList.remove('page-visible');
-        story.classList.add('page-hidden');
-        story.classList.remove('page-visible');
+    // Khi rời khỏi sản phẩm
+    function onLeave() {
+        tooltip.style.opacity = '0';
     }
-    if (target) {
-        target.classList.remove('page-hidden');
-        target.classList.add('page-visible');
-        window.scrollTo(0, 0);
-    }
-}
 
-// --- INTRO ---
-function createIntroLeaves() {
-    const overlay = document.getElementById('intro-overlay');
-    if (!overlay) return;
-    const leafSVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981' stroke='%23065f46' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 22s5-3 5-9c0-4.5-2.5-9-7-11 8 1 14 6 14 11 0 3.5-1.5 6-3.5 8'/%3E%3Cpath d='M2 22c5-3 5-9'/%3E%3C/svg%3E";
-    for (let i = 0; i < 15; i++) {
-        const leaf = document.createElement('div');
-        leaf.classList.add('falling-leaf');
-        leaf.style.backgroundImage = `url("${leafSVG}")`;
-        leaf.style.width = Math.random() * 20 + 20 + 'px';
-        leaf.style.height = leaf.style.width;
-        leaf.style.left = Math.random() * 100 + 'vw';
-        leaf.style.animation = `leaf-fall ${Math.random() * 2 + 2}s linear forwards`;
-        leaf.style.animationDelay = Math.random() * 1 + 's';
-        overlay.appendChild(leaf);
+    // Gán sự kiện cho các sản phẩm (hỗ trợ cả sản phẩm tải thêm bằng AJAX)
+    function bindTooltips() {
+        document.querySelectorAll('.product-hover-trigger').forEach(el => {
+            if (el.dataset.tooltipBound) return;
+            el.dataset.tooltipBound = '1';
+            el.addEventListener('mouseenter', onEnter);
+            el.addEventListener('mousemove', onMove);
+            el.addEventListener('mouseleave', onLeave);
+        });
     }
-    setTimeout(() => {
-        overlay.classList.add('fade-out');
-        setTimeout(() => { overlay.style.display = 'none'; observeElements(); }, 1000);
-    }, 3500);
-}
-window.addEventListener('load', createIntroLeaves);
 
-// --- CURSOR ---
-const cursor = document.getElementById('custom-cursor');
-document.addEventListener('mousemove', (e) => {
-    if (!cursor) return;
-    cursor.style.left = e.clientX + 'px';
-    cursor.style.top = e.clientY + 'px';
-});
-const addHoverListeners = () => {
-    if (!cursor) return;
-    document.querySelectorAll('.hover-trigger, .group').forEach(trigger => {
-        trigger.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
-        trigger.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+    document.addEventListener('DOMContentLoaded', bindTooltips);
+    const observer = new MutationObserver(bindTooltips);
+    observer.observe(document.body, { childList: true, subtree: true });
+})();
+
+// =============================================================================
+// IV. HỆ THỐNG CHI TIẾT SẢN PHẨM (ZOOM, TABS, AJAX)
+// =============================================================================
+
+/**
+ * Đổi ảnh chính khi click vào ảnh thu nhỏ
+ */
+window.switchImage = function(url) {
+    const img = document.getElementById('main-product-img');
+    if (!img) return;
+    img.src = url;
+    
+    // Cập nhật trạng thái active cho ảnh thu nhỏ
+    document.querySelectorAll('.gallery-thumb').forEach(t => {
+        const thumbImg = t.querySelector('img');
+        if (thumbImg && thumbImg.src === url) {
+            t.classList.add('border-emerald-600', 'opacity-100');
+            t.classList.remove('border-stone-200', 'opacity-70');
+        } else {
+            t.classList.remove('border-emerald-600', 'opacity-100');
+            t.classList.add('border-stone-200', 'opacity-70');
+        }
     });
 };
 
-// --- SLIDER (Works with Django-rendered slides) ---
-const sliderContainer = document.getElementById('parallax-slider-container');
-const parallaxSection = document.getElementById('slider-section');
-let currentIndex = 0;
-let autoPlayTimer;
+/**
+ * Hiệu ứng phóng to ảnh (Zoom)
+ */
+window.handleZoom = function(e) {
+    const container = document.getElementById('zoom-container');
+    const img = document.getElementById('main-product-img');
+    const lens = document.getElementById('zoom-lens');
+    const preview = document.getElementById('zoom-preview');
+    if (!container || !img || !lens || !preview || window.innerWidth < 1024) return;
 
-function updateSliderClasses() {
-    if (!sliderContainer) return;
-    const slides = sliderContainer.querySelectorAll('.slide-card');
-    const len = slides.length;
-    if (len === 0) return;
-    
-    const prevIndex = (currentIndex - 1 + len) % len;
-    const nextIndex = (currentIndex + 1) % len;
-    
-    slides.forEach((slide, index) => {
-        slide.classList.remove('active', 'prev', 'next', 'hidden-slide');
-        if (index === currentIndex) slide.classList.add('active');
-        else if (index === nextIndex) slide.classList.add('next');
-        else if (index === prevIndex) slide.classList.add('prev');
-        else slide.classList.add('hidden-slide');
+    const rect = container.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
+    const lw = lens.offsetWidth / 2;
+    const lh = lens.offsetHeight / 2;
+
+    // Giới hạn trong khung ảnh
+    x = Math.max(lw, Math.min(x, rect.width - lw));
+    y = Math.max(lh, Math.min(y, rect.height - lh));
+
+    lens.style.left = (x - lw) + 'px';
+    lens.style.top = (y - lh) + 'px';
+    lens.classList.remove('hidden');
+
+    // Cấu hình độ phóng to
+    const zoomFactor = 2.5;
+    preview.style.backgroundImage = `url(${img.src})`;
+    preview.style.backgroundSize = `${rect.width * zoomFactor}px ${rect.height * zoomFactor}px`;
+    preview.style.backgroundPosition = `-${(x - lw) * zoomFactor - preview.offsetWidth / 2 + lw * zoomFactor}px -${(y - lh) * zoomFactor - preview.offsetHeight / 2 + lh * zoomFactor}px`;
+    preview.classList.remove('hidden');
+};
+
+window.hideZoom = function() {
+    const lens = document.getElementById('zoom-lens');
+    const preview = document.getElementById('zoom-preview');
+    if (lens) lens.classList.add('hidden');
+    if (preview) preview.classList.add('hidden');
+};
+
+/**
+ * Chuyển đổi Tab (Mô tả, Đánh giá...)
+ */
+window.switchTab = function(tabId) {
+    document.querySelectorAll('.product-tab-content').forEach(c => c.classList.add('hidden'));
+    document.querySelectorAll('.product-tab-btn').forEach(b => {
+        b.classList.remove('text-emerald-900', 'border-emerald-700', 'bg-white');
+        b.classList.add('text-stone-500', 'border-transparent');
     });
-}
+    const tab = document.getElementById(tabId);
+    const btn = document.getElementById('btn-' + tabId);
+    if (tab) tab.classList.remove('hidden');
+    if (btn) {
+        btn.classList.add('text-emerald-900', 'border-emerald-700', 'bg-white');
+        btn.classList.remove('text-stone-500', 'border-transparent');
+    }
+};
 
-function moveSlider(dir) {
-    if (!sliderContainer) return;
-    const slides = sliderContainer.querySelectorAll('.slide-card');
-    const len = slides.length;
-    if (len === 0) return;
-    currentIndex = dir === 'next' ? (currentIndex + 1) % len : (currentIndex - 1 + len) % len;
-    updateSliderClasses();
-}
+/**
+ * Thay đổi số lượng mua hàng
+ */
+window.changeQty = function(delta) {
+    const input = document.getElementById('qty-input');
+    if (!input) return;
+    let val = parseInt(input.value) || 1;
+    val = Math.max(1, Math.min(val + delta, parseInt(input.max) || 999));
+    input.value = val;
+};
 
-function goToSlide(idx) { currentIndex = idx; updateSliderClasses(); }
-function startAutoPlay() { stopAutoPlay(); autoPlayTimer = setInterval(() => moveSlider('next'), 4000); }
-function stopAutoPlay() { clearInterval(autoPlayTimer); }
+// =============================================================================
+// V. HỆ THỐNG ĐÁNH GIÁ (REVIEWS AJAX)
+// =============================================================================
+let currentReviewPage = 1;
+let hasNextReviewPage = false;
 
-if (parallaxSection) {
-    parallaxSection.addEventListener('mouseenter', stopAutoPlay);
-    parallaxSection.addEventListener('mouseleave', startAutoPlay);
-}
-updateSliderClasses();
-startAutoPlay();
-
-// --- SCRAPBOOK (Works with Django-rendered items, adds spotlight effect) ---
-const scrapbookContainer = document.getElementById('scrapbook-container');
-const chaoticSection = document.getElementById('chaotic-section');
-const chaoticTitle = document.getElementById('chaotic-title');
-const chaoticSubtitle = document.getElementById('chaotic-subtitle');
-
-function setupScrapbookEffects() {
-    if (!scrapbookContainer) return;
-    const items = scrapbookContainer.querySelectorAll('.scrapbook-item');
-    if (items.length === 0) return;
+window.fetchReviews = function(page = 1) {
+    const productMeta = document.getElementById('product-meta');
+    if (!productMeta) return;
+    const slug = productMeta.dataset.slug;
+    const sort = document.getElementById('review-sort')?.value || 'newest';
+    const query = document.getElementById('review-search')?.value || '';
+    const container = document.getElementById('reviews-list-container');
     
+    if (!container) return;
+    container.innerHTML = '<div class="flex justify-center py-12"><i data-lucide="loader-2" class="w-8 h-8 text-emerald-600 animate-spin"></i></div>';
+    if (window.lucide) window.lucide.createIcons();
+    
+    fetch(`/product/${slug}/reviews-ajax/?page=${page}&sort=${sort}&q=${encodeURIComponent(query)}`)
+        .then(r => r.json())
+        .then(data => {
+            container.innerHTML = data.html;
+            if (window.lucide) window.lucide.createIcons();
+            currentReviewPage = page;
+            hasNextReviewPage = !!data.has_next;
+            updateReviewNav();
+        });
+};
+
+function updateReviewNav() {
+    const moreBtn = document.getElementById('reviews-more-btn');
+    const collapseBtn = document.getElementById('reviews-collapse-btn');
+    if (moreBtn) moreBtn.classList.toggle('hidden', !hasNextReviewPage);
+    if (collapseBtn) collapseBtn.classList.toggle('hidden', currentReviewPage <= 1);
+}
+
+// =============================================================================
+// VI. HỆ THỐNG BÌNH LUẬN (COMMENTS AJAX)
+// =============================================================================
+let currentCommentPage = 1;
+let hasNextCommentPage = false;
+
+window.fetchComments = function(page = 1, append = false) {
+    const productMeta = document.getElementById('product-meta');
+    if (!productMeta) return;
+    const slug = productMeta.dataset.slug;
+    const sort = document.getElementById('comment-sort')?.value || 'newest';
+    const container = document.getElementById('comments-list-container');
+    
+    if (!container) return;
+    
+    return fetch(`/product/${slug}/comments-ajax/?page=${page}&sort=${sort}`)
+        .then(r => r.json())
+        .then(data => {
+            if (append) container.insertAdjacentHTML('beforeend', data.html);
+            else container.innerHTML = data.html;
+            
+            currentCommentPage = page;
+            hasNextCommentPage = data.has_next;
+            if (window.lucide) window.lucide.createIcons();
+            updateCommentsLoadControl();
+        });
+};
+
+/**
+ * Hiển thị thông báo Toast nhỏ cho bình luận
+ */
+window.showCommentToast = function(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-24 right-4 z-[120] px-4 py-3 rounded-xl shadow-xl border text-sm font-semibold transition-all duration-300 translate-y-2 opacity-0 ${type === 'success' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    requestAnimationFrame(() => toast.classList.remove('translate-y-2', 'opacity-0'));
+    setTimeout(() => {
+        toast.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 2500);
+};
+
+// =============================================================================
+// VII. TIỆN ÍCH CHUNG
+// =============================================================================
+
+// Hiệu ứng Spotlight cho Scrapbook
+(function() {
+    const scrapbook = document.getElementById('scrapbook-container');
+    if (!scrapbook) return;
+    const items = scrapbook.querySelectorAll('.scrapbook-item');
     items.forEach(item => {
         item.addEventListener('mouseenter', () => {
-            if (!chaoticSection || !chaoticTitle || !chaoticSubtitle) return;
-            chaoticSection.classList.remove('bg-transparent');
-            chaoticSection.classList.add('bg-[#0f291e]');
-            chaoticTitle.classList.replace('text-emerald-950', 'text-emerald-50');
-            chaoticSubtitle.classList.replace('text-stone-500', 'text-emerald-300');
-            items.forEach(otherItem => {
-                if (otherItem === item) {
-                    otherItem.classList.add('z-50', 'scale-110', '-translate-y-4', '!rotate-0');
-                    otherItem.style.boxShadow = '0 0 60px rgba(163, 230, 53, 0.6)';
-                } else {
-                    otherItem.classList.add('blur-[3px]', 'opacity-30', 'grayscale', 'scale-95');
-                }
+            items.forEach(other => {
+                if (other !== item) other.classList.add('blur-[2px]', 'opacity-40');
+                else item.classList.add('scale-105', 'z-10');
             });
         });
         item.addEventListener('mouseleave', () => {
-            if (!chaoticSection || !chaoticTitle || !chaoticSubtitle) return;
-            chaoticSection.classList.add('bg-transparent');
-            chaoticSection.classList.remove('bg-[#0f291e]');
-            chaoticTitle.classList.replace('text-emerald-50', 'text-emerald-950');
-            chaoticSubtitle.classList.replace('text-emerald-300', 'text-stone-500');
-            items.forEach(otherItem => {
-                otherItem.classList.remove('z-50', 'scale-110', '-translate-y-4', '!rotate-0', 'blur-[3px]', 'opacity-30', 'grayscale', 'scale-95');
-                otherItem.style.boxShadow = 'none';
-            });
+            items.forEach(other => other.classList.remove('blur-[2px]', 'opacity-40', 'scale-105', 'z-10'));
         });
     });
-}
-setupScrapbookEffects();
+})();
 
-// --- CABINET (Works with Django-rendered items, adds accordion effect) ---
-const cabinetContainer = document.getElementById('cabinet-container');
-
-function setupCabinetEffects() {
-    if (!cabinetContainer) return;
-    const items = cabinetContainer.querySelectorAll('.cabinet-item');
-    if (items.length === 0) return;
-    
-    items.forEach(item => {
-        item.addEventListener('click', () => {
-            const isActive = item.classList.contains('cabinet-active');
-            items.forEach(i => {
-                i.classList.remove('cabinet-active', 'flex-[4]');
-                i.classList.add('flex-[1]');
-            });
-            if (!isActive) {
-                item.classList.add('cabinet-active', 'flex-[4]');
-                item.classList.remove('flex-[1]');
-            }
-        });
+// Custom Cursor
+(function() {
+    const cursor = document.getElementById('custom-cursor');
+    if (!cursor) return;
+    document.addEventListener('mousemove', (e) => {
+        cursor.style.left = e.clientX + 'px';
+        cursor.style.top = e.clientY + 'px';
     });
-}
-setupCabinetEffects();
+    document.addEventListener('mouseover', (e) => {
+        if (e.target.closest('.hover-trigger') || e.target.closest('button') || e.target.closest('a')) {
+            cursor.classList.add('hovered');
+        } else {
+            cursor.classList.remove('hovered');
+        }
+    });
+})();
 
-// --- PINTEREST (Works with Django-rendered items) ---
-const pinterestContainer = document.getElementById('pinterest-scroll');
-
-function scrollPinterest(direction) {
-    if (!pinterestContainer) return;
-    const amount = direction === 'left' ? -350 : 350;
-    pinterestContainer.scrollBy({ left: amount, behavior: 'smooth' });
-}
-
-// Init
-addHoverListeners();
-if (window.lucide) lucide.createIcons();
-
-setTimeout(observeElements, 500);
+// Khởi tạo icons Lucide
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.lucide) lucide.createIcons();
+});

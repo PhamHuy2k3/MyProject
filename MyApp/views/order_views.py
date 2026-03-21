@@ -5,9 +5,10 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.utils import timezone
+from django.db import transaction
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 
-from MyApp.models import Order, OrderItem, Payment, Notification
+from MyApp.models import Order, OrderItem, Payment, Notification, Product, ProductVariation
 from .cart_views import get_or_create_cart
 from .utils import create_notification, is_accountant
 
@@ -252,36 +253,57 @@ def checkout(request):
         if payment_method not in ('qr_bank', 'cod'):
             payment_method = 'qr_bank'
 
-        total_amount = cart.get_total_price()
-        discount_amount = cart.get_discount_amount()
+        with transaction.atomic():
+            total_amount = cart.get_total_price()
+            discount_amount = cart.get_discount_amount()
 
-        for item in cart_items:
-            target = item.variation if item.variation else item.product
-            if target and target.available_stock < item.quantity:
-                messages.error(request, f"Sản phẩm {target} không đủ tồn kho khả dụng.")
-                return redirect('cart')
+            # Lấy danh sách sản phẩm và khóa bản ghi để tránh race condition
+            # Sắp xếp theo ID để tránh deadlock
+            products_to_lock = []
+            for item in cart_items:
+                if item.variation:
+                    products_to_lock.append(('variation', item.variation.id, item.quantity))
+                else:
+                    products_to_lock.append(('product', item.product.id, item.quantity))
+            
+            # Khóa và kiểm tra tồn kho
+            for type, pk, qty in products_to_lock:
+                if type == 'variation':
+                    target = ProductVariation.objects.select_for_update().get(pk=pk)
+                else:
+                    target = Product.objects.select_for_update().get(pk=pk)
+                
+                if target.available_stock < qty:
+                    messages.error(request, f"Sản phẩm {target} không đủ tồn kho khả dụng (Chỉ còn {target.available_stock}).")
+                    return redirect('cart')
 
-        order = Order.objects.create(
-            user=request.user,
-            total_amount=total_amount,
-            status='pending',
-            note=note,
-            coupon=cart.coupon,
-            discount_amount=discount_amount
-        )
-
-        for item in cart_items:
-            item_price = item.variation.price if (item.variation and item.variation.price) else item.product.price
-            OrderItem.objects.create(
-                order=order,
-                product=item.product,
-                variation=item.variation,
-                product_title=item.product.title,
-                quantity=item.quantity,
-                price=item_price or 0
+            order = Order.objects.create(
+                user=request.user,
+                total_amount=total_amount,
+                status='pending',
+                note=note,
+                coupon=cart.coupon,
+                discount_amount=discount_amount
             )
 
-        order.set_status('pending', user=request.user, note="Tạo đơn hàng.")
+            for item in cart_items:
+                item_price = item.variation.price if (item.variation and item.variation.price) else item.product.price
+                OrderItem.objects.create(
+                    order=order,
+                    product=item.product,
+                    variation=item.variation,
+                    product_title=item.product.title,
+                    quantity=item.quantity,
+                    price=item_price or 0
+                )
+
+            # Thực hiện giữ chỗ kho hàng ngay lập tức
+            success, msg = order.action_confirm(user=request.user)
+            if not success:
+                # Nếu vì lý do gì đó fail (dù đã check ở trên), rollback transaction
+                messages.error(request, f"Lỗi giữ kho: {msg}")
+                transaction.set_rollback(True)
+                return redirect('cart')
 
         # Notify staff about new order
         staff_users = User.objects.filter(is_staff=True)

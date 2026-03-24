@@ -1,0 +1,45 @@
+# Hướng dẫn: Thêm trường dữ liệu mới cho Model bất kỳ
+
+Quy trình thêm trường dữ liệu là **giống hệt nhau** cho mọi mục trong ứng dụng của bạn (Product, Category, Storyboard, v.v.). Dưới đây là cách thực hiện tổng quát:
+
+### Bước 1: Khai báo trong [models.py](file:///c:/ITC_Subjects_HKV/Django/MyProject%20-%20Copy%20-%20Copy/MyApp/models.py)
+Hãy tìm đến Class (mục) mà bạn muốn thêm trường và khai báo nó.
+- Nếu muốn thêm vào **Danh mục**: Tìm `class Category`.
+- Nếu muốn thêm vào **Storyboard**: Tìm `class StoryboardItem`.
+
+**Ví dụ thêm trường "Ghi chú" cho bất kỳ Model nào:**
+```python
+class TenModelCuaBan(models.Model):
+    # ... các trường cũ ...
+    note = models.TextField(blank=True, verbose_name="Ghi chú thêm")
+```
+
+### Bước 2: Chạy Migration (Cực kỳ quan trọng)
+Mở terminal và chạy 2 lệnh sau để cập nhật cơ sở dữ liệu:
+1. `python manage.py makemigrations` (Để Django tạo ra "bản vẽ" thay đổi).
+2. `python manage.py migrate` (Để áp dụng "bản vẽ" đó vào thực tế).
+
+### Bước 3: Cập nhật Form nhập liệu ([forms.py](file:///c:/ITC_Subjects_HKV/Django/MyProject%20-%20Copy%20-%20Copy/MyApp/forms.py))
+Nếu bạn có trang thêm/sửa sản phẩm, hãy thêm tên trường vào danh sách `fields`:
+```python
+class ProductForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = ['title', 'category', 'origin', 'price', ...] # Thêm 'origin' vào đây
+```
+
+### Bước 4: Hiển thị ra giao diện (`templates/`)
+Mở file HTML của trang chi tiết sản phẩm (ví dụ [product_detail.html](file:///c:/ITC_Subjects_HKV/Django/MyProject%20-%20Copy%20-%20Copy/templates/shop/product_detail.html)) và gọi dữ liệu:
+```html
+<p><strong>Xuất xứ:</strong> {{ product.origin }}</p>
+```
+
+---
+
+> [!TIP]
+> **Lưu ý về `null=True` và `blank=True`**:
+> - `blank=True`: Cho phép để trống khi nhập trên giao diện (Admin/Form).
+> - `null=True`: Cho phép cơ sở dữ liệu lưu giá trị Rỗng (thường dùng cho các trường số hoặc liên kết ForeignKey).
+> - Với `CharField` (chuỗi), thường chỉ cần `blank=True` là đủ.
+
+Nếu bạn muốn tôi thực hiện trực tiếp một trường cụ thể nào đó (ví dụ như để phục vụ trang About), hãy cho tôi biết tên trường nhé!

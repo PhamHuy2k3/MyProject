@@ -8,3 +8,4 @@ reportlab==4.4.9
 PyJWT==2.10.1
 django-q2
 cryptography
+gunicorn

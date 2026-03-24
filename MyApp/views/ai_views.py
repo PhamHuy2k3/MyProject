@@ -126,45 +126,93 @@ def api_chat_message(request):
     # Thử lần lượt các model Gemini (phòng trường hợp quota hết ở model chính)
     gemini_models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite']
     
-    payload = {
-        "systemInstruction": {
-            "parts": [{"text": system_instruction}]
-        },
-        "contents": gemini_contents,
-        "generationConfig": {
-            "temperature": 0.7,
-            "maxOutputTokens": 2048,
+    def build_payload(use_snake_case: bool):
+        if use_snake_case:
+            return {
+                "system_instruction": {
+                    "parts": [{"text": system_instruction}]
+                },
+                "contents": gemini_contents,
+                "generation_config": {
+                    "temperature": 0.7,
+                    "max_output_tokens": 2048,
+                }
+            }
+        return {
+            "systemInstruction": {
+                "parts": [{"text": system_instruction}]
+            },
+            "contents": gemini_contents,
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 2048,
+            }
         }
-    }
+
+    def should_retry_with_snake_case(resp_data):
+        try:
+            text = json.dumps(resp_data, ensure_ascii=False)
+        except Exception:
+            text = str(resp_data)
+        return (
+            'Unknown name "systemInstruction"' in text or
+            'Unknown name "generationConfig"' in text or
+            ('Unknown name' in text and 'systemInstruction' in text) or
+            ('Unknown name' in text and 'generationConfig' in text)
+        )
+
+    payload = build_payload(use_snake_case=False)
+    payload_snake = build_payload(use_snake_case=True)
     
     headers = {'Content-Type': 'application/json'}
     
     ai_content = None
+    last_error = None
     import time
     for model_name in gemini_models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-        try:
-            response = requests.post(url, headers=headers, json=payload, timeout=30)
-            resp_data = response.json()
-            
-            if response.status_code == 200:
-                ai_content = resp_data['candidates'][0]['content']['parts'][0]['text']
+        for attempt in range(2):
+            current_payload = payload if attempt == 0 else payload_snake
+            try:
+                response = requests.post(url, headers=headers, json=current_payload, timeout=30)
+                try:
+                    resp_data = response.json()
+                except Exception:
+                    resp_data = {"error": "non_json_response", "text": response.text}
+                
+                if response.status_code == 200:
+                    try:
+                        ai_content = resp_data['candidates'][0]['content']['parts'][0]['text']
+                    except Exception:
+                        ai_content = None
+                        last_error = {"error": "invalid_response_shape", "response": resp_data}
+                    if ai_content:
+                        break
+                elif response.status_code == 429:
+                    print(f"Gemini API 429 (quota exceeded) for model {model_name}, trying next model...")
+                    last_error = resp_data
+                    break
+                elif response.status_code == 400 and attempt == 0 and should_retry_with_snake_case(resp_data):
+                    print("Retrying Gemini payload with snake_case fields...")
+                    last_error = resp_data
+                    continue
+                else:
+                    print(f"Gemini API Error ({model_name}) Status: {response.status_code}")
+                    print(f"Gemini API Error Response: {resp_data}")
+                    last_error = resp_data
+                    break
+            except requests.exceptions.Timeout:
+                print(f"Gemini API timeout for model {model_name}")
+                last_error = {"error": "timeout"}
                 break
-            elif response.status_code == 429:
-                print(f"Gemini API 429 (quota exceeded) for model {model_name}, trying next model...")
-                continue
-            else:
-                print(f"Gemini API Error ({model_name}) Status: {response.status_code}")
-                print(f"Gemini API Error Response: {resp_data}")
-                continue
-        except requests.exceptions.Timeout:
-            print(f"Gemini API timeout for model {model_name}")
-            continue
-        except Exception as e:
-            import traceback
-            print(f"Exception calling Gemini API ({model_name}):")
-            traceback.print_exc()
-            continue
+            except Exception as e:
+                import traceback
+                print(f"Exception calling Gemini API ({model_name}):")
+                traceback.print_exc()
+                last_error = {"error": "exception", "details": str(e)}
+                break
+        if ai_content:
+            break
     
     if ai_content is None:
         ai_content = "Xin thứ lỗi, hiện tại tôi đang gặp chút vấn đề kỹ thuật. Quý khách vui lòng thử lại sau giây lát nhé."
@@ -200,8 +248,11 @@ def api_chat_message(request):
     # Lưu reply từ AI (lưu text đã xóa raw tag)
     AIChatMessage.objects.create(session=session, sender='ai', content=ai_content)
     
-    return JsonResponse({
+    response_payload = {
         'sender': 'ai',
         'content': ai_content,
         'recommended_products': recommended_products
-    })
+    }
+    if settings.DEBUG and last_error:
+        response_payload['debug'] = last_error
+    return JsonResponse(response_payload)

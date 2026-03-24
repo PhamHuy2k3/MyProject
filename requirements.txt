@@ -9,3 +9,4 @@ PyJWT==2.10.1
 django-q2
 cryptography
 gunicorn
+whitenoise

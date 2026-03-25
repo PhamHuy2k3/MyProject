@@ -458,6 +458,120 @@
                 </div>
                 {% endif %}
             </div>
+
+            <!-- Reviews List (AJAX Loaded) -->
+            <div id="reviews-list-container">
+                <div class="flex justify-center py-12">
+                    <i data-lucide="loader-2" class="w-8 h-8 text-emerald-600 animate-spin"></i>
+                </div>
+            </div>
+
+            <!-- Reviews Pagination -->
+            <div class="flex items-center justify-center gap-4 mt-6">
+                <button id="reviews-collapse-btn" class="hidden hover-trigger text-sm font-bold text-stone-500 hover:text-emerald-700 flex items-center gap-1 transition-colors">
+                    <i data-lucide="chevrons-up" class="w-4 h-4"></i> Thu gọn
+                </button>
+                <button id="reviews-more-btn" class="hidden hover-trigger text-sm font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 transition-colors">
+                    Xem thêm đánh giá <i data-lucide="chevrons-down" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= COMMENTS SECTION ================= -->
+        <div class="mt-16 pt-16 border-t border-stone-200">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <span class="text-stone-500 font-mono text-xs uppercase tracking-widest">Thảo luận</span>
+                    <h2 class="font-art text-3xl font-bold text-emerald-950 mt-1">
+                        Bình luận <span id="comment-count-inline" class="text-lg text-stone-400 font-normal">({{ comment_count }})</span>
+                    </h2>
+                </div>
+                <!-- Sort -->
+                <div class="relative shrink-0">
+                    <select id="comment-sort" class="appearance-none pl-4 pr-10 py-2.5 rounded-xl border border-stone-200 text-sm bg-stone-50 focus:border-emerald-600 focus:outline-none focus:bg-white transition-all text-stone-700 font-medium cursor-pointer">
+                        <option value="newest">Mới nhất</option>
+                        <option value="oldest">Cũ nhất</option>
+                        <option value="popular">Phổ biến nhất</option>
+                    </select>
+                    <i data-lucide="chevron-down" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none"></i>
+                </div>
+            </div>
+
+            <!-- Comment Form -->
+            {% if user.is_authenticated %}
+            <div class="bg-white rounded-[2rem] p-6 shadow-sm border border-stone-100 mb-8">
+                <form onsubmit="submitComment(event, {{ product.id }})" class="comment-form space-y-4">
+                    <div class="flex gap-3">
+                        <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm shrink-0">
+                            {% if user.profile.avatar %}
+                                <img src="{{ user.profile.avatar.url }}" class="w-full h-full object-cover rounded-full">
+                            {% else %}
+                                {{ user.username|first|upper }}
+                            {% endif %}
+                        </div>
+                        <div class="flex-1 bg-stone-50 border border-stone-200 rounded-2xl p-1 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all">
+                            <textarea name="content" rows="2" class="w-full bg-transparent px-3 py-2 text-sm focus:outline-none resize-none auto-resize-textarea" placeholder="Viết bình luận của bạn..." required maxlength="1000"></textarea>
+                            
+                            <div class="flex items-center justify-between px-2 pb-1 border-t border-stone-200 border-dashed mt-1 pt-2">
+                                <!-- Media Upload -->
+                                <div class="flex items-center gap-1">
+                                    <label class="cursor-pointer w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-200 text-stone-500 transition-colors" title="Đính kèm ảnh/video">
+                                        <i data-lucide="paperclip" class="w-4 h-4"></i>
+                                        <input type="file" name="media" class="hidden media-upload-input" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/webm">
+                                    </label>
+                                </div>
+                                
+                                <div class="flex items-center gap-3">
+                                    <span class="text-[10px] text-stone-400 font-mono char-counter">0/1000</span>
+                                    <button type="submit" class="bg-emerald-800 text-white px-5 py-1.5 rounded-xl font-bold text-xs hover:bg-emerald-700 transition-colors flex items-center gap-1.5 shadow-sm submit-btn">
+                                        <i data-lucide="send" class="w-3 h-3"></i> Gửi bình luận
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Preview Container -->
+                    <div class="media-preview-container flex flex-wrap gap-2 pl-13 hidden"></div>
+                </form>
+            </div>
+            {% else %}
+            <div class="bg-white rounded-[2rem] p-6 mb-8 shadow-sm border border-stone-100 text-center">
+                <i data-lucide="message-circle" class="w-10 h-10 mx-auto mb-3 text-stone-300"></i>
+                <p class="text-stone-600 text-sm">
+                    Vui lòng <a href="{% url 'login' %}?next={{ request.path }}" class="text-emerald-700 font-bold hover:underline">đăng nhập</a> để tham gia thảo luận.
+                </p>
+            </div>
+            {% endif %}
+
+            <!-- Comments List (AJAX Loaded) -->
+            <div id="comments-list-container">
+                <div class="flex justify-center py-12">
+                    <i data-lucide="loader-2" class="w-8 h-8 text-emerald-600 animate-spin"></i>
+                </div>
+            </div>
+
+            <!-- Comments Pagination -->
+            <div class="flex items-center justify-center gap-4 mt-6">
+                <button id="comments-collapse-btn" class="hidden hover-trigger text-sm font-bold text-stone-500 hover:text-emerald-700 flex items-center gap-1 transition-colors">
+                    <i data-lucide="chevrons-up" class="w-4 h-4"></i> Thu gọn
+                </button>
+                <button id="comments-more-btn" class="hidden hover-trigger text-sm font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 transition-colors">
+                    Xem thêm bình luận <i data-lucide="chevrons-down" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Comment Count Text -->
+            <p id="comment-count-text" class="text-center text-stone-400 text-sm mt-4">{{ comment_count }} bình luận</p>
+        </div>
+    </div>
+</section>
+
+<!-- RELATED PRODUCTS SECTION -->
+<section class="py-16 px-6 bg-white/50">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-12">
+            <span class="text-stone-500 font-mono text-xs uppercase tracking-widest">Khám phá thêm</span>
+            <h2 class="font-art text-4xl font-bold text-emerald-950 mt-2">Sản phẩm liên quan</h2>
         </div>
         {% if related_products %}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">

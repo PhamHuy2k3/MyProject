@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     function getCsrfToken() {
         const meta = document.querySelector('meta[name="csrf-token"]');
         if (meta && meta.content) return meta.content;
@@ -632,4 +632,85 @@
     window.getCsrfToken = window.getCsrfToken || getCsrfToken;
     window.bindCommentEvents = window.bindCommentEvents || bindCommentEvents;
     window.updateCommentCount = window.updateCommentCount || updateCommentCount;
+
+    /* ===== AJAX FETCH: Reviews ===== */
+    window.currentReviewPage = 0;
+
+    window.fetchReviews = function (page) {
+        const slug = document.getElementById('product-meta')?.dataset.slug;
+        const container = document.getElementById('reviews-list-container');
+        if (!slug || !container) return;
+
+        const search = document.getElementById('review-search');
+        const sort = document.getElementById('review-sort');
+        const params = new URLSearchParams();
+        params.set('page', page);
+        if (search && search.value.trim()) params.set('q', search.value.trim());
+        if (sort) params.set('sort', sort.value);
+
+        fetch(`/product/${slug}/reviews-ajax/?${params}`)
+            .then(r => r.json())
+            .then(data => {
+                if (page === 1) {
+                    container.innerHTML = data.html || '';
+                } else {
+                    container.insertAdjacentHTML('beforeend', data.html || '');
+                }
+                window.currentReviewPage = page;
+
+                const moreBtn = document.getElementById('reviews-more-btn');
+                const collapseBtn = document.getElementById('reviews-collapse-btn');
+                if (moreBtn) moreBtn.classList.toggle('hidden', !data.has_next);
+                if (collapseBtn) collapseBtn.classList.toggle('hidden', page <= 1);
+
+                // Update counts
+                if (typeof data.review_count === 'number') {
+                    const countText = document.getElementById('review-count-text');
+                    if (countText) countText.textContent = `${data.review_count} bài đánh giá`;
+                    const countInline = document.getElementById('review-count-inline');
+                    if (countInline) countInline.textContent = `(${data.review_count} đánh giá)`;
+                }
+
+                if (window.lucide) window.lucide.createIcons();
+            })
+            .catch(err => console.error('fetchReviews error:', err));
+    };
+
+    /* ===== AJAX FETCH: Comments ===== */
+    window.currentCommentPage = 0;
+
+    window.fetchComments = function (page, append) {
+        const slug = document.getElementById('product-meta')?.dataset.slug;
+        const container = document.getElementById('comments-list-container');
+        if (!slug || !container) return;
+
+        const sort = document.getElementById('comment-sort');
+        const params = new URLSearchParams();
+        params.set('page', page);
+        if (sort) params.set('sort', sort.value);
+
+        fetch(`/product/${slug}/comments-ajax/?${params}`)
+            .then(r => r.json())
+            .then(data => {
+                if (append && page > 1) {
+                    container.insertAdjacentHTML('beforeend', data.html || '');
+                } else {
+                    container.innerHTML = data.html || '';
+                }
+                window.currentCommentPage = page;
+
+                const moreBtn = document.getElementById('comments-more-btn');
+                const collapseBtn = document.getElementById('comments-collapse-btn');
+                if (moreBtn) moreBtn.classList.toggle('hidden', !data.has_next);
+                if (collapseBtn) collapseBtn.classList.toggle('hidden', page <= 1);
+
+                if (typeof data.total_count === 'number') {
+                    updateCommentCount(data.total_count);
+                }
+
+                if (window.lucide) window.lucide.createIcons();
+                bindCommentEvents();
+            })
+            .catch(err => console.error('fetchComments error:', err));
+    };
 })();

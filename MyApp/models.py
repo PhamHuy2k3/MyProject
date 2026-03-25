@@ -325,7 +325,7 @@ class Order(models.Model):
 
 		with transaction.atomic():
 			# Lock items in sorted order to prevent deadlock
-			items = self.items.select_related('product', 'variation').order_by('product__id', 'variation__id').select_for_update(of=('product', 'variation'))
+			items = self.items.select_related('product', 'variation').order_by('product__id', 'variation__id').select_for_update()
 			
 			can_proceed, msg = self.can_confirm()
 			if not can_proceed:
@@ -352,7 +352,7 @@ class Order(models.Model):
 		if self.status in ['delivered', 'completed', 'return_requested', 'return_approved', 'returned', 'refunded', 'exchanged']:
 			return False, "Đơn hàng đã hoàn tất hoặc đang xử lý đổi trả, không thể hủy."
 		with transaction.atomic():
-			items = self.items.select_related('product', 'variation').order_by('product__id', 'variation__id').select_for_update(of=('product', 'variation'))
+			items = self.items.select_related('product', 'variation').order_by('product__id', 'variation__id').select_for_update()
 			
 			if self.status in ['confirmed', 'processing', 'shipping']:
 				for item in items:
@@ -384,7 +384,7 @@ class Order(models.Model):
 			return False, "Trạng thái đơn hàng không hợp lệ để hoàn tất."
 
 		with transaction.atomic():
-			items = self.items.select_related('product', 'variation').order_by('product__id', 'variation__id').select_for_update(of=('product', 'variation'))
+			items = self.items.select_related('product', 'variation').order_by('product__id', 'variation__id').select_for_update()
 			
 			for item in items:
 				target = item.variation if item.variation else item.product

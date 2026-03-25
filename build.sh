@@ -13,6 +13,9 @@ python manage.py migrate
 
 echo "Checking for database dump..."
 if [ -f datadump.json ]; then
+    echo "Flushing previous partial data..."
+    python manage.py flush --no-input
+    
     echo "Loading data from datadump.json..."
     python manage.py loaddata datadump.json
     

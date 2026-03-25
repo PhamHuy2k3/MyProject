@@ -629,6 +629,72 @@ window.showCommentToast = function(message, type = 'success') {
     });
 })();
 
+// =============================================================================
+// PRODUCT HOVER TOOLTIP — Hiển thị popup thông tin khi di chuột vào sản phẩm
+// =============================================================================
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltip = document.getElementById('product-tooltip');
+    if (!tooltip) return;
+
+    var tImg = document.getElementById('tooltip-img');
+    var tTitle = document.getElementById('tooltip-title');
+    var tPrice = document.getElementById('tooltip-price');
+    var tExcerpt = document.getElementById('tooltip-excerpt');
+    var OFFSET = 15;
+
+    function onEnter(e) {
+        var el = e.currentTarget;
+        var title = el.dataset.title || '';
+        var image = el.dataset.image || '';
+        if (!title) return;
+
+        if (tTitle) tTitle.textContent = title;
+        if (tPrice) tPrice.textContent = el.dataset.price || '';
+        if (tExcerpt) tExcerpt.textContent = el.dataset.excerpt || '';
+        if (tImg) {
+            tImg.src = image;
+            tImg.style.display = image ? '' : 'none';
+        }
+        tooltip.style.opacity = '1';
+    }
+
+    function onMove(e) {
+        if (tooltip.style.opacity === '0') return;
+        var rect = tooltip.getBoundingClientRect();
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+
+        var x = e.clientX + OFFSET;
+        var y = e.clientY + OFFSET;
+        if (x + rect.width > vw) x = e.clientX - rect.width - OFFSET;
+        if (y + rect.height > vh) y = e.clientY - rect.height - OFFSET;
+
+        tooltip.style.left = Math.max(4, x) + 'px';
+        tooltip.style.top = Math.max(4, y) + 'px';
+    }
+
+    function onLeave() {
+        tooltip.style.opacity = '0';
+    }
+
+    function bindTooltips() {
+        document.querySelectorAll('.product-hover-trigger').forEach(function(el) {
+            if (el.dataset.tooltipBound) return;
+            el.dataset.tooltipBound = '1';
+            el.addEventListener('mouseenter', onEnter);
+            el.addEventListener('mousemove', onMove);
+            el.addEventListener('mouseleave', onLeave);
+        });
+    }
+
+    // Bind existing elements
+    bindTooltips();
+
+    // Auto-bind for dynamically added elements
+    var observer = new MutationObserver(bindTooltips);
+    observer.observe(document.body, { childList: true, subtree: true });
+});
+
 // Khởi tạo icons Lucide
 document.addEventListener('DOMContentLoaded', () => {
     if (window.lucide) lucide.createIcons();

@@ -329,7 +329,7 @@ class Order(models.Model):
 
 		with transaction.atomic():
 			# Lock items in sorted order to prevent deadlock
-			items = self.items.select_related('product', 'variation').order_by('product__id', 'variation__id').select_for_update()
+			items = self.items.select_related('product', 'variation').order_by('product__id', 'variation__id')
 			
 			can_proceed, msg = self.can_confirm()
 			if not can_proceed:
@@ -337,10 +337,17 @@ class Order(models.Model):
 
 			for item in items:
 				if not from_cart:
-					target = item.variation if item.variation else item.product
+					# Explicitly lock the specific product or variation row to avoid outer join FOR UPDATE errors
+					if item.variation_id:
+						target = ProductVariation.objects.select_for_update().get(id=item.variation_id)
+					else:
+						target = Product.objects.select_for_update().get(id=item.product_id)
+					
 					# Update reserved stock only if not coming from already reserved cart
 					target.reserved_stock = F('reserved_stock') + item.quantity
 					target.save()
+				else:
+					target = item.variation if item.variation else item.product
 				
 				# Ghi log giữ hàng cho Đơn hàng (dù từ giỏ hay không đều cần log của Order)
 				self.log_transaction(item, 'RESERVE', item.quantity, is_physical=False, user=user, note="Tạm giữ khi xác nhận đơn hàng.")
@@ -356,11 +363,15 @@ class Order(models.Model):
 		if self.status in ['delivered', 'completed', 'return_requested', 'return_approved', 'returned', 'refunded', 'exchanged']:
 			return False, "Đơn hàng đã hoàn tất hoặc đang xử lý đổi trả, không thể hủy."
 		with transaction.atomic():
-			items = self.items.select_related('product', 'variation').order_by('product__id', 'variation__id').select_for_update()
+			items = self.items.select_related('product', 'variation').order_by('product__id', 'variation__id')
 			
 			if self.status in ['confirmed', 'processing', 'shipping']:
 				for item in items:
-					target = item.variation if item.variation else item.product
+					if item.variation_id:
+						target = ProductVariation.objects.select_for_update().get(id=item.variation_id)
+					else:
+						target = Product.objects.select_for_update().get(id=item.product_id)
+						
 					# Safe Release: Đảm bảo không trừ âm reserved_stock
 					release_qty = min(item.quantity, target.reserved_stock)
 					if release_qty > 0:
@@ -388,10 +399,14 @@ class Order(models.Model):
 			return False, "Trạng thái đơn hàng không hợp lệ để hoàn tất."
 
 		with transaction.atomic():
-			items = self.items.select_related('product', 'variation').order_by('product__id', 'variation__id').select_for_update()
+			items = self.items.select_related('product', 'variation').order_by('product__id', 'variation__id')
 			
 			for item in items:
-				target = item.variation if item.variation else item.product
+				if item.variation_id:
+					target = ProductVariation.objects.select_for_update().get(id=item.variation_id)
+				else:
+					target = Product.objects.select_for_update().get(id=item.product_id)
+					
 				# Physical deduction (Physical stock MUST exist)
 				target.physical_stock = F('physical_stock') - item.quantity
 				

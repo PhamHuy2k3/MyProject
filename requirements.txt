@@ -10,3 +10,4 @@ django-q2
 cryptography
 gunicorn
 whitenoise
+dj-database-url

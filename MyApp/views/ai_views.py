@@ -112,7 +112,8 @@ def api_chat_message(request):
     """
     
     # Loại bỏ tin nhắn cuối cùng của user ra khỏi history vì API Gemini v1beta yêu cầu payload contents phải theo thứ tự
-    gemini_contents = history_context[:-1] 
+    # Nếu history_context rỗng hoặc chỉ có 1 phần tử thì gemini_contents = []
+    gemini_contents = history_context[:-1] if len(history_context) > 1 else []
     gemini_contents.append({
         "role": "user",
         "parts": [{"text": f"Context dữ liệu cửa hàng:\n{product_context}\n\nTin nhắn người dùng:\n{user_content}"}]
@@ -120,11 +121,12 @@ def api_chat_message(request):
 
     api_key = settings.GEMINI_API_KEY
     if not api_key:
-        AIChatMessage.objects.create(session=session, sender='ai', content='Hệ thống chưa được cấu hình API key. Vui lòng liên hệ quản trị viên.')
-        return JsonResponse({'sender': 'ai', 'content': 'Hệ thống chưa được cấu hình API key. Vui lòng liên hệ quản trị viên.', 'recommended_products': []})
+        error_msg = 'Hệ thống chưa được cấu hình API key. Vui lòng liên hệ quản trị viên.'
+        AIChatMessage.objects.create(session=session, sender='ai', content=error_msg)
+        return JsonResponse({'sender': 'ai', 'content': error_msg, 'recommended_products': []})
     
     # Thử lần lượt các model Gemini (phòng trường hợp quota hết ở model chính)
-    gemini_models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite']
+    gemini_models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash']
     
     def build_payload(use_snake_case: bool):
         if use_snake_case:
@@ -168,7 +170,6 @@ def api_chat_message(request):
     
     ai_content = None
     last_error = None
-    import time
     for model_name in gemini_models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
         for attempt in range(2):
@@ -215,7 +216,11 @@ def api_chat_message(request):
             break
     
     if ai_content is None:
-        ai_content = "Xin thứ lỗi, hiện tại tôi đang gặp chút vấn đề kỹ thuật. Quý khách vui lòng thử lại sau giây lát nhé."
+        error_detail = ''
+        if settings.DEBUG and last_error:
+            error_detail = f"\n\n[DEBUG] Chi tiết lỗi: {json.dumps(last_error, ensure_ascii=False, default=str)[:500]}"
+        ai_content = f"Xin thứ lỗi, hiện tại tôi đang gặp chút vấn đề kỹ thuật. Quý khách vui lòng thử lại sau giây lát nhé.{error_detail}"
+        print(f'[CHATBOT ERROR] All Gemini models failed. Last error: {last_error}')
         
     # Xử lý parse [PRODUCTS: id1, id2]
     recommended_products = []

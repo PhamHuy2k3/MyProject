@@ -77,6 +77,7 @@ SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -214,3 +215,4 @@ Q_CLUSTER = {
 
 # 32-byte URL-safe base64-encoded key for Fernet (cryptography)
 AUDIT_LOG_ENCRYPTION_KEY = os.environ.get('AUDIT_LOG_ENCRYPTION_KEY', 'vOa3Q7yE-xL1o9D9uI6V-S8gE1W6eG5F-Y1E2nO9Z2c=')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

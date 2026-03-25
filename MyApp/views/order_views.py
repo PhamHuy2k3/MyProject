@@ -151,10 +151,27 @@ def payment_view(request, order_number):
     qr_image_url = None
 
     try:
+        # Lấy thông tin thiết lập Bank
+        from django.conf import settings
+        from MyApp.vietqr_service import VietQRService
+        
+        bank_config = getattr(settings, 'BANK_ACCOUNT', {})
+        bank_code = bank_config.get('code', '970422')
         service = VietQRService()
-        if service.client_id:
-            qr_result = service.generate_qr_code(order, qr_type=0)
-            qr_image_url = qr_result.get('qrLink')
+        acq_id = service.get_bin_code(bank_code)
+        account_no = bank_config.get('account_number', '')
+        account_name = bank_config.get('account_name', '')
+        amount = int(order.total_amount)
+        content = f"TeaZen{order.order_number[-6:]}".replace("-", "")[:23]
+        
+        import urllib.parse
+        # URL Encoding cho tên tài khoản và nội dung (phòng ngừa lỗi hiển thị có khoảng trắng)
+        encoded_content = urllib.parse.quote(content)
+        encoded_name = urllib.parse.quote(account_name)
+        
+        # Tạo thẳng Quick Link Render hình ảnh từ VietQR, tốc độ 0.001s, không cần POST request
+        qr_image_url = f"https://img.vietqr.io/image/{acq_id}-{account_no}-compact.png?amount={amount}&addInfo={encoded_content}&accountName={encoded_name}"
+        
     except Exception as e:
         logger.warning(f"VietQR error: {e}")
 

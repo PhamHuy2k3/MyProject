@@ -205,6 +205,8 @@ class UserProfile(models.Model):
 # Signal để tự động tạo UserProfile khi User được tạo
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
+	if kwargs.get('raw', False):
+		return
 	if created:
 		role = 'admin' if instance.is_superuser else 'customer'
 		UserProfile.objects.create(user=instance, role=role)
@@ -212,6 +214,8 @@ def create_user_profile(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
+	if kwargs.get('raw', False):
+		return
 	if hasattr(instance, 'profile'):
 		instance.profile.save()
 
@@ -657,11 +661,15 @@ class CartItem(models.Model):
 # Signal để tự động tạo Cart khi User được tạo
 @receiver(post_save, sender=User)
 def create_user_cart(sender, instance, created, **kwargs):
+	if kwargs.get('raw', False):
+		return
 	if created:
 		Cart.objects.create(user=instance)
 
 @receiver(post_save, sender=User)
 def save_user_cart(sender, instance, **kwargs):
+	if kwargs.get('raw', False):
+		return
 	if hasattr(instance, 'cart'):
 		instance.cart.save()
 
@@ -728,10 +736,7 @@ class InventoryReceiptItem(models.Model):
 	def __str__(self):
 		return f"{self.product.title} - {self.quantity}"
 
-@receiver(post_save, sender=User)
-def save_user_cart(sender, instance, **kwargs):
-	if hasattr(instance, 'cart'):
-		instance.cart.save()
+# Removed duplicate save_user_cart signal
 
 # ==================== PAYMENT MODELS ====================
 

@@ -4,6 +4,190 @@
  */
 
 // =============================================================================
+// 0. INTRO OVERLAY - Ẩn màn hình chờ + Hiệu ứng lá trà rơi
+// =============================================================================
+(function() {
+    const overlay = document.getElementById('intro-overlay');
+    if (!overlay) return;
+
+    // --- Tạo lá trà rơi ---
+    var LEAF_COUNT = 25;
+    var leafSVGs = [
+        // Lá trà nhỏ gọn
+        '<svg viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 2 C8 10, 2 25, 8 40 C12 48, 18 50, 20 50 C22 50, 28 48, 32 40 C38 25, 32 10, 20 2Z" fill="currentColor" opacity="0.7"/><path d="M20 8 L20 45" stroke="currentColor" stroke-width="0.8" opacity="0.4"/><path d="M20 18 L12 25" stroke="currentColor" stroke-width="0.5" opacity="0.3"/><path d="M20 25 L28 32" stroke="currentColor" stroke-width="0.5" opacity="0.3"/></svg>',
+        // Lá trà tròn hơn
+        '<svg viewBox="0 0 36 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 2 C6 12, 1 24, 6 38 C10 46, 16 48, 18 48 C20 48, 26 46, 30 38 C35 24, 30 12, 18 2Z" fill="currentColor" opacity="0.6"/><path d="M18 6 L18 42" stroke="currentColor" stroke-width="0.6" opacity="0.35"/></svg>',
+        // Lá nhỏ
+        '<svg viewBox="0 0 28 38" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 1 C5 8, 1 18, 5 30 C8 36, 12 38, 14 38 C16 38, 20 36, 23 30 C27 18, 23 8, 14 1Z" fill="currentColor" opacity="0.5"/></svg>'
+    ];
+
+    var leafColors = [
+        '#86efac', '#6ee7b7', '#a7f3d0', '#bbf7d0',
+        '#d1fae5', '#4ade80', '#34d399', '#ecfdf5'
+    ];
+
+    for (var i = 0; i < LEAF_COUNT; i++) {
+        var leaf = document.createElement('div');
+        leaf.className = 'falling-leaf';
+
+        var size = 16 + Math.random() * 28;  // 16px - 44px
+        var left = Math.random() * 100;       // vị trí ngang ngẫu nhiên
+        var delay = Math.random() * 2;        // delay 0-2s
+        var duration = 3 + Math.random() * 4; // thời gian rơi 3-7s
+        var swayX = -30 + Math.random() * 60; // lắc ngang -30px đến 30px
+        var rotateEnd = 180 + Math.random() * 360;
+        var color = leafColors[Math.floor(Math.random() * leafColors.length)];
+        var svgHtml = leafSVGs[Math.floor(Math.random() * leafSVGs.length)];
+
+        leaf.innerHTML = svgHtml;
+        leaf.style.cssText = [
+            'position:absolute',
+            'width:' + size + 'px',
+            'height:' + size + 'px',
+            'left:' + left + '%',
+            'top:-60px',
+            'color:' + color,
+            'opacity:0',
+            'pointer-events:none',
+            'animation:leaf-fall ' + duration + 's ease-in ' + delay + 's forwards',
+            '--sway-x:' + swayX + 'px',
+            '--rotate-end:' + rotateEnd + 'deg',
+            'filter:blur(' + (Math.random() < 0.3 ? '1px' : '0') + ')'
+        ].join(';');
+
+        overlay.appendChild(leaf);
+    }
+
+    // --- Ẩn intro overlay sau 3.5 giây (cho đủ thời gian xem lá rơi) ---
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            overlay.classList.add('fade-out');
+            setTimeout(function() {
+                overlay.style.display = 'none';
+            }, 1000);
+        }, 3500);
+    });
+})();
+
+// =============================================================================
+// 0A. SCROLL ANIMATIONS - IntersectionObserver cho hiệu ứng cuộn
+// =============================================================================
+(function() {
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('in-view');
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+    // Quan sát tất cả các phần tử có hiệu ứng scroll
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectors = [
+            '.fade-up', '.reveal-text-container', '.scroll-section',
+            '.tree-node', '.film-strip', '.branch-content'
+        ];
+        document.querySelectorAll(selectors.join(',')).forEach(function(el) {
+            observer.observe(el);
+        });
+    });
+})();
+
+// =============================================================================
+// 0B. SPA NAVIGATION - Chuyển trang nội bộ
+// =============================================================================
+window.navigateTo = function(pageId) {
+    document.querySelectorAll('[id^="page-"]').forEach(function(page) {
+        page.classList.remove('page-visible');
+        page.classList.add('page-hidden');
+    });
+    var target = document.getElementById('page-' + pageId);
+    if (target) {
+        target.classList.remove('page-hidden');
+        target.classList.add('page-visible');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+};
+
+// =============================================================================
+// 0C. PARALLAX SLIDER - Hệ thống slider sản phẩm
+// =============================================================================
+var currentSlideIndex = 0;
+var totalSlides = 0;
+
+(function() {
+    var slides = document.querySelectorAll('.slide-card');
+    totalSlides = slides.length;
+})();
+
+window.goToSlide = function(index) {
+    var slides = document.querySelectorAll('.slide-card');
+    if (slides.length === 0) return;
+
+    currentSlideIndex = ((index % slides.length) + slides.length) % slides.length;
+
+    slides.forEach(function(slide, i) {
+        slide.classList.remove('active', 'next', 'prev', 'hidden-slide');
+        if (i === currentSlideIndex) {
+            slide.classList.add('active');
+        } else if (i === (currentSlideIndex + 1) % slides.length) {
+            slide.classList.add('next');
+        } else if (i === (currentSlideIndex - 1 + slides.length) % slides.length) {
+            slide.classList.add('prev');
+        } else {
+            slide.classList.add('hidden-slide');
+        }
+    });
+};
+
+window.moveSlider = function(direction) {
+    var slides = document.querySelectorAll('.slide-card');
+    if (slides.length === 0) return;
+
+    if (direction === 'next') {
+        goToSlide(currentSlideIndex + 1);
+    } else {
+        goToSlide(currentSlideIndex - 1);
+    }
+};
+
+// =============================================================================
+// 0D. SCROLL SECTION - Cuộn ngang các section sản phẩm
+// =============================================================================
+window.scrollSection = function(containerId, direction) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var scrollAmount = 340;
+    if (direction === 'left') {
+        container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+    } else {
+        container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+};
+
+// =============================================================================
+// 0E. HORIZONTAL SCROLL - The Ritual section
+// =============================================================================
+(function() {
+    var section = document.querySelector('.h-scroll-section');
+    var container = document.getElementById('ritual-container');
+    if (!section || !container) return;
+
+    window.addEventListener('scroll', function() {
+        var rect = section.getBoundingClientRect();
+        var sectionHeight = section.offsetHeight;
+        var viewportHeight = window.innerHeight;
+
+        if (rect.top < viewportHeight && rect.bottom > 0) {
+            var scrollProgress = -rect.top / (sectionHeight - viewportHeight);
+            scrollProgress = Math.max(0, Math.min(1, scrollProgress));
+            var maxScroll = container.scrollWidth - window.innerWidth;
+            container.style.transform = 'translateX(' + (-scrollProgress * maxScroll) + 'px)';
+        }
+    });
+})();
+
+// =============================================================================
 // I. HIỆU ỨNG 3D (THREE.JS) - VẬT THỂ SỐ ZEN
 // =============================================================================
 (function() {

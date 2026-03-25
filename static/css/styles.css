@@ -161,7 +161,14 @@ body {
 #intro-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #064e3b; z-index: 10000; display: flex; align-items: center; justify-content: center; transition: opacity 1s ease-out, visibility 1s; color: white; }
 #intro-overlay.fade-out { opacity: 0; visibility: hidden; }
 .falling-leaf { position: absolute; background-repeat: no-repeat; background-size: contain; opacity: 0; pointer-events: none; }
-@keyframes leaf-fall { 0% { transform: translateY(-10vh) rotate(0deg) translateX(0); opacity: 0; } 10% { opacity: 0.8; } 100% { transform: translateY(110vh) rotate(360deg) translateX(20px); opacity: 0; } }
+@keyframes leaf-fall {
+    0%   { transform: translateY(-10vh) rotate(0deg) translateX(0); opacity: 0; }
+    10%  { opacity: 0.85; }
+    30%  { transform: translateY(25vh) rotate(calc(var(--rotate-end, 180deg) * 0.3)) translateX(calc(var(--sway-x, 20px) * 0.6)); }
+    60%  { transform: translateY(55vh) rotate(calc(var(--rotate-end, 180deg) * 0.6)) translateX(calc(var(--sway-x, 20px) * -0.4)); opacity: 0.7; }
+    85%  { opacity: 0.4; }
+    100% { transform: translateY(110vh) rotate(var(--rotate-end, 360deg)) translateX(var(--sway-x, 20px)); opacity: 0; }
+}
 
 /* --- ORGANIC TREE STYLES --- */
 .organic-tree-container { position: relative; width: 100%; max-width: 1000px; margin: 0 auto; }
